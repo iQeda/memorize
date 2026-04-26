@@ -78,6 +78,18 @@ class CollectionStore {
     }
   }
 
+  async createDeck(name: string): Promise<number | null> {
+    try {
+      const id = await invoke<number>("create_deck", { name });
+      await this.refreshDecks();
+      this.selectedDeckId = id;
+      return id;
+    } catch (e) {
+      this.error = String(e);
+      return null;
+    }
+  }
+
   get selectedDeck(): DeckSummary | null {
     return this.decks.find((d) => d.id === this.selectedDeckId) ?? null;
   }

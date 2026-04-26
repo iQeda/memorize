@@ -5,9 +5,51 @@
     Search,
     Settings as SettingsIcon,
     Brain,
+    Plus,
+    Check,
+    X,
   } from "lucide-svelte";
   import { collection, type DeckSummary } from "$lib/stores/collection.svelte";
   import { draggable } from "$lib/actions/draggable";
+  import { tick } from "svelte";
+
+  let creating = $state(false);
+  let newName = $state("");
+  let newInputEl = $state<HTMLInputElement | null>(null);
+
+  async function startCreate() {
+    creating = true;
+    newName = "";
+    await tick();
+    newInputEl?.focus();
+  }
+
+  async function submitCreate() {
+    const name = newName.trim();
+    if (!name) {
+      creating = false;
+      return;
+    }
+    const id = await collection.createDeck(name);
+    creating = false;
+    newName = "";
+    if (id !== null) collection.selectedDeckId = id;
+  }
+
+  function cancelCreate() {
+    creating = false;
+    newName = "";
+  }
+
+  function onInputKey(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void submitCreate();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelCreate();
+    }
+  }
 
   const navItems = [
     { href: "/", label: "Decks", icon: Library },
@@ -79,18 +121,55 @@
 
   {#if collection.isOpen && collection.decks.length > 0}
     <div class="mt-5 flex-1 overflow-y-auto px-2 pb-3">
-      <div
-        class="mb-1 flex items-center justify-between px-2.5"
-      >
+      <div class="mb-1 flex items-center justify-between gap-1 px-2.5">
         <span
           class="text-[10px] font-semibold tracking-[0.14em] text-(--color-fg-subtle) uppercase"
         >
           デッキ
         </span>
-        <span class="number-tabular text-[10px] text-(--color-fg-subtle)">
-          {collection.decks.length}
-        </span>
+        <div class="flex items-center gap-1">
+          <span class="number-tabular text-[10px] text-(--color-fg-subtle)">
+            {collection.decks.length}
+          </span>
+          <button
+            type="button"
+            onclick={startCreate}
+            disabled={creating}
+            aria-label="新規デッキ"
+            class="grid h-4 w-4 place-items-center rounded text-(--color-fg-subtle) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default) disabled:opacity-40"
+          >
+            <Plus size={12} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
+
+      {#if creating}
+        <div class="mb-1 flex items-center gap-1 px-2.5">
+          <input
+            bind:this={newInputEl}
+            bind:value={newName}
+            onkeydown={onInputKey}
+            placeholder="デッキ名 (a::b でネスト)"
+            class="min-w-0 flex-1 rounded-(--radius-sm) border border-(--color-border-strong) bg-(--color-bg-elevated) px-2 py-0.5 text-xs outline-none focus:border-(--color-accent-500)"
+          />
+          <button
+            type="button"
+            onclick={submitCreate}
+            aria-label="作成"
+            class="grid h-5 w-5 place-items-center rounded text-(--color-success) transition-colors hover:bg-(--color-bg-overlay)"
+          >
+            <Check size={12} strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
+            onclick={cancelCreate}
+            aria-label="キャンセル"
+            class="grid h-5 w-5 place-items-center rounded text-(--color-fg-subtle) transition-colors hover:bg-(--color-bg-overlay)"
+          >
+            <X size={12} strokeWidth={2.5} />
+          </button>
+        </div>
+      {/if}
       {#each collection.decks as deck (deck.id)}
         {@const active = collection.selectedDeckId === deck.id}
         {@const badge = deckBadge(deck)}

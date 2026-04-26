@@ -25,6 +25,21 @@ pub async fn list_decks(state: State<'_, AppState>) -> AppResult<Vec<DeckSummary
     Ok(out)
 }
 
+#[tauri::command]
+pub async fn create_deck(
+    name: String,
+    state: State<'_, AppState>,
+) -> AppResult<i64> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Anyhow(anyhow::anyhow!("deck name is empty")));
+    }
+    let mut guard = state.col.lock().await;
+    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    let deck = col.get_or_create_normal_deck(trimmed)?;
+    Ok(deck.id.0)
+}
+
 fn walk(node: &anki_proto::decks::DeckTreeNode, level: u32, out: &mut Vec<DeckSummary>) {
     if node.deck_id != 0 {
         out.push(DeckSummary {

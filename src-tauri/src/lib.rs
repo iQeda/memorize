@@ -23,6 +23,7 @@ pub fn run() {
             commands::collection::close_collection,
             commands::collection::is_open,
             commands::decks::list_decks,
+            commands::decks::create_deck,
             commands::cards::list_cards,
             commands::cards::list_due_cards,
             commands::cards::get_study_queue,
