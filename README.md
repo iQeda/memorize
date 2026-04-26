@@ -16,8 +16,8 @@ Anki 互換の Rust 製デスクトップアプリ。最終形は英単語学習
 | 0 | bootstrap (Tauri + SvelteKit + rslib リンク) | ✅ 完了 |
 | 1 | 読み取り専用 IPC (open / list_decks / list_cards / get_card_render) | ✅ 完了 |
 | 2 | UI ブラッシュアップ (4 画面、デザイントークン、アニメ) | ✅ 完了 |
-| 3 | AnkiWeb Sync 統合 (login / normal_sync / full_upload-download) | ✅ MVP 完了 |
-| 4 | Import / Export UI | ⏳ 未着手 |
+| 3 | AnkiWeb Sync 統合 (login / normal_sync / full_upload-download / 自動 backup) | ✅ MVP 完了 |
+| 4 | `.apkg` Import / Export, `.colpkg` Restore | ✅ MVP 完了 |
 | 5 | 英単語特化機能 (発音・語源・専用 note type 等) | ⏳ 未着手 |
 
 ## セットアップ
@@ -133,12 +133,23 @@ sync API には十分な権限を持つので慎重に)。
 security delete-generic-password -s dev.iqeda.memorize -a ankiweb-credentials
 ```
 
+## Import / Export / Backup
+
+| 操作 | 拡張子 | 用途 | 操作場所 |
+|---|---|---|---|
+| Backup (export) | `.colpkg` | コレクション全体のスナップショット | Settings → Backup → 「今すぐバックアップ」 |
+| 自動 Backup | `.colpkg` | 同期実行直前 | Settings → Backup → トグル ON (default) |
+| Restore (import) | `.colpkg` | コレクション全体を上書き復元 | Settings → Backup → 「復元…」 |
+| Import | `.apkg` | デッキを既存コレクションに追加マージ | Settings → Import / Export → 「ファイルを選択…」 |
+| Export | `.apkg` | デッキを共有・移行用に書き出し | Settings → Import / Export → デッキ選択 → 「Export…」 |
+
+`.colpkg` の Restore と全フル sync は **OS ネイティブ confirm dialog** が出る。
+
 ## 既知の限界
 
 - 解答送信 (`Collection::answer_card()`) は未実装。Reviewer は次のカードに進むだけ
 - Sync 進捗の realtime emit 未実装 (Loader アニメだけ)
-- Sync 前の自動 `.colpkg` バックアップは未実装 (検討中)
-- 同期前後のデッキ一覧 auto-refresh 未実装
+- 同期前後のデッキ一覧 auto-refresh は手動 (Import 後は自動 refresh)
 
 ## ライセンス
 
