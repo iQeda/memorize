@@ -156,9 +156,9 @@ security delete-generic-password -s dev.iqeda.memorize -a ankiweb-credentials
 
 ## 既知の限界
 
-- 解答送信 (`Collection::answer_card()`) は未実装。Reviewer は次のカードに進むだけ
-- Sync 進捗の realtime emit 未実装 (Loader アニメだけ)
-- 同期前後のデッキ一覧 auto-refresh は手動 (Import 後は自動 refresh)
+- Phase 5 (英単語特化 note type / 発音 / 語源 / TTS など) は未着手 — ユーザー要件待ち
+- 同期前後のデッキ一覧 auto-refresh は手動 (Import 後のみ自動 refresh)
+- vendor/anki に local patch 1 件 (`patches/0001-expose-progress-module.patch`) を当てているため、submodule update 後は `./scripts/apply-vendor-patches.sh` を実行する必要あり
 
 ## ライセンス
 
