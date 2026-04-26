@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Brain, Sparkles, Plus, FolderOpen } from "lucide-svelte";
+  import { Brain, Sparkles, Plus, FolderOpen, FilePlus } from "lucide-svelte";
   import { collection } from "$lib/stores/collection.svelte";
   import { goto } from "$app/navigation";
 
@@ -19,6 +19,21 @@
         filters: [{ name: "Anki collection", extensions: ["anki2"] }],
       });
       if (typeof picked === "string") await collection.open(picked);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function createNew() {
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const picked = await save({
+        defaultPath: "memorize-collection.anki2",
+        filters: [{ name: "Anki collection", extensions: ["anki2"] }],
+      });
+      if (typeof picked !== "string") return;
+      // CollectionBuilder creates the SQLite db on first build if not present.
+      await collection.open(picked);
     } catch (e) {
       console.error(e);
     }
@@ -59,14 +74,24 @@
             <br />Sync・Import / Export は後の Phase で対応します。
           </p>
         </div>
-        <button
-          type="button"
-          onclick={pickAndOpen}
-          class="flex items-center gap-2 rounded-(--radius-md) bg-(--color-accent-500) px-5 py-2.5 text-sm font-medium text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all duration-200 hover:bg-(--color-accent-600) active:scale-[0.97]"
-        >
-          <FolderOpen size={16} strokeWidth={2.25} />
-          コレクションを開く
-        </button>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onclick={pickAndOpen}
+            class="flex items-center gap-2 rounded-(--radius-md) bg-(--color-accent-500) px-5 py-2.5 text-sm font-medium text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all duration-200 hover:bg-(--color-accent-600) active:scale-[0.97]"
+          >
+            <FolderOpen size={16} strokeWidth={2.25} />
+            既存のコレクションを開く
+          </button>
+          <button
+            type="button"
+            onclick={createNew}
+            class="flex items-center gap-2 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-sm font-medium text-(--color-fg-default) shadow-(--shadow-subtle) transition-all duration-200 hover:bg-(--color-bg-overlay) active:scale-[0.97]"
+          >
+            <FilePlus size={16} strokeWidth={2.25} />
+            新規コレクションを作成
+          </button>
+        </div>
         {#if collection.error}
           <p class="text-xs text-(--color-danger)">{collection.error}</p>
         {/if}

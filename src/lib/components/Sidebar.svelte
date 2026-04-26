@@ -119,7 +119,7 @@
     {/each}
   </nav>
 
-  {#if collection.isOpen && collection.decks.length > 0}
+  {#if collection.isOpen}
     <div class="mt-5 flex-1 overflow-y-auto px-2 pb-3">
       <div class="mb-1 flex items-center justify-between gap-1 px-2.5">
         <span
@@ -169,6 +169,11 @@
             <X size={12} strokeWidth={2.5} />
           </button>
         </div>
+      {/if}
+      {#if collection.decks.length === 0 && !creating}
+        <p class="px-2.5 py-2 text-[11px] text-(--color-fg-subtle)">
+          デッキがまだありません。<br />+ から作成してください。
+        </p>
       {/if}
       {#each collection.decks as deck (deck.id)}
         {@const active = collection.selectedDeckId === deck.id}
