@@ -32,7 +32,6 @@ thiserror = "2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots"] }
-keyring = { version = "3", features = ["apple-native"] }
 chrono = "0.4"
 
 [features]

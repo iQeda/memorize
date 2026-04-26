@@ -5,10 +5,8 @@ use anki::collection::CollectionBuilder;
 use anki::sync::collection::normal::SyncActionRequired;
 use anki::sync::login::{sync_login, SyncAuth};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, State};
-
-const KEYRING_SERVICE: &str = "dev.iqeda.memorize";
-const KEYRING_ACCOUNT: &str = "ankiweb-credentials";
+use std::path::PathBuf;
+use tauri::{AppHandle, Manager, State};
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 struct StoredCredentials {
@@ -17,37 +15,60 @@ struct StoredCredentials {
     endpoint: Option<String>,
 }
 
-fn load_credentials() -> AppResult<Option<StoredCredentials>> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT)
-        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("keyring: {e}")))?;
-    match entry.get_password() {
+/// File-based credential storage in the app data dir.
+/// Plain JSON with mode 0600 on Unix. Keychain isn't used in dev because
+/// every recompile produces a binary with a different code signature, which
+/// triggers a permission prompt every single launch. When we ship a signed
+/// release we can swap this back to a keychain backend.
+fn credentials_path(app: &AppHandle) -> AppResult<PathBuf> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("app_data_dir: {e}")))?;
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("mkdir app_data_dir: {e}")))?;
+    Ok(dir.join("ankiweb-credentials.json"))
+}
+
+fn load_credentials(app: &AppHandle) -> AppResult<Option<StoredCredentials>> {
+    let path = credentials_path(app)?;
+    match std::fs::read_to_string(&path) {
         Ok(s) => {
-            let creds: StoredCredentials = serde_json::from_str(&s)
-                .map_err(|e| AppError::Anyhow(anyhow::anyhow!("credentials parse: {e}")))?;
+            let creds: StoredCredentials = serde_json::from_str(&s).map_err(|e| {
+                AppError::Anyhow(anyhow::anyhow!("credentials parse: {e}"))
+            })?;
             Ok(Some(creds))
         }
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(AppError::Anyhow(anyhow::anyhow!("keyring: {e}"))),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(AppError::Anyhow(anyhow::anyhow!("credentials read: {e}"))),
     }
 }
 
-fn save_credentials(creds: &StoredCredentials) -> AppResult<()> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT)
-        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("keyring: {e}")))?;
-    let payload = serde_json::to_string(creds)
+fn save_credentials(app: &AppHandle, creds: &StoredCredentials) -> AppResult<()> {
+    let path = credentials_path(app)?;
+    let payload = serde_json::to_string_pretty(creds)
         .map_err(|e| AppError::Anyhow(anyhow::anyhow!("serialize: {e}")))?;
-    entry
-        .set_password(&payload)
-        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("keyring set: {e}")))?;
+    std::fs::write(&path, payload)
+        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("credentials write: {e}")))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perm = std::fs::metadata(&path)
+            .map_err(|e| AppError::Anyhow(anyhow::anyhow!("metadata: {e}")))?
+            .permissions();
+        perm.set_mode(0o600);
+        std::fs::set_permissions(&path, perm)
+            .map_err(|e| AppError::Anyhow(anyhow::anyhow!("chmod 0600: {e}")))?;
+    }
     Ok(())
 }
 
-fn delete_credentials() -> AppResult<()> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT)
-        .map_err(|e| AppError::Anyhow(anyhow::anyhow!("keyring: {e}")))?;
-    match entry.delete_credential() {
-        Ok(_) | Err(keyring::Error::NoEntry) => Ok(()),
-        Err(e) => Err(AppError::Anyhow(anyhow::anyhow!("keyring delete: {e}"))),
+fn delete_credentials(app: &AppHandle) -> AppResult<()> {
+    let path = credentials_path(app)?;
+    match std::fs::remove_file(&path) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(AppError::Anyhow(anyhow::anyhow!("credentials delete: {e}"))),
     }
 }
 
@@ -58,8 +79,8 @@ pub struct SyncStatus {
 }
 
 #[tauri::command]
-pub async fn sync_status() -> AppResult<SyncStatus> {
-    let creds = load_credentials()?;
+pub async fn sync_status(app: AppHandle) -> AppResult<SyncStatus> {
+    let creds = load_credentials(&app)?;
     Ok(SyncStatus {
         logged_in: creds.is_some(),
         username: creds.map(|c| c.username),
@@ -76,6 +97,7 @@ pub struct LoginInput {
 #[tauri::command]
 pub async fn sync_login_cmd(
     input: LoginInput,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<SyncStatus> {
     let auth = sync_login(
@@ -91,7 +113,7 @@ pub async fn sync_login_cmd(
         hkey: auth.hkey,
         endpoint: input.endpoint,
     };
-    save_credentials(&creds)?;
+    save_credentials(&app, &creds)?;
 
     Ok(SyncStatus {
         logged_in: true,
@@ -100,8 +122,8 @@ pub async fn sync_login_cmd(
 }
 
 #[tauri::command]
-pub async fn sync_logout() -> AppResult<()> {
-    delete_credentials()
+pub async fn sync_logout(app: AppHandle) -> AppResult<()> {
+    delete_credentials(&app)
 }
 
 #[derive(Serialize, Debug)]
@@ -133,9 +155,8 @@ pub async fn sync_now(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<SyncReport> {
-    let creds = load_credentials()?.ok_or_else(|| {
-        AppError::Anyhow(anyhow::anyhow!("not logged in"))
-    })?;
+    let creds = load_credentials(&app)?
+        .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("not logged in")))?;
     let auth = auth_from(&creds)?;
     let _emitter = ProgressEmitter::start(app, state.progress.clone());
 
@@ -185,9 +206,8 @@ pub async fn sync_full_download(
 }
 
 async fn full_sync(app: AppHandle, state: State<'_, AppState>, upload: bool) -> AppResult<()> {
-    let creds = load_credentials()?.ok_or_else(|| {
-        AppError::Anyhow(anyhow::anyhow!("not logged in"))
-    })?;
+    let creds = load_credentials(&app)?
+        .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("not logged in")))?;
     let auth = auth_from(&creds)?;
 
     let path = state
