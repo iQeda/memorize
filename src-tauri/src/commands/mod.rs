@@ -4,4 +4,5 @@ pub mod collection;
 pub mod decks;
 pub mod package;
 pub mod reviewer;
+pub mod study;
 pub mod sync;

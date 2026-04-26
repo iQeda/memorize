@@ -1,10 +1,11 @@
 use crate::error::{AppError, AppResult};
+use crate::progress::ProgressEmitter;
 use crate::state::AppState;
 use anki::collection::CollectionBuilder;
 use anki::sync::collection::normal::SyncActionRequired;
 use anki::sync::login::{sync_login, SyncAuth};
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 const KEYRING_SERVICE: &str = "dev.iqeda.memorize";
 const KEYRING_ACCOUNT: &str = "ankiweb-credentials";
@@ -128,11 +129,15 @@ fn auth_from(creds: &StoredCredentials) -> AppResult<SyncAuth> {
 }
 
 #[tauri::command]
-pub async fn sync_now(state: State<'_, AppState>) -> AppResult<SyncReport> {
+pub async fn sync_now(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<SyncReport> {
     let creds = load_credentials()?.ok_or_else(|| {
         AppError::Anyhow(anyhow::anyhow!("not logged in"))
     })?;
     let auth = auth_from(&creds)?;
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
 
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
@@ -164,16 +169,22 @@ pub async fn sync_now(state: State<'_, AppState>) -> AppResult<SyncReport> {
 }
 
 #[tauri::command]
-pub async fn sync_full_upload(state: State<'_, AppState>) -> AppResult<()> {
-    full_sync(state, true).await
+pub async fn sync_full_upload(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    full_sync(app, state, true).await
 }
 
 #[tauri::command]
-pub async fn sync_full_download(state: State<'_, AppState>) -> AppResult<()> {
-    full_sync(state, false).await
+pub async fn sync_full_download(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    full_sync(app, state, false).await
 }
 
-async fn full_sync(state: State<'_, AppState>, upload: bool) -> AppResult<()> {
+async fn full_sync(app: AppHandle, state: State<'_, AppState>, upload: bool) -> AppResult<()> {
     let creds = load_credentials()?.ok_or_else(|| {
         AppError::Anyhow(anyhow::anyhow!("not logged in"))
     })?;
@@ -194,6 +205,7 @@ async fn full_sync(state: State<'_, AppState>, upload: bool) -> AppResult<()> {
         .take()
         .ok_or(AppError::CollectionNotOpen)?;
 
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
     let result = if upload {
         col.full_upload(auth, state.http.clone()).await
     } else {
@@ -202,7 +214,9 @@ async fn full_sync(state: State<'_, AppState>, upload: bool) -> AppResult<()> {
     result?;
 
     // Re-open the collection at the same path.
-    let col = CollectionBuilder::new(&path).build()?;
+    let col = CollectionBuilder::new(&path)
+        .set_shared_progress_state(state.progress.clone())
+        .build()?;
     *state.col.lock().await = Some(col);
 
     Ok(())

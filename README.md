@@ -28,6 +28,9 @@ Anki 互換の Rust 製デスクトップアプリ。最終形は英単語学習
 # submodule (anki + ネストした FTL 翻訳 repo) を取得
 git submodule update --init --recursive
 
+# vendor/anki への local patch を適用 (rslib の progress モジュールを公開)
+./scripts/apply-vendor-patches.sh
+
 # 依存インストール
 pnpm install
 ```
@@ -81,6 +84,12 @@ memorize/
 │       └── commands/             # collection / decks / cards / reviewer / sync
 └── vendor/anki/                  # git submodule → ankitects/anki @ 35b727a
 ```
+
+### vendor/anki へのローカルパッチ
+
+`rslib/src/lib.rs` の `mod progress;` を `pub mod progress;` に変える 1 行パッチを当てている (`patches/0001-expose-progress-module.patch`)。
+これは Tauri command 側で `Arc<Mutex<ProgressState>>` を構築するため必要。
+将来は upstream に PR するか fork に切り替える。
 
 ### `[workspace]` を書かない理由
 

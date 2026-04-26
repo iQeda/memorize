@@ -42,6 +42,23 @@
     void sync.refresh();
   });
 
+  async function confirmFullSync(direction: "upload" | "download") {
+    const { confirm } = await import("@tauri-apps/plugin-dialog");
+    const msg =
+      direction === "upload"
+        ? `ローカルのコレクションで AnkiWeb サーバー側を上書きします。\n\nサーバー側のデータは消えて元に戻せません。続行しますか？`
+        : `AnkiWeb サーバーのコレクションでローカル側を上書きします。\n\n（自動バックアップが ON なら事前に .colpkg が作成されます）\n続行しますか？`;
+    const ok = await confirm(msg, {
+      title: direction === "upload" ? "サーバー側を上書き" : "ローカル側を上書き",
+      kind: "warning",
+      okLabel: direction === "upload" ? "アップロード" : "ダウンロード",
+      cancelLabel: "キャンセル",
+    });
+    if (!ok) return;
+    if (direction === "upload") await sync.fullUpload();
+    else await sync.fullDownload();
+  }
+
   async function handleLogin(e: SubmitEvent) {
     e.preventDefault();
     try {
@@ -294,7 +311,7 @@
             {#if sync.fullSyncRequired.upload_ok}
               <button
                 type="button"
-                onclick={() => sync.fullUpload()}
+                onclick={() => confirmFullSync("upload")}
                 disabled={sync.busy}
                 class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
               >
@@ -304,7 +321,7 @@
             {#if sync.fullSyncRequired.download_ok}
               <button
                 type="button"
-                onclick={() => sync.fullDownload()}
+                onclick={() => confirmFullSync("download")}
                 disabled={sync.busy}
                 class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
               >

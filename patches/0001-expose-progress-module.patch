@@ -1,0 +1,13 @@
+diff --git a/rslib/src/lib.rs b/rslib/src/lib.rs
+index 2258c3592..b14bf9aee 100644
+--- a/rslib/src/lib.rs
++++ b/rslib/src/lib.rs
+@@ -31,7 +31,7 @@ pub mod notetype;
+ pub mod ops;
+ mod preferences;
+ pub mod prelude;
+-mod progress;
++pub mod progress;
+ pub mod revlog;
+ pub mod scheduler;
+ pub mod search;

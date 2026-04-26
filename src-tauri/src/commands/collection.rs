@@ -16,7 +16,9 @@ pub async fn open_collection(
         }
     }
     let path_buf = PathBuf::from(&path);
-    let col = CollectionBuilder::new(&path_buf).build()?;
+    let col = CollectionBuilder::new(&path_buf)
+        .set_shared_progress_state(state.progress.clone())
+        .build()?;
     *guard = Some(col);
     *state.col_path.lock().await = Some(path_buf);
     Ok(())

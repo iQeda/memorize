@@ -12,7 +12,54 @@ type SyncReport = {
 
 type AutoBackupResult = { path: string };
 
+type ProgressEvent =
+  | {
+      kind: "media_sync";
+      checked: number;
+      downloaded_files: number;
+      downloaded_deletions: number;
+      uploaded_files: number;
+      uploaded_deletions: number;
+    }
+  | {
+      kind: "normal_sync";
+      stage: string;
+      local_update: number;
+      local_remove: number;
+      remote_update: number;
+      remote_remove: number;
+    }
+  | { kind: "full_sync"; transferred_bytes: number; total_bytes: number }
+  | { kind: "import"; message: string }
+  | { kind: "export"; message: string }
+  | { kind: "other" };
+
 const AUTO_BACKUP_KEY = "memorize:auto-backup-before-sync";
+
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function describeProgress(p: ProgressEvent): string {
+  switch (p.kind) {
+    case "media_sync":
+      return `メディア: ${p.checked} 件確認 / ↓${p.downloaded_files} ↑${p.uploaded_files}`;
+    case "normal_sync":
+      return `${p.stage}: 追加 ${p.local_update}/${p.remote_update} 削除 ${p.local_remove}/${p.remote_remove}`;
+    case "full_sync":
+      return p.total_bytes > 0
+        ? `${fmtBytes(p.transferred_bytes)} / ${fmtBytes(p.total_bytes)}`
+        : `${fmtBytes(p.transferred_bytes)} 転送中…`;
+    case "import":
+      return "Import 中…";
+    case "export":
+      return "Export 中…";
+    default:
+      return "処理中…";
+  }
+}
 
 class SyncStore {
   loggedIn = $state(false);
@@ -33,6 +80,20 @@ class SyncStore {
       const stored = localStorage.getItem(AUTO_BACKUP_KEY);
       // Default: ON. Stored "0" = OFF.
       if (stored === "0") this.autoBackupBeforeSync = false;
+      this.subscribeProgress();
+    }
+  }
+
+  private async subscribeProgress() {
+    try {
+      const { listen } = await import("@tauri-apps/api/event");
+      await listen<ProgressEvent>("progress", (e) => {
+        if (this.busy) {
+          this.busyReason = describeProgress(e.payload);
+        }
+      });
+    } catch {
+      // Not running inside Tauri (browser dev mode); ignore.
     }
   }
 

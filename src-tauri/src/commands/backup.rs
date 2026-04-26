@@ -1,10 +1,11 @@
 use crate::error::{AppError, AppResult};
+use crate::progress::ProgressEmitter;
 use crate::state::AppState;
 use anki::collection::CollectionBuilder;
 use anki::import_export::package::import_colpkg as rslib_import_colpkg;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 /// Export the currently-open collection as a .colpkg file at `out_path`.
 /// Re-opens the same collection afterwards so the app continues working.
@@ -27,7 +28,9 @@ async fn export_to(state: &State<'_, AppState>, out_path: &Path, include_media: 
     let result = col.export_colpkg(out_path, include_media, /* legacy */ false);
 
     // Re-open regardless of export success so the app stays usable.
-    let reopened = CollectionBuilder::new(&path).build()?;
+    let reopened = CollectionBuilder::new(&path)
+        .set_shared_progress_state(state.progress.clone())
+        .build()?;
     *state.col.lock().await = Some(reopened);
 
     result?;
@@ -38,8 +41,10 @@ async fn export_to(state: &State<'_, AppState>, out_path: &Path, include_media: 
 pub async fn export_colpkg(
     out_path: String,
     include_media: bool,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
     export_to(&state, Path::new(&out_path), include_media).await
 }
 
@@ -53,7 +58,7 @@ pub struct AutoBackupResult {
 #[tauri::command]
 pub async fn auto_backup(
     include_media: bool,
-    app: tauri::AppHandle,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<AutoBackupResult> {
     let backup_dir: PathBuf = app
@@ -67,6 +72,7 @@ pub async fn auto_backup(
     let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
     let out_path = backup_dir.join(format!("memorize-{stamp}.colpkg"));
 
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
     export_to(&state, &out_path, include_media).await?;
     Ok(AutoBackupResult {
         path: out_path.to_string_lossy().to_string(),
@@ -79,8 +85,10 @@ pub async fn auto_backup(
 #[tauri::command]
 pub async fn import_colpkg(
     in_path: String,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
     let col_path = state
         .col_path
         .lock()

@@ -1,5 +1,6 @@
 mod commands;
 mod error;
+mod progress;
 mod state;
 
 use state::AppState;
@@ -37,6 +38,9 @@ pub fn run() {
             commands::backup::import_colpkg,
             commands::package::import_apkg,
             commands::package::export_all_apkg,
+            commands::study::start_study,
+            commands::study::get_next_card,
+            commands::study::answer_card_now,
         ])
         .run(tauri::generate_context!())
         .expect("error while running memorize");

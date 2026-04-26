@@ -1,10 +1,11 @@
 use crate::error::{AppError, AppResult};
+use crate::progress::ProgressEmitter;
 use crate::state::AppState;
 use anki_proto::import_export::ExportAnkiPackageOptions;
 use anki_proto::import_export::ImportAnkiPackageOptions;
 use anki_proto::import_export::ImportAnkiPackageUpdateCondition;
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[derive(Serialize, Debug)]
 pub struct ImportReport {
@@ -22,8 +23,10 @@ pub struct ImportReport {
 #[tauri::command]
 pub async fn import_apkg(
     in_path: String,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<ImportReport> {
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
 
@@ -67,8 +70,10 @@ pub struct ExportReport {
 #[tauri::command]
 pub async fn export_all_apkg(
     input: ExportAllInput,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<ExportReport> {
+    let _emitter = ProgressEmitter::start(app, state.progress.clone());
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
 
