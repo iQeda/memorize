@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use anki::collection::CollectionBuilder;
+use anki::import_export::package::import_colpkg as rslib_import_colpkg;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tauri::{Manager, State};
@@ -70,4 +71,52 @@ pub async fn auto_backup(
     Ok(AutoBackupResult {
         path: out_path.to_string_lossy().to_string(),
     })
+}
+
+/// Restore the currently-open collection from a .colpkg backup.
+/// This OVERWRITES the local collection at its current path. The frontend
+/// MUST present a destructive-action confirm dialog before invoking this.
+#[tauri::command]
+pub async fn import_colpkg(
+    in_path: String,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let col_path = state
+        .col_path
+        .lock()
+        .await
+        .clone()
+        .ok_or(AppError::CollectionNotOpen)?;
+    let col_path_str = col_path
+        .to_str()
+        .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("non-utf8 collection path")))?
+        .to_string();
+    let media_folder = col_path.with_extension("media");
+    let media_db = col_path.with_extension("mdb");
+
+    // Take Collection out, grab a progress handle, then close to release file lock.
+    let col = state
+        .col
+        .lock()
+        .await
+        .take()
+        .ok_or(AppError::CollectionNotOpen)?;
+    let progress = col.new_progress_handler();
+    let _ = col.close(None);
+
+    let import_result = rslib_import_colpkg(
+        &in_path,
+        &col_path_str,
+        &media_folder,
+        &media_db,
+        progress,
+    );
+
+    // Re-open at the same path regardless of import success so the app
+    // doesn't end up in a "collection closed" state with no recovery path.
+    let reopened = CollectionBuilder::new(&col_path).build()?;
+    *state.col.lock().await = Some(reopened);
+
+    import_result?;
+    Ok(())
 }

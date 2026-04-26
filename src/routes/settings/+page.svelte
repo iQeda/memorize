@@ -13,6 +13,7 @@
     Download,
     Save,
     Shield,
+    History,
   } from "lucide-svelte";
 
   const themeOptions: { value: Theme; label: string }[] = [
@@ -60,6 +61,33 @@
       if (typeof picked === "string") {
         await sync.manualBackup(picked, includeMedia);
       }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleRestore() {
+    try {
+      const { open, confirm } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Anki collection package", extensions: ["colpkg"] }],
+      });
+      if (typeof picked !== "string") return;
+
+      const ok = await confirm(
+        `現在のコレクションを完全に置き換えます。\n\n復元元: ${picked}\n\nこの操作は取り消せません。続行しますか？`,
+        {
+          title: "コレクションを復元",
+          kind: "warning",
+          okLabel: "復元する",
+          cancelLabel: "キャンセル",
+        },
+      );
+      if (!ok) return;
+
+      await sync.restore(picked);
     } catch (e) {
       console.error(e);
     }
@@ -134,6 +162,29 @@
           最終: {sync.lastBackupPath}
         </p>
       {/if}
+
+      <hr class="my-4 border-(--color-border-default)" />
+
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <History size={16} class="text-(--color-warning)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">バックアップから復元</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
+              <code>.colpkg</code> でローカルコレクションを完全に上書きします
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={handleRestore}
+          disabled={sync.busy || !collection.isOpen}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-1.5 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
+        >
+          <History size={12} />
+          復元…
+        </button>
+      </div>
     </div>
   </section>
 

@@ -86,6 +86,22 @@ class SyncStore {
     }
   }
 
+  async restore(inPath: string) {
+    this.busy = true;
+    this.busyReason = "復元中…";
+    this.lastError = null;
+    this.lastMessage = null;
+    try {
+      await invoke("import_colpkg", { inPath });
+      this.lastMessage = `復元完了: ${inPath}`;
+    } catch (e) {
+      this.lastError = String(e);
+    } finally {
+      this.busy = false;
+      this.busyReason = null;
+    }
+  }
+
   async refresh() {
     try {
       const s = await invoke<SyncStatus>("sync_status");
