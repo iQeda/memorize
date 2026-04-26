@@ -113,7 +113,7 @@
         class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) hover:bg-(--color-accent-600) active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-(--color-bg-overlay) disabled:text-(--color-fg-subtle) disabled:shadow-none"
       >
         <Plus size={12} strokeWidth={2.5} />
-        ノートを追加
+        単語を追加
       </button>
     </header>
     <div class="flex-1 overflow-y-auto">

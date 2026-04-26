@@ -2,6 +2,7 @@
   import { Brain, Sparkles, Plus, FolderOpen, FilePlus } from "lucide-svelte";
   import { collection } from "$lib/stores/collection.svelte";
   import { goto } from "$app/navigation";
+  import NoteEditor from "$lib/components/NoteEditor.svelte";
 
   const selected = $derived(collection.selectedDeck);
   const totalDue = $derived(
@@ -41,6 +42,12 @@
 
   function startStudy() {
     if (selected && totalDue > 0) goto(`/review/${selected.id}/`);
+  }
+
+  let showAddNote = $state(false);
+
+  async function onWordAdded() {
+    await collection.refreshDecks();
   }
 
   type Tone = "accent" | "warning" | "success";
@@ -140,6 +147,14 @@
         <p class="text-xs text-(--color-fg-subtle) tabular-nums">
           {totalDue > 0 ? `${totalDue} cards waiting` : "今日は終わりました"}
         </p>
+        <button
+          type="button"
+          onclick={() => (showAddNote = true)}
+          class="mt-1 flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
+        >
+          <Plus size={12} strokeWidth={2.5} />
+          このデッキに単語を追加
+        </button>
       </div>
     </div>
   {:else}
@@ -151,6 +166,15 @@
     </div>
   {/if}
 </div>
+
+{#if showAddNote && selected}
+  <NoteEditor
+    mode="add"
+    initialDeckId={selected.id}
+    onClose={() => (showAddNote = false)}
+    onSaved={onWordAdded}
+  />
+{/if}
 
 {#snippet countCard(label: string, count: number, tone: Tone, delayMs: number)}
   <div

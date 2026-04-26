@@ -81,9 +81,9 @@
     if (mode !== "edit" || noteId === undefined) return;
     const { confirm } = await import("@tauri-apps/plugin-dialog");
     const ok = await confirm(
-      "このノートを削除します。関連するカードもすべて削除されます。続行しますか？",
+      "この単語を削除します。関連するカードもすべて削除されます。続行しますか？",
       {
-        title: "ノート削除",
+        title: "単語を削除",
         kind: "warning",
         okLabel: "削除",
         cancelLabel: "キャンセル",
@@ -130,7 +130,7 @@
       class="flex items-center justify-between border-b border-(--color-border-default) px-5 py-3"
     >
       <h2 class="text-sm font-semibold tracking-wide">
-        {mode === "add" ? "ノートを追加" : "ノートを編集"}
+        {mode === "add" ? "単語を追加" : "単語を編集"}
       </h2>
       <button
         type="button"
