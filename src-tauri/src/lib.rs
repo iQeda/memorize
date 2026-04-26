@@ -42,6 +42,11 @@ pub fn run() {
             commands::study::start_study,
             commands::study::get_next_card,
             commands::study::answer_card_now,
+            commands::notes::list_notetypes,
+            commands::notes::get_note,
+            commands::notes::add_note,
+            commands::notes::update_note,
+            commands::notes::delete_notes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running memorize");
