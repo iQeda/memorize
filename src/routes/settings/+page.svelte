@@ -3,7 +3,17 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { onMount } from "svelte";
-  import { CheckCircle2, AlertCircle, Loader2, RefreshCw, LogOut, Upload, Download } from "lucide-svelte";
+  import {
+    CheckCircle2,
+    AlertCircle,
+    Loader2,
+    RefreshCw,
+    LogOut,
+    Upload,
+    Download,
+    Save,
+    Shield,
+  } from "lucide-svelte";
 
   const themeOptions: { value: Theme; label: string }[] = [
     { value: "light", label: "Light" },
@@ -35,10 +45,97 @@
       password = "";
     } catch {}
   }
+
+  async function handleManualBackup(includeMedia: boolean) {
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:T]/g, "")
+        .replace(/\.\d+Z$/, "");
+      const picked = await save({
+        defaultPath: `memorize-${stamp}.colpkg`,
+        filters: [{ name: "Anki collection package", extensions: ["colpkg"] }],
+      });
+      if (typeof picked === "string") {
+        await sync.manualBackup(picked, includeMedia);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
 </script>
 
 <div class="mx-auto max-w-2xl px-8 py-10">
   <h1 class="font-display text-3xl font-medium tracking-tight">Settings</h1>
+
+  <section class="mt-10 space-y-3">
+    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      Backup
+    </h2>
+    <div
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+    >
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <Shield size={16} class="text-(--color-success)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">同期前に自動バックアップ</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
+              app data dir/backups/ に <code>.colpkg</code> を作成。失敗したら同期は中止
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={() => sync.setAutoBackup(!sync.autoBackupBeforeSync)}
+          aria-pressed={sync.autoBackupBeforeSync}
+          aria-label="同期前に自動バックアップ"
+          class="relative h-5 w-9 shrink-0 rounded-full transition-colors {sync.autoBackupBeforeSync
+            ? 'bg-(--color-accent-500)'
+            : 'bg-(--color-bg-overlay)'}"
+        >
+          <span
+            class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {sync.autoBackupBeforeSync
+              ? 'left-[18px]'
+              : 'left-0.5'}"
+          ></span>
+        </button>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onclick={() => handleManualBackup(false)}
+          disabled={sync.busy || !collection.isOpen}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
+        >
+          <Save size={12} />
+          今すぐバックアップ
+        </button>
+        <button
+          type="button"
+          onclick={() => handleManualBackup(true)}
+          disabled={sync.busy || !collection.isOpen}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
+        >
+          <Save size={12} />
+          メディアも含めてバックアップ
+        </button>
+      </div>
+
+      {#if !collection.isOpen}
+        <p class="mt-3 text-xs text-(--color-fg-subtle)">
+          バックアップにはコレクションを開く必要があります
+        </p>
+      {/if}
+      {#if sync.lastBackupPath}
+        <p class="mt-3 truncate font-mono text-[11px] text-(--color-fg-subtle)">
+          最終: {sync.lastBackupPath}
+        </p>
+      {/if}
+    </div>
+  </section>
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
@@ -79,7 +176,7 @@
             {:else}
               <RefreshCw size={14} />
             {/if}
-            今すぐ同期
+            {sync.busy && sync.busyReason ? sync.busyReason : "今すぐ同期"}
           </button>
 
           {#if sync.fullSyncRequired}

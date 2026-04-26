@@ -32,6 +32,8 @@ pub fn run() {
             commands::sync::sync_now,
             commands::sync::sync_full_upload,
             commands::sync::sync_full_download,
+            commands::backup::export_colpkg,
+            commands::backup::auto_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running memorize");
