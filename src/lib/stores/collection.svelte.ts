@@ -1,4 +1,5 @@
 import { invoke } from "$lib/ipc";
+import { browser } from "$app/environment";
 
 export type DeckSummary = {
   id: number;
@@ -9,6 +10,8 @@ export type DeckSummary = {
   review_count: number;
 };
 
+const LAST_PATH_KEY = "memorize:last-collection-path";
+
 class CollectionStore {
   isOpen = $state(false);
   decks = $state<DeckSummary[]>([]);
@@ -16,16 +19,41 @@ class CollectionStore {
   loading = $state(false);
   error = $state<string | null>(null);
 
-  async open(path: string) {
+  /** Reconcile the frontend store with the backend AppState, and
+   *  auto-reopen the last-used collection if the backend has none open
+   *  (handles the cold-start case after a Tauri relaunch). */
+  async refresh() {
+    try {
+      const open = await invoke<boolean>("is_open");
+      if (open) {
+        this.isOpen = true;
+        await this.refreshDecks();
+        return;
+      }
+      const lastPath = browser ? localStorage.getItem(LAST_PATH_KEY) : null;
+      if (lastPath) {
+        await this.open(lastPath, /* skipPersist */ true);
+      }
+    } catch (e) {
+      console.error("collection.refresh", e);
+    }
+  }
+
+  async open(path: string, skipPersist = false) {
     this.loading = true;
     this.error = null;
     try {
       await invoke("open_collection", { path });
       this.isOpen = true;
+      if (!skipPersist && browser) {
+        localStorage.setItem(LAST_PATH_KEY, path);
+      }
       await this.refreshDecks();
     } catch (e) {
       this.error = String(e);
       this.isOpen = false;
+      // Don't keep stale path that fails to open.
+      if (browser) localStorage.removeItem(LAST_PATH_KEY);
     } finally {
       this.loading = false;
     }
@@ -38,6 +66,7 @@ class CollectionStore {
       this.isOpen = false;
       this.decks = [];
       this.selectedDeckId = null;
+      if (browser) localStorage.removeItem(LAST_PATH_KEY);
     }
   }
 

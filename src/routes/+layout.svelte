@@ -15,13 +15,7 @@
   });
 
   onMount(async () => {
-    // Try to auto-open a default profile if not yet open.
-    if (collection.isOpen) return;
-    const home =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (globalThis as any).process?.env?.HOME ?? "";
-    if (!home) return;
-    // No-op for now: profile opening flow comes in Phase 1 wire-up.
+    await collection.refresh();
   });
 </script>
 
