@@ -35,6 +35,8 @@ pub fn run() {
             commands::backup::export_colpkg,
             commands::backup::auto_backup,
             commands::backup::import_colpkg,
+            commands::package::import_apkg,
+            commands::package::export_deck_apkg,
         ])
         .run(tauri::generate_context!())
         .expect("error while running memorize");
