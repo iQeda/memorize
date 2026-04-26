@@ -70,16 +70,9 @@
   }
 
   // ---- Import / Export (.apkg) ----
-  let exportDeckId = $state<number | null>(null);
   let exportWithScheduling = $state(false);
   let exportWithMedia = $state(true);
   let exportWithDeckConfigs = $state(true);
-
-  $effect(() => {
-    if (exportDeckId === null && collection.decks.length > 0) {
-      exportDeckId = collection.decks[0].id;
-    }
-  });
 
   async function handleImport() {
     try {
@@ -97,20 +90,19 @@
     }
   }
 
-  async function handleExportDeck() {
-    if (exportDeckId === null) return;
-    const deck = collection.decks.find((d) => d.id === exportDeckId);
-    if (!deck) return;
+  async function handleExportAll() {
     try {
       const { save } = await import("@tauri-apps/plugin-dialog");
-      const safeName = deck.name.replace(/[^\w\d_-]+/g, "_");
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:T]/g, "")
+        .replace(/\.\d+Z$/, "");
       const picked = await save({
-        defaultPath: `${safeName}.apkg`,
+        defaultPath: `memorize-all-${stamp}.apkg`,
         filters: [{ name: "Anki package", extensions: ["apkg"] }],
       });
       if (typeof picked !== "string") return;
-      await pkg.exportDeck({
-        deckId: exportDeckId,
+      await pkg.exportAll({
         outPath: picked,
         withScheduling: exportWithScheduling,
         withMedia: exportWithMedia,
@@ -454,48 +446,36 @@
 
       <!-- Export -->
       <div class="space-y-3">
-        <div class="flex items-center gap-2.5">
-          <Package size={16} class="text-(--color-accent-500)" />
-          <div class="text-sm">
-            <p class="text-(--color-fg-default)">デッキを Apkg として Export</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
-              共有・移行・バックアップ用
-            </p>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2.5">
+            <Package size={16} class="text-(--color-accent-500)" />
+            <div class="text-sm">
+              <p class="text-(--color-fg-default)">全デッキを Apkg として Export</p>
+              <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
+                共有・移行用 (1 ファイルにまとめて出力)
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onclick={handleExportAll}
+            disabled={pkg.busy || !collection.isOpen}
+            class="flex shrink-0 items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
+          >
+            {#if pkg.busy}
+              <Loader2 size={12} class="animate-spin" />
+            {:else}
+              <Package size={12} />
+            {/if}
+            Export…
+          </button>
         </div>
 
-        <label class="block">
-          <span class="mb-1 block text-xs text-(--color-fg-muted)">対象デッキ</span>
-          <select
-            bind:value={exportDeckId}
-            disabled={pkg.busy || !collection.isOpen}
-            class="w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-1.5 text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500) disabled:opacity-50"
-          >
-            {#each collection.decks as d (d.id)}
-              <option value={d.id}>{d.name}</option>
-            {/each}
-          </select>
-        </label>
-
-        <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+        <div class="flex flex-wrap gap-x-5 gap-y-2 pl-7 text-xs">
           {@render checkbox("メディアを含める", exportWithMedia, (v) => (exportWithMedia = v))}
           {@render checkbox("スケジューリングを含める", exportWithScheduling, (v) => (exportWithScheduling = v))}
           {@render checkbox("デッキ設定を含める", exportWithDeckConfigs, (v) => (exportWithDeckConfigs = v))}
         </div>
-
-        <button
-          type="button"
-          onclick={handleExportDeck}
-          disabled={pkg.busy || !collection.isOpen || exportDeckId === null}
-          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
-        >
-          {#if pkg.busy}
-            <Loader2 size={12} class="animate-spin" />
-          {:else}
-            <Package size={12} />
-          {/if}
-          Export…
-        </button>
       </div>
 
       {#if pkg.lastExportPath}

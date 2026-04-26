@@ -51,8 +51,7 @@ pub async fn import_apkg(
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ExportDeckInput {
-    pub deck_id: i64,
+pub struct ExportAllInput {
     pub out_path: String,
     pub with_scheduling: bool,
     pub with_media: bool,
@@ -66,8 +65,8 @@ pub struct ExportReport {
 }
 
 #[tauri::command]
-pub async fn export_deck_apkg(
-    input: ExportDeckInput,
+pub async fn export_all_apkg(
+    input: ExportAllInput,
     state: State<'_, AppState>,
 ) -> AppResult<ExportReport> {
     let mut guard = state.col.lock().await;
@@ -79,8 +78,8 @@ pub async fn export_deck_apkg(
         with_media: input.with_media,
         legacy: input.legacy,
     };
-    let search = format!("did:{}", input.deck_id);
-    let count = col.export_apkg(&input.out_path, options, search.as_str(), None)?;
+    // Empty search string is parsed as SearchNode::WholeCollection by rslib.
+    let count = col.export_apkg(&input.out_path, options, "", None)?;
     Ok(ExportReport {
         note_count: count as u32,
     })

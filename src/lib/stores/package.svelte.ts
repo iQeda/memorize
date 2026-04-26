@@ -15,7 +15,6 @@ export type ImportReport = {
 export type ExportReport = { note_count: number };
 
 export type ExportInput = {
-  deckId: number;
   outPath: string;
   withScheduling: boolean;
   withMedia: boolean;
@@ -47,14 +46,13 @@ class PackageStore {
     }
   }
 
-  async exportDeck(input: ExportInput): Promise<ExportReport | null> {
+  async exportAll(input: ExportInput): Promise<ExportReport | null> {
     this.busy = true;
     this.busyReason = "Export 中…";
     this.lastError = null;
     try {
-      const r = await invoke<ExportReport>("export_deck_apkg", {
+      const r = await invoke<ExportReport>("export_all_apkg", {
         input: {
-          deck_id: input.deckId,
           out_path: input.outPath,
           with_scheduling: input.withScheduling,
           with_media: input.withMedia,
