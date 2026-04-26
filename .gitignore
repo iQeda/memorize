@@ -1,0 +1,13 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+src-tauri/target/
+src-tauri/gen/
+*.log
+.vite/
+.claude/
