@@ -162,7 +162,7 @@ pub async fn sync_now(
     let creds = load_credentials(&app)?
         .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("not logged in")))?;
     let auth = auth_from(&creds)?;
-    let _emitter = ProgressEmitter::start(app, state.progress.clone());
+    let _emitter = ProgressEmitter::start(app.clone(), state.progress.clone());
 
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
@@ -172,8 +172,24 @@ pub async fn sync_now(
     tracing::info!(
         ?out.required,
         server_message = %out.server_message,
+        new_endpoint = ?out.new_endpoint,
+        host_number = out.host_number,
         "sync done"
     );
+
+    // If the server told us about a host-specific endpoint (typical:
+    // https://sync13.ankiweb.net/), persist it so subsequent full_upload /
+    // full_download go to the right shard. Otherwise full sync hits the
+    // generic sync.ankiweb.net and gets a 303.
+    if let Some(ref endpoint) = out.new_endpoint {
+        if let Some(mut updated) = load_credentials(&app)? {
+            if updated.endpoint.as_deref() != Some(endpoint.as_str()) {
+                tracing::info!(endpoint, "saving discovered endpoint to credentials");
+                updated.endpoint = Some(endpoint.clone());
+                save_credentials(&app, &updated)?;
+            }
+        }
+    }
 
     let pending_notes = 0u32;
     let pending_cards = 0u32;
