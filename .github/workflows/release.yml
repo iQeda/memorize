@@ -114,6 +114,27 @@ jobs:
           prerelease: true
           args: --target aarch64-apple-darwin
 
+      - name: Verify bundle signature
+        # We don't sign with a real Developer ID, but cargo applies an
+        # ad-hoc signature automatically — without that, kernel exec on
+        # Apple Silicon refuses to even launch the app. If a future Tauri
+        # / cargo / rust toolchain bump silently drops the ad-hoc signing,
+        # users would suddenly get "binary cannot be opened" with no
+        # message. Catch that here.
+        run: |
+          set -euo pipefail
+          BUNDLE=src-tauri/target/release/bundle/macos/memorize.app
+          if [ ! -d "$BUNDLE" ]; then
+            echo "::error::expected app bundle not found: $BUNDLE"
+            exit 1
+          fi
+          codesign -dvvv "$BUNDLE" 2>&1 | tee /tmp/codesign.log
+          if ! grep -q "Signature=adhoc" /tmp/codesign.log; then
+            echo "::error title=signature regression::expected an ad-hoc signature on the app bundle; got something else (see codesign output)."
+            exit 1
+          fi
+          echo "::notice::ad-hoc signature OK"
+
       - name: Bump cask in iQeda/homebrew-tap
         # Only attempts the bump when a PAT secret is configured. Without
         # the secret the step prints a warning and exits 0 — useful so
