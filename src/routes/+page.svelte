@@ -126,7 +126,7 @@
         <button
           type="button"
           onclick={() => (showAddNote = true)}
-          class="shrink-0 mt-1 flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) transition-all hover:bg-(--color-accent-600) hover:shadow-(--shadow-card) active:scale-[0.97]"
+          class="shrink-0 mt-1 flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-3 py-1.5 text-xs font-medium text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
         >
           <Plus size={12} strokeWidth={2.5} />
           {t("decks.addWord")}
