@@ -233,24 +233,39 @@ pub async fn sync_now(
 
 #[tauri::command]
 pub async fn sync_full_upload(
+    endpoint_override: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    full_sync(app, state, true).await
+    full_sync(app, state, true, endpoint_override).await
 }
 
 #[tauri::command]
 pub async fn sync_full_download(
+    endpoint_override: Option<String>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    full_sync(app, state, false).await
+    full_sync(app, state, false, endpoint_override).await
 }
 
-async fn full_sync(app: AppHandle, state: State<'_, AppState>, upload: bool) -> AppResult<()> {
+async fn full_sync(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    upload: bool,
+    endpoint_override: Option<String>,
+) -> AppResult<()> {
     let creds = load_credentials(&app)?
         .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("not logged in")))?;
-    let auth = auth_from(&creds)?;
+    let mut auth = auth_from(&creds)?;
+    // If the caller knows the right shard endpoint (typical: just-learned
+    // from a normal_sync that returned FullSyncRequired), use it to avoid
+    // hitting the wrong shard on a fresh client.
+    if let Some(ep) = endpoint_override {
+        let url = reqwest::Url::parse(&ep)
+            .map_err(|e| AppError::Anyhow(anyhow::anyhow!("bad endpoint override: {e}")))?;
+        auth.endpoint = Some(url);
+    }
 
     let path = state
         .col_path

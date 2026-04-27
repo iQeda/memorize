@@ -256,9 +256,10 @@ class SyncStore {
 
   async fullUpload() {
     this.lastError = null;
+    const endpointOverride = this.lastReport?.new_endpoint ?? null;
     try {
       await this.runWithAutoBackup("ローカル → サーバーへ上書き中…", () =>
-        invoke("sync_full_upload"),
+        invoke("sync_full_upload", { endpointOverride }),
       );
       this.fullSyncRequired = null;
       this.lastMessage = "フルアップロード完了";
@@ -269,9 +270,10 @@ class SyncStore {
 
   async fullDownload() {
     this.lastError = null;
+    const endpointOverride = this.lastReport?.new_endpoint ?? null;
     try {
       await this.runWithAutoBackup("サーバー → ローカルへ上書き中…", () =>
-        invoke("sync_full_download"),
+        invoke("sync_full_download", { endpointOverride }),
       );
       this.fullSyncRequired = null;
       this.lastMessage = "フルダウンロード完了";
