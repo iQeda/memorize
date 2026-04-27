@@ -120,12 +120,15 @@ jobs:
           args: --target aarch64-apple-darwin
 
       - name: Verify bundle signature
-        # We don't sign with a real Developer ID, but cargo applies an
-        # ad-hoc signature automatically — without that, kernel exec on
-        # Apple Silicon refuses to even launch the app. If a future Tauri
-        # / cargo / rust toolchain bump silently drops the ad-hoc signing,
-        # users would suddenly get "binary cannot be opened" with no
-        # message. Catch that here.
+        # We don't sign with a real Developer ID. Tauri (with
+        # bundle.macOS.signingIdentity = "-") ad-hoc signs the assembled
+        # bundle so it satisfies its Designated Requirement structurally.
+        #
+        # Without this end-to-end signature, the app launches as
+        # "damaged" on other Macs even if quarantine is stripped — kernel
+        # exec on Apple Silicon refuses bundles whose signature claims
+        # resources that aren't covered. Catch any regression in this
+        # path before users see "damaged" dialogs.
         run: |
           set -euo pipefail
           # tauri-action runs with --target aarch64-apple-darwin, so the
@@ -143,7 +146,15 @@ jobs:
             echo "::error title=signature regression::expected an ad-hoc signature on the app bundle; got something else (see codesign output)."
             exit 1
           fi
-          echo "::notice::ad-hoc signature OK"
+          # Strict structural verification — catches the
+          # "code has no resources but signature indicates they must be
+          # present" failure mode where the binary was signed but the
+          # surrounding bundle never re-sealed.
+          if ! codesign --verify --deep --strict --verbose=2 "$BUNDLE" 2>&1 | tee /tmp/codesign-verify.log; then
+            echo "::error title=bundle integrity::codesign --verify --deep --strict failed; the app would launch as 'damaged' on user machines."
+            exit 1
+          fi
+          echo "::notice::ad-hoc signature + bundle integrity OK"
 
       - name: Mark release as Latest
         # tauri-action publishes with prerelease=true, so GitHub will not
