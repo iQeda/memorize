@@ -1,0 +1,54 @@
+diff --git a/rslib/src/sync/http_client/io_monitor.rs b/rslib/src/sync/http_client/io_monitor.rs
+index 602b672dd..d02e135d8 100644
+--- a/rslib/src/sync/http_client/io_monitor.rs
++++ b/rslib/src/sync/http_client/io_monitor.rs
+@@ -124,22 +124,33 @@ impl IoMonitor {
+                 .headers()
+                 .get(&ORIGINAL_SIZE)
+                 .and_then(|v| v.to_str().ok())
+-                .and_then(|v| v.parse::<u32>().ok())
+-                .or_bad_request("missing original size")?;
+-            let response_stream = self.wrap_stream(
+-                false,
+-                response_total,
+-                decode_zstd_body_stream_for_client(resp.bytes_stream()),
+-            );
+-            let mut reader =
+-                StreamReader::new(response_stream.map_err(|e| {
+-                    std::io::Error::new(ErrorKind::ConnectionAborted, format!("{e}"))
+-                }));
+-            let mut buf = Vec::with_capacity(response_total as usize);
+-            reader
+-                .read_to_end(&mut buf)
+-                .await
+-                .or_http_err(StatusCode::SEE_OTHER, "reading stream")?;
++                .and_then(|v| v.parse::<u32>().ok());
++            let buf = if let Some(total) = response_total {
++                let response_stream = self.wrap_stream(
++                    false,
++                    total,
++                    decode_zstd_body_stream_for_client(resp.bytes_stream()),
++                );
++                let mut reader =
++                    StreamReader::new(response_stream.map_err(|e| {
++                        std::io::Error::new(ErrorKind::ConnectionAborted, format!("{e}"))
++                    }));
++                let mut buf = Vec::with_capacity(total as usize);
++                reader
++                    .read_to_end(&mut buf)
++                    .await
++                    .or_http_err(StatusCode::SEE_OTHER, "reading stream")?;
++                buf
++            } else {
++                // memorize patch: production AnkiWeb's /upload endpoint
++                // returns a small plain-text response ("OK" or an error
++                // message) WITHOUT the anki-original-size header and
++                // WITHOUT zstd encoding. Read the body raw in that case.
++                resp.bytes()
++                    .await
++                    .or_http_err(StatusCode::SEE_OTHER, "reading raw body")?
++                    .to_vec()
++            };
+             Ok::<_, HttpError>(buf)
+         };
+         select! {
