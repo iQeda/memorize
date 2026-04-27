@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import {
-    Library,
     Search,
     Settings as SettingsIcon,
     Brain,
@@ -123,13 +122,11 @@
   }
 
   const navItems = [
-    { href: "/", label: "Decks", icon: Library },
     { href: "/browse/", label: "Browse", icon: Search },
     { href: "/settings/", label: "Settings", icon: SettingsIcon },
   ];
 
   function isActive(href: string): boolean {
-    if (href === "/") return $page.url.pathname === "/";
     return $page.url.pathname.startsWith(href);
   }
 
@@ -161,7 +158,12 @@
     use:draggable
     class="flex h-11 items-center pr-4 pl-[78px]"
   >
-    <div class="flex items-center gap-2">
+    <a
+      href="/"
+      data-sveltekit-preload-data="hover"
+      class="no-drag flex items-center gap-2 rounded-md px-1 -mx-1 py-0.5 transition-colors hover:bg-(--color-bg-overlay)"
+      aria-label="Home"
+    >
       <div
         class="grid h-6 w-6 place-items-center rounded-md bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)"
       >
@@ -170,7 +172,7 @@
       <span class="font-display text-sm font-medium tracking-tight">
         memorize
       </span>
-    </div>
+    </a>
   </div>
 
   <nav class="flex flex-col gap-0.5 px-2 pt-1">
