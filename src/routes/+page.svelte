@@ -3,7 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
-  import { t } from "$lib/i18n";
+  import { t } from "$lib/i18n/index.svelte";
 
   const selected = $derived(collection.selectedDeck);
   const totalDue = $derived(

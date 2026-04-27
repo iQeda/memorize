@@ -3,7 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
-  import { i18n, t, type Locale } from "$lib/i18n";
+  import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
   import { onMount } from "svelte";
   import {
     CheckCircle2,

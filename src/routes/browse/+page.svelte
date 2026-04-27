@@ -3,7 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { invoke } from "$lib/ipc";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
-  import { t } from "$lib/i18n";
+  import { t } from "$lib/i18n/index.svelte";
 
   type CardSummary = {
     id: number;

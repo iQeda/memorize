@@ -6,7 +6,7 @@
   import { goto } from "$app/navigation";
   import { draggable } from "$lib/actions/draggable";
   import { onMount } from "svelte";
-  import { t } from "$lib/i18n";
+  import { t } from "$lib/i18n/index.svelte";
 
   onMount(() => {
     void sync.refresh();

@@ -7,7 +7,7 @@
   import { onMount, onDestroy } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
-  import { t } from "$lib/i18n";
+  import { t } from "$lib/i18n/index.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {

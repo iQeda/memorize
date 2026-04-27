@@ -5,7 +5,7 @@
   import { onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
-  import { t } from "$lib/i18n";
+  import { t } from "$lib/i18n/index.svelte";
 
   type Props = {
     mode: "add" | "edit";

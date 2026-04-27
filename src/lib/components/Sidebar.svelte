@@ -15,7 +15,7 @@
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import { goto } from "$app/navigation";
   import { tick } from "svelte";
-  import { t } from "$lib/i18n";
+  import { t } from "$lib/i18n/index.svelte";
 
   async function selectDeck(deck: DeckSummary) {
     collection.selectedDeckId = deck.id;

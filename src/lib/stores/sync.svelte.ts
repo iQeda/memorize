@@ -1,6 +1,6 @@
 import { invoke } from "$lib/ipc";
 import { browser } from "$app/environment";
-import { t } from "$lib/i18n";
+import { t } from "$lib/i18n/index.svelte";
 
 type SyncStatus = { logged_in: boolean; username: string | null };
 
