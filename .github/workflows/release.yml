@@ -72,7 +72,7 @@ jobs:
           DATE=$(date -u +%Y%m%d-%H%M)
           SHA=$(git rev-parse --short HEAD)
           TAG="v${VERSION}-${DATE}-${SHA}"
-          TITLE="memorize v${VERSION} (main @ ${SHA}, ${DATE} UTC)"
+          TITLE="Memorize v${VERSION} (main @ ${SHA}, ${DATE} UTC)"
           {
             echo "tag=${TAG}"
             echo "title=${TITLE}"
@@ -132,10 +132,10 @@ jobs:
           # bundle lands under target/aarch64-apple-darwin/release/... not
           # target/release/... Use a glob to stay robust if the target
           # triple ever changes.
-          BUNDLE=$(find src-tauri/target -type d -path '*/release/bundle/macos/memorize.app' | head -n1)
+          BUNDLE=$(find src-tauri/target -type d -path '*/release/bundle/macos/Memorize.app' | head -n1)
           if [ -z "$BUNDLE" ] || [ ! -d "$BUNDLE" ]; then
             echo "::error::expected app bundle not found under src-tauri/target"
-            find src-tauri/target -maxdepth 5 -name 'memorize.app' || true
+            find src-tauri/target -maxdepth 5 -name '*.app' || true
             exit 1
           fi
           codesign -dvvv "$BUNDLE" 2>&1 | tee /tmp/codesign.log
@@ -173,9 +173,9 @@ jobs:
             exit 0
           fi
 
-          DMG=$(find src-tauri/target -type f -path "*/release/bundle/dmg/memorize_${PKG_VERSION}_aarch64.dmg" | head -n1)
+          DMG=$(find src-tauri/target -type f -path "*/release/bundle/dmg/Memorize_${PKG_VERSION}_aarch64.dmg" | head -n1)
           if [ -z "$DMG" ] || [ ! -f "$DMG" ]; then
-            echo "::error::expected DMG not found: memorize_${PKG_VERSION}_aarch64.dmg"
+            echo "::error::expected DMG not found: Memorize_${PKG_VERSION}_aarch64.dmg"
             find src-tauri/target -maxdepth 6 -name '*.dmg' || true
             exit 1
           fi
@@ -190,10 +190,13 @@ jobs:
           cd "$TAP_DIR"
 
           # BSD sed (-i with backup suffix) — works on macOS-latest runner.
+          # The DMG file name changed from `memorize_*` to `Memorize_*` when
+          # productName was capitalized; the [Mm] alternation lets the
+          # regex match either pre-rename or post-rename URLs in the cask.
           sed -i.bak \
             -e "s/^  version \".*\"$/  version \"${CASK_VERSION}\"/" \
             -e "s/^  sha256 \".*\"$/  sha256 \"${SHA}\"/" \
-            -e "s/memorize_[^_]*_aarch64\.dmg/memorize_${PKG_VERSION}_aarch64.dmg/" \
+            -e "s/[Mm]emorize_[^_]*_aarch64\.dmg/Memorize_${PKG_VERSION}_aarch64.dmg/" \
             Casks/memorize.rb
           rm -f Casks/memorize.rb.bak
 

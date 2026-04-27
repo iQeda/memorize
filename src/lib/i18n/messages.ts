@@ -152,10 +152,10 @@ export const messages = {
     "settings.startup": "Startup",
     "settings.startup.autoLabel": "Launch at login",
     "settings.startup.autoBody":
-      "Open memorize automatically when you sign in to your computer.",
+      "Open Memorize automatically when you sign in to your computer.",
     "updater.askTitle": "Update available",
     "updater.askBody":
-      "memorize {version} is available (you have {current}). Install now and restart?",
+      "Memorize {version} is available (you have {current}). Install now and restart?",
     "updater.installNow": "Install & restart",
     "updater.later": "Later",
     "updater.title": "Updates",
@@ -402,10 +402,10 @@ export const messages = {
     "settings.startup": "起動",
     "settings.startup.autoLabel": "ログイン時に自動起動",
     "settings.startup.autoBody":
-      "サインイン時に memorize を自動的に起動します。",
+      "サインイン時に Memorize を自動的に起動します。",
     "updater.askTitle": "アップデートが利用可能",
     "updater.askBody":
-      "memorize {version} が利用可能です（現在 {current}）。今すぐインストールして再起動しますか？",
+      "Memorize {version} が利用可能です（現在 {current}）。今すぐインストールして再起動しますか？",
     "updater.installNow": "更新して再起動",
     "updater.later": "あとで",
     "updater.title": "アップデート",

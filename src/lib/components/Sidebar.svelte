@@ -240,7 +240,7 @@
         <Brain size={14} strokeWidth={2.5} />
       </div>
       <span class="font-display text-sm font-medium tracking-tight">
-        memorize
+        Memorize
       </span>
     </a>
   </div>
