@@ -18,7 +18,8 @@ Anki 互換の Rust 製デスクトップアプリ。最終形は英単語学習
 | 2 | UI ブラッシュアップ (4 画面、デザイントークン、アニメ) | ✅ 完了 |
 | 3 | AnkiWeb Sync 統合 (login / normal_sync / full_upload-download / 自動 backup) | ✅ MVP 完了 |
 | 4 | `.apkg` Import / Export, `.colpkg` Restore | ✅ MVP 完了 |
-| 5 | 英単語特化機能 (発音・語源・専用 note type 等) | ⏳ 未着手 |
+| 4.5 | Decks 画面の Stats パネル全実装 (Today / Future Due / Calendar / Reviews / Card Counts / Intervals / Card Ease / Retention / Hourly / Answer Buttons / Added) | ✅ 完了 |
+| 5 | 英単語特化機能 | ⏳ 着手中 (Nani lookup ✅) |
 
 ## セットアップ
 
@@ -62,6 +63,18 @@ pnpm exec svelte-check
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
+## 本番ビルド (DMG)
+
+```sh
+pnpm tauri build
+```
+
+- 出力: `src-tauri/target/release/bundle/dmg/memorize_<version>_<arch>.dmg`
+  および `src-tauri/target/release/bundle/macos/memorize.app`
+- `tauri.conf.json` の `bundle.active` は `true`、`bundle.targets` は `["app", "dmg"]`
+- 初回ビルドは Anki rslib の release 最適化込みで 5–10 分程度かかる
+- 署名・公証 (codesign / notarize) は未設定。配布時は別途設定が必要
+
 ## アーキテクチャ
 
 ```
@@ -87,8 +100,16 @@ memorize/
 
 ### vendor/anki へのローカルパッチ
 
-`rslib/src/lib.rs` の `mod progress;` を `pub mod progress;` に変える 1 行パッチを当てている (`patches/0001-expose-progress-module.patch`)。
-これは Tauri command 側で `Arc<Mutex<ProgressState>>` を構築するため必要。
+`patches/` 配下の差分を submodule の working tree に当てている (idempotent な
+`./scripts/apply-vendor-patches.sh` で適用):
+
+| パッチ | 内容 | 必要な理由 |
+|---|---|---|
+| `0001-expose-progress-module.patch` | `mod progress;` → `pub mod progress;` | Tauri command で `Arc<Mutex<ProgressState>>` を構築 |
+| `0002-tolerate-missing-original-size-header.patch` | `io_monitor.rs` で zstd ヘッダ無しの応答を許容 | AnkiWeb `/upload` が plain `OK` を返す挙動への対処 |
+| `0003-expose-graph-data-for-search.patch` | `Collection::graph_data_for_search` を pub に | Decks 画面の Stats パネルで内部 graph data API を利用 |
+
+submodule 更新後は必ず `./scripts/apply-vendor-patches.sh` を再実行する。
 将来は upstream に PR するか fork に切り替える。
 
 ### `[workspace]` を書かない理由
@@ -109,6 +130,35 @@ Phase 0 から維持。
 カードの HTML/CSS は Anki ノートテンプレ由来でアプリ全体を汚染しうる。
 `src/lib/components/CardFrame.svelte` は `<iframe srcdoc>` で隔離レンダリング、
 ベース CSS と user CSS を内部で結合してから注入する。
+
+加えて iframe 内部で短い JS を走らせて、CJK Unicode 範囲のテキストランを
+`<span lang="ja">…</span>` で wrap している。これにより CSS `[lang="ja"]`
+セレクタで日本語だけ regular weight に固定できる (英単語は `font-weight: 700`)。
+
+> ⚠️ Svelte tokenizer 上の制約: srcdoc を組み立てる JS テンプレートリテラルに
+> 文字列 `<script>` / `</script>` を直接書くと、Svelte の HTML パーサが
+> 外側の `<script lang="ts">` ブロックを早期クローズしてしまう (HMR では
+> 通るが `pnpm build` の SSR で fail する)。タグは `"<" + "script>"` 形式で
+> 連結すること。
+
+### Nani lookup (Phase 5)
+
+解答画面の "Nani" ボタン (デフォルトショートカット `n`) で:
+
+1. front (英単語) を抽出してオフスクリーン `<input>` に詰めて全選択
+2. `osascript` 経由で Cmd+J を OS に送出
+3. Nani の global hotkey (Cmd+J 想定) が macOS Accessibility API で
+   memorize の focused input から選択テキストを読み取る
+
+ショートカットキーは Settings > Keyboard shortcuts で再バインド可能。
+(`shortcuts.svelte.ts` の `Action = Rating | "nani"`)
+
+### Deck stats のカウント方式
+
+`commands/decks.rs::deck_stats` は `c.queue` 値による排他カウントを直接 SQL で行う。
+Anki search 構文 (`is:learn`, `is:suspended` 等) は `c.type` ベースと `c.queue`
+ベースが混在しており排他にならないため使わない (suspended-while-learning な
+カードが両方にカウントされる)。
 
 ## AnkiWeb Sync の安全な使い方
 
