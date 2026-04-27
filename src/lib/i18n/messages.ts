@@ -148,6 +148,23 @@ export const messages = {
     "settings.shortcut.nani": "Nani lookup",
     "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
+    "settings.startup": "Startup",
+    "settings.startup.autoLabel": "Launch at login",
+    "settings.startup.autoBody":
+      "Open memorize automatically when you sign in to your computer.",
+    "updater.askTitle": "Update available",
+    "updater.askBody":
+      "memorize {version} is available (you have {current}). Install now and restart?",
+    "updater.installNow": "Install & restart",
+    "updater.later": "Later",
+    "updater.title": "Updates",
+    "updater.currentVersion": "Current version: {version}",
+    "updater.check": "Check for updates",
+    "updater.checking": "Checking…",
+    "updater.upToDate": "You're on the latest version.",
+    "updater.available": "Version {version} is available.",
+    "updater.downloading": "Downloading… {percent}%",
+    "updater.installing": "Installing…",
 
     // Backup
     "backup.title": "Backup",
@@ -372,6 +389,23 @@ export const messages = {
     "settings.shortcut.nani": "Nani 検索",
     "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
+    "settings.startup": "起動",
+    "settings.startup.autoLabel": "ログイン時に自動起動",
+    "settings.startup.autoBody":
+      "サインイン時に memorize を自動的に起動します。",
+    "updater.askTitle": "アップデートが利用可能",
+    "updater.askBody":
+      "memorize {version} が利用可能です（現在 {current}）。今すぐインストールして再起動しますか？",
+    "updater.installNow": "更新して再起動",
+    "updater.later": "あとで",
+    "updater.title": "アップデート",
+    "updater.currentVersion": "現在のバージョン: {version}",
+    "updater.check": "アップデートを確認",
+    "updater.checking": "確認中…",
+    "updater.upToDate": "最新版を利用しています。",
+    "updater.available": "バージョン {version} が利用可能です。",
+    "updater.downloading": "ダウンロード中… {percent}%",
+    "updater.installing": "インストール中…",
 
     // Backup
     "backup.title": "Backup",

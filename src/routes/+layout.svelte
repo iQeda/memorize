@@ -5,6 +5,7 @@
   import PageTransition from "$lib/components/PageTransition.svelte";
   import { theme } from "$lib/stores/theme.svelte";
   import { collection } from "$lib/stores/collection.svelte";
+  import { checkForAppUpdates } from "$lib/updater";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
 
@@ -43,6 +44,7 @@
 
   onMount(async () => {
     await collection.refresh();
+    void checkForAppUpdates();
   });
 </script>
 

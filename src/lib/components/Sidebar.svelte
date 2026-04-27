@@ -132,10 +132,20 @@
     return name.split("::").at(-1) ?? name;
   }
 
-  function deckBadge(d: DeckSummary): { count: number; tone: "accent" | "warning" | "success" } | null {
-    if (d.new_count > 0) return { count: d.new_count, tone: "accent" };
-    if (d.learn_count > 0) return { count: d.learn_count, tone: "warning" };
-    if (d.review_count > 0) return { count: d.review_count, tone: "success" };
+  type BadgeTone = "accent" | "warning" | "success";
+
+  function deckBadges(d: DeckSummary): { count: number; tone: BadgeTone }[] {
+    const out: { count: number; tone: BadgeTone }[] = [];
+    if (d.new_count > 0) out.push({ count: d.new_count, tone: "accent" });
+    if (d.learn_count > 0) out.push({ count: d.learn_count, tone: "warning" });
+    if (d.review_count > 0) out.push({ count: d.review_count, tone: "success" });
+    return out;
+  }
+
+  function deckTone(d: DeckSummary): BadgeTone | null {
+    if (d.new_count > 0) return "accent";
+    if (d.learn_count > 0) return "warning";
+    if (d.review_count > 0) return "success";
     return null;
   }
 
@@ -147,10 +157,72 @@
     success:
       "bg-(--color-success)/12 text-(--color-success) ring-(--color-success)/20",
   } as const;
+
+  // ---- Resizable width ----
+  const SIDEBAR_WIDTH_KEY = "sidebar.width";
+  const SIDEBAR_MIN = 180;
+  const SIDEBAR_MAX = 480;
+  const SIDEBAR_DEFAULT = 240;
+
+  function clampWidth(n: number): number {
+    return Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(n)));
+  }
+
+  function readInitialWidth(): number {
+    if (typeof window === "undefined") return SIDEBAR_DEFAULT;
+    const raw = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    const n = raw == null ? NaN : Number(raw);
+    return Number.isFinite(n) ? clampWidth(n) : SIDEBAR_DEFAULT;
+  }
+
+  let width = $state(readInitialWidth());
+  let resizing = $state(false);
+
+  $effect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(width));
+    }
+  });
+
+  function startResize(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    resizing = true;
+    const startX = e.clientX;
+    const startWidth = width;
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+
+    const prevCursor = document.body.style.cursor;
+    const prevSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (ev: PointerEvent) => {
+      width = clampWidth(startWidth + (ev.clientX - startX));
+    };
+    const onUp = (ev: PointerEvent) => {
+      resizing = false;
+      target.releasePointerCapture?.(ev.pointerId);
+      target.removeEventListener("pointermove", onMove);
+      target.removeEventListener("pointerup", onUp);
+      target.removeEventListener("pointercancel", onUp);
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevSelect;
+    };
+    target.addEventListener("pointermove", onMove);
+    target.addEventListener("pointerup", onUp);
+    target.addEventListener("pointercancel", onUp);
+  }
+
+  function resetWidth() {
+    width = SIDEBAR_DEFAULT;
+  }
 </script>
 
 <aside
-  class="flex h-full w-60 shrink-0 flex-col border-r border-(--color-border-default) bg-(--color-bg-sunken)"
+  class="relative flex h-full shrink-0 flex-col border-r border-(--color-border-default) bg-(--color-bg-sunken)"
+  style="width: {width}px;"
 >
   <div
     use:draggable
@@ -248,7 +320,8 @@
       {/if}
       {#each collection.decks as deck (deck.id)}
         {@const active = collection.selectedDeckId === deck.id}
-        {@const badge = deckBadge(deck)}
+        {@const badges = deckBadges(deck)}
+        {@const tone = deckTone(deck)}
         {#if renamingId === deck.id}
           <div
             class="flex items-center gap-1 py-0.5 pr-2"
@@ -276,15 +349,25 @@
             <span class="flex min-w-0 items-center gap-2">
               <span
                 class="h-1.5 w-1.5 shrink-0 rounded-full transition-colors
-                  {badge ? (badge.tone === 'accent' ? 'bg-(--color-accent-500)' : badge.tone === 'warning' ? 'bg-(--color-warning)' : 'bg-(--color-success)') : 'bg-(--color-border-strong) group-hover:bg-(--color-fg-subtle)'}"
+                  {tone === 'accent'
+                  ? 'bg-(--color-accent-500)'
+                  : tone === 'warning'
+                    ? 'bg-(--color-warning)'
+                    : tone === 'success'
+                      ? 'bg-(--color-success)'
+                      : 'bg-(--color-border-strong) group-hover:bg-(--color-fg-subtle)'}"
               ></span>
               <span class="truncate">{deckShortName(deck.name)}</span>
             </span>
-            {#if badge}
-              <span
-                class="number-tabular shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset {badgeTone[badge.tone]}"
-              >
-                {badge.count}
+            {#if badges.length > 0}
+              <span class="flex shrink-0 items-center gap-1">
+                {#each badges as b (b.tone)}
+                  <span
+                    class="number-tabular rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset {badgeTone[b.tone]}"
+                  >
+                    {b.count}
+                  </span>
+                {/each}
               </span>
             {/if}
           </button>
@@ -294,6 +377,21 @@
   {:else}
     <div class="flex-1"></div>
   {/if}
+
+  <div
+    role="separator"
+    aria-orientation="vertical"
+    aria-label="Resize sidebar"
+    aria-valuenow={width}
+    aria-valuemin={SIDEBAR_MIN}
+    aria-valuemax={SIDEBAR_MAX}
+    onpointerdown={startResize}
+    ondblclick={resetWidth}
+    class="absolute top-0 -right-1 z-10 h-full w-2 cursor-col-resize select-none
+      after:pointer-events-none after:absolute after:top-0 after:right-1 after:h-full after:w-px after:transition-colors
+      hover:after:bg-(--color-accent-500)/40
+      {resizing ? 'after:bg-(--color-accent-500)' : ''}"
+  ></div>
 </aside>
 
 {#if menu}
