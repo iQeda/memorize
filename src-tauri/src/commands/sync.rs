@@ -257,13 +257,17 @@ async fn full_sync(app: AppHandle, state: State<'_, AppState>, upload: bool) -> 
     } else {
         col.full_download(auth, state.http.clone()).await
     };
-    result?;
 
-    // Re-open the collection at the same path.
-    let col = CollectionBuilder::new(&path)
+    // Always try to re-open before returning, even if full_upload errored,
+    // so the app doesn't end up in a "collection not open" state.
+    match CollectionBuilder::new(&path)
         .set_shared_progress_state(state.progress.clone())
-        .build()?;
-    *state.col.lock().await = Some(col);
+        .build()
+    {
+        Ok(reopened) => *state.col.lock().await = Some(reopened),
+        Err(e) => tracing::error!(?e, "failed to re-open after full sync"),
+    }
 
+    result?;
     Ok(())
 }
