@@ -33,7 +33,16 @@ impl Default for AppState {
         Self {
             col: Mutex::new(None),
             col_path: Mutex::new(None),
-            http: reqwest::Client::new(),
+            // rslib's sync code expects to see 30x redirects (it has its own
+            // map_redirect_to_error / meta_with_redirect logic to update the
+            // endpoint to the right shard). reqwest's default policy auto-
+            // follows redirects which hides this from rslib and causes
+            // /sync/upload to fail with body "303" because the request
+            // ends up hitting the wrong (generic) shard. Disable here.
+            http: reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .expect("build reqwest client"),
             last_queued: Mutex::new(None),
             progress: Arc::new(StdMutex::new(ProgressState::default())),
         }
