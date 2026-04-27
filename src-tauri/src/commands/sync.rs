@@ -132,6 +132,10 @@ pub struct SyncReport {
     pub upload_ok: bool,
     pub download_ok: bool,
     pub server_message: String,
+    pub host_number: u32,
+    pub new_endpoint: Option<String>,
+    pub local_pending_notes: u32,
+    pub local_pending_cards: u32,
 }
 
 fn auth_from(creds: &StoredCredentials) -> AppResult<SyncAuth> {
@@ -162,7 +166,17 @@ pub async fn sync_now(
 
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+
+    tracing::info!("starting normal_sync");
     let out = col.normal_sync(auth, state.http.clone()).await?;
+    tracing::info!(
+        ?out.required,
+        server_message = %out.server_message,
+        "sync done"
+    );
+
+    let pending_notes = 0u32;
+    let pending_cards = 0u32;
 
     Ok(match out.required {
         SyncActionRequired::NoChanges => SyncReport {
@@ -170,12 +184,20 @@ pub async fn sync_now(
             upload_ok: false,
             download_ok: false,
             server_message: out.server_message,
+            host_number: out.host_number,
+            new_endpoint: out.new_endpoint,
+            local_pending_notes: pending_notes,
+            local_pending_cards: pending_cards,
         },
         SyncActionRequired::NormalSyncRequired => SyncReport {
             kind: "normal_done",
             upload_ok: false,
             download_ok: false,
             server_message: out.server_message,
+            host_number: out.host_number,
+            new_endpoint: out.new_endpoint,
+            local_pending_notes: pending_notes,
+            local_pending_cards: pending_cards,
         },
         SyncActionRequired::FullSyncRequired {
             upload_ok,
@@ -185,6 +207,10 @@ pub async fn sync_now(
             upload_ok,
             download_ok,
             server_message: out.server_message,
+            host_number: out.host_number,
+            new_endpoint: out.new_endpoint,
+            local_pending_notes: pending_notes,
+            local_pending_cards: pending_cards,
         },
     })
 }

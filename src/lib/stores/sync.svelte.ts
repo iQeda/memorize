@@ -8,6 +8,10 @@ type SyncReport = {
   upload_ok: boolean;
   download_ok: boolean;
   server_message: string;
+  host_number: number;
+  new_endpoint: string | null;
+  local_pending_notes: number;
+  local_pending_cards: number;
 };
 
 type AutoBackupResult = { path: string };
@@ -73,6 +77,7 @@ class SyncStore {
     download_ok: boolean;
   } | null>(null);
   lastBackupPath = $state<string | null>(null);
+  lastReport = $state<SyncReport | null>(null);
   autoBackupBeforeSync = $state(true);
 
   constructor() {
@@ -209,19 +214,24 @@ class SyncStore {
       const r = await this.runWithAutoBackup("同期中…", () =>
         invoke<SyncReport>("sync_now"),
       );
+      this.lastReport = r;
+      const pendingHint =
+        r.local_pending_notes > 0 || r.local_pending_cards > 0
+          ? ` / 未同期 ${r.local_pending_notes} 単語 + ${r.local_pending_cards} カード`
+          : "";
       switch (r.kind) {
         case "no_changes":
-          this.lastMessage = "変更なし";
+          this.lastMessage = `変更なし${pendingHint}`;
           break;
         case "normal_done":
-          this.lastMessage = "同期完了";
+          this.lastMessage = `同期完了${pendingHint}`;
           break;
         case "full_required":
           this.fullSyncRequired = {
             upload_ok: r.upload_ok,
             download_ok: r.download_ok,
           };
-          this.lastMessage = "フル同期が必要です";
+          this.lastMessage = `フル同期が必要です${pendingHint}`;
           break;
       }
       if (r.server_message) this.lastMessage += ` — ${r.server_message}`;
