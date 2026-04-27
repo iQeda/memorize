@@ -90,6 +90,31 @@ class CollectionStore {
     }
   }
 
+  async renameDeck(deckId: number, newName: string): Promise<boolean> {
+    try {
+      await invoke("rename_deck", { deckId, newName });
+      await this.refreshDecks();
+      return true;
+    } catch (e) {
+      this.error = String(e);
+      return false;
+    }
+  }
+
+  async deleteDeck(deckId: number): Promise<boolean> {
+    try {
+      await invoke("delete_deck", { deckId });
+      if (this.selectedDeckId === deckId) {
+        this.selectedDeckId = null;
+      }
+      await this.refreshDecks();
+      return true;
+    } catch (e) {
+      this.error = String(e);
+      return false;
+    }
+  }
+
   get selectedDeck(): DeckSummary | null {
     return this.decks.find((d) => d.id === this.selectedDeckId) ?? null;
   }

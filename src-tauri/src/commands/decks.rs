@@ -40,6 +40,33 @@ pub async fn create_deck(
     Ok(deck.id.0)
 }
 
+#[tauri::command]
+pub async fn rename_deck(
+    deck_id: i64,
+    new_name: String,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let trimmed = new_name.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Anyhow(anyhow::anyhow!("deck name is empty")));
+    }
+    let mut guard = state.col.lock().await;
+    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    col.rename_deck(anki::prelude::DeckId(deck_id), trimmed)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_deck(
+    deck_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<usize> {
+    let mut guard = state.col.lock().await;
+    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    let out = col.remove_decks_and_child_decks(&[anki::prelude::DeckId(deck_id)])?;
+    Ok(out.output)
+}
+
 fn walk(node: &anki_proto::decks::DeckTreeNode, level: u32, out: &mut Vec<DeckSummary>) {
     if node.deck_id != 0 {
         out.push(DeckSummary {

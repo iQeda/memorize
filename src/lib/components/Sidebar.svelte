@@ -8,9 +8,12 @@
     Plus,
     Check,
     X,
+    Pencil,
+    Trash2,
   } from "lucide-svelte";
   import { collection, type DeckSummary } from "$lib/stores/collection.svelte";
   import { draggable } from "$lib/actions/draggable";
+  import ContextMenu from "$lib/components/ContextMenu.svelte";
   import { tick } from "svelte";
 
   let creating = $state(false);
@@ -49,6 +52,66 @@
       e.preventDefault();
       cancelCreate();
     }
+  }
+
+  // ---- Context menu / rename / delete ----
+  let menu = $state<{ x: number; y: number; deck: DeckSummary } | null>(null);
+  let renamingId = $state<number | null>(null);
+  let renameValue = $state("");
+  let renameInputEl = $state<HTMLInputElement | null>(null);
+
+  function openMenu(e: MouseEvent, deck: DeckSummary) {
+    e.preventDefault();
+    menu = { x: e.clientX, y: e.clientY, deck };
+  }
+
+  async function startRename(deck: DeckSummary) {
+    menu = null;
+    renamingId = deck.id;
+    renameValue = deck.name;
+    await tick();
+    renameInputEl?.focus();
+    renameInputEl?.select();
+  }
+
+  async function submitRename() {
+    if (renamingId === null) return;
+    const id = renamingId;
+    const name = renameValue.trim();
+    renamingId = null;
+    if (!name) return;
+    await collection.renameDeck(id, name);
+  }
+
+  function cancelRename() {
+    renamingId = null;
+    renameValue = "";
+  }
+
+  function onRenameKey(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void submitRename();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelRename();
+    }
+  }
+
+  async function deleteDeck(deck: DeckSummary) {
+    menu = null;
+    const { confirm } = await import("@tauri-apps/plugin-dialog");
+    const ok = await confirm(
+      `デッキ「${deck.name}」とその子デッキを削除します。\n含まれるすべてのカードと単語データも削除されます。\n\nこの操作は取り消せません。続行しますか？`,
+      {
+        title: "デッキを削除",
+        kind: "warning",
+        okLabel: "削除",
+        cancelLabel: "キャンセル",
+      },
+    );
+    if (!ok) return;
+    await collection.deleteDeck(deck.id);
   }
 
   const navItems = [
@@ -178,33 +241,71 @@
       {#each collection.decks as deck (deck.id)}
         {@const active = collection.selectedDeckId === deck.id}
         {@const badge = deckBadge(deck)}
-        <button
-          type="button"
-          onclick={() => (collection.selectedDeckId = deck.id)}
-          class="group flex w-full items-center justify-between gap-2 rounded-md py-1 pr-2 text-left text-sm transition-colors
-            {active
-            ? 'bg-(--color-bg-elevated) text-(--color-fg-default) shadow-(--shadow-subtle)'
-            : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
-          style="padding-left: {0.625 + deck.level * 0.75}rem;"
-        >
-          <span class="flex min-w-0 items-center gap-2">
-            <span
-              class="h-1.5 w-1.5 shrink-0 rounded-full transition-colors
-                {badge ? (badge.tone === 'accent' ? 'bg-(--color-accent-500)' : badge.tone === 'warning' ? 'bg-(--color-warning)' : 'bg-(--color-success)') : 'bg-(--color-border-strong) group-hover:bg-(--color-fg-subtle)'}"
-            ></span>
-            <span class="truncate">{deckShortName(deck.name)}</span>
-          </span>
-          {#if badge}
-            <span
-              class="number-tabular shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset {badgeTone[badge.tone]}"
-            >
-              {badge.count}
+        {#if renamingId === deck.id}
+          <div
+            class="flex items-center gap-1 py-0.5 pr-2"
+            style="padding-left: {0.625 + deck.level * 0.75}rem;"
+          >
+            <input
+              bind:this={renameInputEl}
+              bind:value={renameValue}
+              onkeydown={onRenameKey}
+              onblur={submitRename}
+              class="min-w-0 flex-1 rounded-(--radius-sm) border border-(--color-accent-500) bg-(--color-bg-elevated) px-1.5 py-0.5 text-sm outline-none"
+            />
+          </div>
+        {:else}
+          <button
+            type="button"
+            onclick={() => (collection.selectedDeckId = deck.id)}
+            oncontextmenu={(e) => openMenu(e, deck)}
+            class="group flex w-full items-center justify-between gap-2 rounded-md py-1 pr-2 text-left text-sm transition-colors
+              {active
+              ? 'bg-(--color-bg-elevated) text-(--color-fg-default) shadow-(--shadow-subtle)'
+              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+            style="padding-left: {0.625 + deck.level * 0.75}rem;"
+          >
+            <span class="flex min-w-0 items-center gap-2">
+              <span
+                class="h-1.5 w-1.5 shrink-0 rounded-full transition-colors
+                  {badge ? (badge.tone === 'accent' ? 'bg-(--color-accent-500)' : badge.tone === 'warning' ? 'bg-(--color-warning)' : 'bg-(--color-success)') : 'bg-(--color-border-strong) group-hover:bg-(--color-fg-subtle)'}"
+              ></span>
+              <span class="truncate">{deckShortName(deck.name)}</span>
             </span>
-          {/if}
-        </button>
+            {#if badge}
+              <span
+                class="number-tabular shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset {badgeTone[badge.tone]}"
+              >
+                {badge.count}
+              </span>
+            {/if}
+          </button>
+        {/if}
       {/each}
     </div>
   {:else}
     <div class="flex-1"></div>
   {/if}
 </aside>
+
+{#if menu}
+  {@const m = menu}
+  <ContextMenu x={m.x} y={m.y} onClose={() => (menu = null)}>
+    <button
+      type="button"
+      onclick={() => startRename(m.deck)}
+      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--color-fg-default) hover:bg-(--color-bg-overlay)"
+    >
+      <Pencil size={12} strokeWidth={2} />
+      名前を変更
+    </button>
+    <button
+      type="button"
+      onclick={() => deleteDeck(m.deck)}
+      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--color-danger) hover:bg-(--color-danger)/10"
+    >
+      <Trash2 size={12} strokeWidth={2} />
+      削除…
+    </button>
+  </ContextMenu>
+{/if}
