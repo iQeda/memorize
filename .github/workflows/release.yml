@@ -93,5 +93,21 @@ jobs:
             right-click → Open → Open to bypass Gatekeeper.
 
             See [README](https://github.com/${{ github.repository }}#readme) for setup.
+
+            ---
+
+            ### Source code (AGPL-3.0-or-later §6 corresponding source)
+
+            This binary is built from
+            <https://github.com/${{ github.repository }}/tree/${{ github.sha }}>.
+            memorize is licensed under
+            [AGPL-3.0-or-later](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/LICENSE);
+            it bundles a modified copy of [`rslib`](https://github.com/ankitects/anki/tree/main/rslib)
+            from Ankitects Pty Ltd. Local modifications are documented in
+            [`patches/`](https://github.com/${{ github.repository }}/tree/${{ github.sha }}/patches)
+            and [`NOTICE`](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/NOTICE).
+
+            memorize is an unofficial third-party client; it is not affiliated
+            with, endorsed by, or sponsored by Ankitects Pty Ltd.
           prerelease: true
           args: --target aarch64-apple-darwin

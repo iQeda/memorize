@@ -9,6 +9,11 @@ Anki 互換の Rust 製デスクトップアプリ。最終形は英単語学習
 > **互換性方針**: AnkiWeb の認証・同期プロトコル、`.apkg` / `.colpkg` の Import/Export
 > はすべて `rslib` の公開 API 経由。独自実装はしない。
 
+> **Disclaimer**: memorize is an unofficial, third-party client. It is not
+> affiliated with, endorsed by, or sponsored by Ankitects Pty Ltd. "Anki" and
+> "AnkiWeb" are trademarks of Ankitects Pty Ltd; their use here is solely for
+> nominative description of compatibility, not as a product designation.
+
 ## ステータス
 
 | Phase | 内容 | 状態 |
@@ -168,6 +173,24 @@ Anki search 構文 (`is:learn`, `is:suspended` 等) は `c.type` ベースと `c
 バグで壊れたローカルコレクションを upload すれば、サーバー側も壊れます。
 AnkiWeb のサーバー側バックアップは Anki 公式に問い合わせないと復元できません。
 
+### third-party クライアントである旨の注意
+
+memorize は Ankitects の公式クライアントではありません。Anki 公式ドキュメント
+[Third-party tools and apps](https://docs.ankiweb.net/third-party.html) は
+third-party クライアントについて以下の通り述べています:
+
+> No testing is done against them, and they tend to take time to catch up when
+> the sync protocol changes, so they are not recommended.
+
+これは memorize にも当てはまります:
+
+- **Sync protocol 変更リスク**: AnkiWeb 側のプロトコルが変わると memorize は
+  突然壊れる可能性があります。修正は `vendor/anki` の追従と patch 更新が必要
+- **公式サポート対象外**: memorize 経由でデータ消失が起きても Ankitects の
+  サポートは受けられません
+- **将来的な選択肢**: 長期的には [Anki 公式の self-hosted sync server](https://docs.ankiweb.net/sync-server.html)
+  を立てて、memorize / 公式 Anki どちらもそこに繋ぐ方が安全です
+
 ### 推奨手順
 
 1. **事前ダウンロード**: https://ankiweb.net/decks/ から `.colpkg` をダウンロードして手元に保存
@@ -212,5 +235,18 @@ security delete-generic-password -s dev.iqeda.memorize -a ankiweb-credentials
 
 ## ライセンス
 
-`vendor/anki` 配下は AGPL-3.0-or-later (Anki 本体)。
-memorize 自体のライセンスは未定 (要検討)。
+memorize は **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**
+でライセンスされています。全文は [`LICENSE`](./LICENSE)、サードパーティ著作権の
+帰属は [`NOTICE`](./NOTICE) を参照してください。
+
+This project incorporates `rslib` from
+[ankitects/anki](https://github.com/ankitects/anki) (Copyright Ankitects Pty Ltd
+and Alex Fraser), which is also licensed under AGPL-3.0-or-later. ローカル改変
+は `patches/` 以下に保管し、各 patch の冒頭で AGPL §5(a) の改変表記を行って
+います。
+
+### AGPL §6 (バイナリ配布における対応するソース)
+
+GitHub Releases で配布する DMG にはアプリ本体のみを同梱しています。対応する
+ソースコードは本リポジトリ (https://github.com/iQeda/memorize) の同一バージョン
+タグから取得できます。Release notes に直接リンクを記載しています。
