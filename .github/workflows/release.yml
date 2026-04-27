@@ -128,9 +128,14 @@ jobs:
         # message. Catch that here.
         run: |
           set -euo pipefail
-          BUNDLE=src-tauri/target/release/bundle/macos/memorize.app
-          if [ ! -d "$BUNDLE" ]; then
-            echo "::error::expected app bundle not found: $BUNDLE"
+          # tauri-action runs with --target aarch64-apple-darwin, so the
+          # bundle lands under target/aarch64-apple-darwin/release/... not
+          # target/release/... Use a glob to stay robust if the target
+          # triple ever changes.
+          BUNDLE=$(find src-tauri/target -type d -path '*/release/bundle/macos/memorize.app' | head -n1)
+          if [ -z "$BUNDLE" ] || [ ! -d "$BUNDLE" ]; then
+            echo "::error::expected app bundle not found under src-tauri/target"
+            find src-tauri/target -maxdepth 5 -name 'memorize.app' || true
             exit 1
           fi
           codesign -dvvv "$BUNDLE" 2>&1 | tee /tmp/codesign.log
@@ -156,10 +161,10 @@ jobs:
             exit 0
           fi
 
-          DMG="src-tauri/target/release/bundle/dmg/memorize_${PKG_VERSION}_aarch64.dmg"
-          if [ ! -f "$DMG" ]; then
-            echo "::error::expected DMG not found: $DMG"
-            ls -la src-tauri/target/release/bundle/dmg/ || true
+          DMG=$(find src-tauri/target -type f -path "*/release/bundle/dmg/memorize_${PKG_VERSION}_aarch64.dmg" | head -n1)
+          if [ -z "$DMG" ] || [ ! -f "$DMG" ]; then
+            echo "::error::expected DMG not found: memorize_${PKG_VERSION}_aarch64.dmg"
+            find src-tauri/target -maxdepth 6 -name '*.dmg' || true
             exit 1
           fi
           SHA=$(shasum -a 256 "$DMG" | awk '{print $1}')
