@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout (with submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Apply local patches against vendor/anki
+        run: ./scripts/apply-vendor-patches.sh
+
+      - name: Install protoc
+        run: brew install protobuf
+
+      - name: Read pinned Rust toolchain
+        id: rust
+        run: |
+          # vendor/anki/rust-toolchain.toml pins the version we must use.
+          VERSION=$(awk -F'"' '/channel/ {print $2}' vendor/anki/rust-toolchain.toml)
+          echo "version=${VERSION:-stable}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.rust.outputs.version }}
+          targets: aarch64-apple-darwin
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri
+            vendor/anki
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compute release tag and title
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          DATE=$(date -u +%Y%m%d-%H%M)
+          SHA=$(git rev-parse --short HEAD)
+          TAG="v${VERSION}-${DATE}-${SHA}"
+          TITLE="memorize v${VERSION} (main @ ${SHA}, ${DATE} UTC)"
+          {
+            echo "tag=${TAG}"
+            echo "title=${TITLE}"
+            echo "version=${VERSION}"
+            echo "sha=${SHA}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build app and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ steps.meta.outputs.tag }}
+          releaseName: ${{ steps.meta.outputs.title }}
+          releaseBody: |
+            Automated build from `main` @ ${{ github.sha }}.
+
+            **Apple Silicon (aarch64) only.** Unsigned — first launch requires
+            right-click → Open → Open to bypass Gatekeeper.
+
+            See [README](https://github.com/${{ github.repository }}#readme) for setup.
+          prerelease: true
+          args: --target aarch64-apple-darwin
