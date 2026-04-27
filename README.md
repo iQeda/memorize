@@ -26,7 +26,27 @@ Anki 互換の Rust 製デスクトップアプリ。最終形は英単語学習
 | 4.5 | Decks 画面の Stats パネル全実装 (Today / Future Due / Calendar / Reviews / Card Counts / Intervals / Card Ease / Retention / Hourly / Answer Buttons / Added) | ✅ 完了 |
 | 5 | 英単語特化機能 | ⏳ 着手中 (Nani lookup ✅) |
 
-## セットアップ
+## インストール
+
+### Homebrew (Apple Silicon)
+
+```sh
+brew tap iQeda/tap
+brew install --cask memorize
+```
+
+cask は [iQeda/homebrew-tap](https://github.com/iQeda/homebrew-tap) で管理。
+Apple Silicon (arm64) のみ。Intel Mac は非対応。
+
+### 直接 DMG をダウンロード
+
+[Releases](https://github.com/iQeda/memorize/releases) から
+`memorize_<version>_aarch64.dmg` をダウンロード → マウント →
+`memorize.app` を `/Applications` にドラッグ。未署名なので初回起動は
+**右クリック → 開く → 開く** で Gatekeeper をバイパスしてください
+(brew cask 経由なら postflight で自動的に xattr が剥がされるので不要)。
+
+## 開発セットアップ
 
 前提: `rustup` (Rust 1.92.0)、`pnpm`、`protoc`、`node` >= 22。
 
