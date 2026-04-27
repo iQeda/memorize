@@ -81,6 +81,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build app and publish release
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -112,3 +113,57 @@ jobs:
             with, endorsed by, or sponsored by Ankitects Pty Ltd.
           prerelease: true
           args: --target aarch64-apple-darwin
+
+      - name: Bump cask in iQeda/homebrew-tap
+        # Only attempts the bump when a PAT secret is configured. Without
+        # the secret the step prints a warning and exits 0 — useful so
+        # forks / contributors don't see a failed CI on missing secrets.
+        if: success()
+        env:
+          GH_PAT: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          PKG_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_PAT:-}" ]; then
+            echo "::warning title=cask bump skipped::HOMEBREW_TAP_TOKEN secret not set; skipping homebrew-tap update."
+            exit 0
+          fi
+
+          DMG="src-tauri/target/release/bundle/dmg/memorize_${PKG_VERSION}_aarch64.dmg"
+          if [ ! -f "$DMG" ]; then
+            echo "::error::expected DMG not found: $DMG"
+            ls -la src-tauri/target/release/bundle/dmg/ || true
+            exit 1
+          fi
+          SHA=$(shasum -a 256 "$DMG" | awk '{print $1}')
+          CASK_VERSION="${TAG#v}"
+          echo "Bumping cask to version=${CASK_VERSION}, sha=${SHA:0:12}…"
+
+          TAP_DIR=$(mktemp -d)
+          git clone --depth 1 \
+            "https://x-access-token:${GH_PAT}@github.com/iQeda/homebrew-tap.git" \
+            "$TAP_DIR"
+          cd "$TAP_DIR"
+
+          # BSD sed (-i with backup suffix) — works on macOS-latest runner.
+          sed -i.bak \
+            -e "s/^  version \".*\"$/  version \"${CASK_VERSION}\"/" \
+            -e "s/^  sha256 \".*\"$/  sha256 \"${SHA}\"/" \
+            -e "s/memorize_[^_]*_aarch64\.dmg/memorize_${PKG_VERSION}_aarch64.dmg/" \
+            Casks/memorize.rb
+          rm -f Casks/memorize.rb.bak
+
+          if git diff --quiet -- Casks/memorize.rb; then
+            echo "Cask already up to date; nothing to commit."
+            exit 0
+          fi
+
+          git config user.email "actions@iqeda.dev"
+          git config user.name "memorize release bot"
+          git commit -am "memorize: bump to ${TAG}
+
+          Source: https://github.com/iQeda/memorize/releases/tag/${TAG}
+          SHA-256: ${SHA}
+          "
+          git push origin HEAD:main

@@ -90,6 +90,8 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 ## 本番ビルド (DMG)
 
+ローカルで:
+
 ```sh
 pnpm tauri build
 ```
@@ -99,6 +101,33 @@ pnpm tauri build
 - `tauri.conf.json` の `bundle.active` は `true`、`bundle.targets` は `["app", "dmg"]`
 - 初回ビルドは Anki rslib の release 最適化込みで 5–10 分程度かかる
 - 署名・公証 (codesign / notarize) は未設定。配布時は別途設定が必要
+
+### CI で main push ごとに DMG を発行
+
+`.github/workflows/release.yml` が main 直下 push を検知して macos-latest runner で
+`aarch64-apple-darwin` 向けに自動ビルド → tag (`v<pkgver>-<UTC日時>-<short-sha>`)
+を切って prerelease として GitHub Releases に DMG を公開します。
+
+直前の build がまだ走っていれば `concurrency: cancel-in-progress: true` で
+キャンセルされ、最新コミットのものだけが完走します。
+
+### Homebrew tap への自動 bump (要 PAT)
+
+リリース成功後、CI は [`iQeda/homebrew-tap`](https://github.com/iQeda/homebrew-tap) の
+`Casks/memorize.rb` の version / sha256 / DMG ファイル名を新リリースに合わせて
+書き換えて push します。
+
+これを動かすには **`HOMEBREW_TAP_TOKEN`** という Actions secret が必要:
+
+1. GitHub の [Settings → Developer settings → Personal access tokens → Fine-grained tokens](https://github.com/settings/tokens?type=beta) で新規 PAT を作る
+2. **Resource owner**: `iQeda` (個人アカウント)
+3. **Repository access**: Only select repositories → `iQeda/homebrew-tap`
+4. **Permissions** (Repository): **Contents → Read and write**
+5. 生成されたトークンを `iQeda/memorize` の Settings → Secrets and variables → Actions →
+   `HOMEBREW_TAP_TOKEN` として登録
+
+secret が無い場合、bump ステップは warning を出して skip するので、CI 自体は
+失敗しません (ただし cask は古いままになります)。
 
 ## アーキテクチャ
 
