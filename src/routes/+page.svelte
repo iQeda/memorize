@@ -3,7 +3,14 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
-  import FutureDueChart from "$lib/components/FutureDueChart.svelte";
+  import FutureDueChart from "$lib/components/charts/FutureDueChart.svelte";
+  import CardCountsPie from "$lib/components/charts/CardCountsPie.svelte";
+  import HistogramChart from "$lib/components/charts/HistogramChart.svelte";
+  import StackedBarChart from "$lib/components/charts/StackedBarChart.svelte";
+  import HoursChart from "$lib/components/charts/HoursChart.svelte";
+  import ButtonsChart from "$lib/components/charts/ButtonsChart.svelte";
+  import RetentionTable from "$lib/components/charts/RetentionTable.svelte";
+  import CalendarHeatmap from "$lib/components/charts/CalendarHeatmap.svelte";
   import { t } from "$lib/i18n/index.svelte";
   import { invoke } from "$lib/ipc";
 
@@ -26,15 +33,72 @@
     review_count: number;
     relearn_count: number;
   };
-  type FutureDueBucket = { day: number; count: number };
+  type Bucket<K> = { key: K; value: number };
+  type CardCountsBreakdown = {
+    new_cards: number;
+    learn: number;
+    relearn: number;
+    young: number;
+    mature: number;
+    suspended: number;
+    buried: number;
+  };
+  type ReviewsBucket = {
+    day: number;
+    learn: number;
+    relearn: number;
+    young: number;
+    mature: number;
+    filtered: number;
+  };
+  type ButtonsCounts = { learning: number[]; young: number[]; mature: number[] };
+  type ButtonsByRange = {
+    one_month: ButtonsCounts;
+    three_months: ButtonsCounts;
+    one_year: ButtonsCounts;
+  };
+  type HourBucket = { hour: number; total: number; correct: number };
+  type HoursByRange = {
+    one_month: HourBucket[];
+    three_months: HourBucket[];
+    one_year: HourBucket[];
+  };
+  type TrueRetention = {
+    young_passed: number;
+    young_failed: number;
+    mature_passed: number;
+    mature_failed: number;
+  };
+  type RetentionStats = {
+    today: TrueRetention;
+    yesterday: TrueRetention;
+    week: TrueRetention;
+    month: TrueRetention;
+    year: TrueRetention;
+    all_time: TrueRetention;
+  };
   type DeckGraphStats = {
     today: TodayStats;
-    future_due: FutureDueBucket[];
+    future_due: Bucket<number>[];
     future_due_total: number;
     future_due_avg_per_day: number;
     future_due_have_backlog: boolean;
     daily_load: number;
+    card_counts_separate: CardCountsBreakdown;
+    card_counts_combined: CardCountsBreakdown;
+    intervals: Bucket<number>[];
+    eases: Bucket<number>[];
+    eases_average: number;
+    reviews: ReviewsBucket[];
+    added: Bucket<number>[];
+    buttons: ButtonsByRange;
+    hours: HoursByRange;
+    retention: RetentionStats;
   };
+
+  let separateInactive = $state(true);
+  let buttonsRange = $state<"one_month" | "three_months" | "one_year">("one_month");
+  let hoursRange = $state<"one_month" | "three_months" | "one_year">("one_month");
 
   let stats = $state<DeckStats | null>(null);
   let statsDeckId = $state<number | null>(null);
@@ -253,52 +317,222 @@
       {/if}
 
       {#if graph}
-        <section
-          class="animate-count rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
-          style="animation-delay: 240ms; animation-fill-mode: backwards;"
-        >
-          <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
-            {t("decks.today")}
-          </h2>
-          {#if graph.today.answer_count === 0}
-            <p class="mt-3 text-sm text-(--color-fg-muted)">
-              {t("decks.todayEmpty")}
-            </p>
+        {@const futureDueChartBuckets = graph!.future_due.map((b) => ({ day: b.key, count: b.value }))}
+        {@const reviewsCols = (() => {
+          // Map day (0 today, negative past) to columns from min to 0
+          const minDay = Math.min(0, ...graph!.reviews.map((r) => r.day));
+          const cols = -minDay + 1;
+          const series = [
+            { label: "Learn", color: "#f5a623", values: Array(cols).fill(0) },
+            { label: "Relearn", color: "#e26d6d", values: Array(cols).fill(0) },
+            { label: "Young", color: "#7ed87a", values: Array(cols).fill(0) },
+            { label: "Mature", color: "#3aa050", values: Array(cols).fill(0) },
+            { label: "Filtered", color: "#7c8aff", values: Array(cols).fill(0) },
+          ];
+          for (const r of graph!.reviews) {
+            const i = r.day - minDay;
+            if (i < 0 || i >= cols) continue;
+            series[0].values[i] = r.learn;
+            series[1].values[i] = r.relearn;
+            series[2].values[i] = r.young;
+            series[3].values[i] = r.mature;
+            series[4].values[i] = r.filtered;
+          }
+          return { cols, series, minDay };
+        })()}
+        {@const calendarPerDay = graph!.reviews.map((r) => ({ day: r.day, total: r.learn + r.relearn + r.young + r.mature + r.filtered }))}
+        {@const addedCols = (() => {
+          const minDay = Math.min(0, ...graph!.added.map((b) => b.key));
+          const cols = -minDay + 1;
+          const values = Array(cols).fill(0);
+          for (const b of graph!.added) {
+            const i = b.key - minDay;
+            if (i >= 0 && i < cols) values[i] = b.value;
+          }
+          return { cols, values, minDay };
+        })()}
+
+        <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <!-- Today -->
+          {@render panel(t("decks.today"), null, todayBlock)}
+
+          <!-- Future Due -->
+          {@render panel(t("decks.futureDue"), futureDueRange, futureDueBlock)}
+
+          <!-- Calendar -->
+          {@render panel(t("decks.calendar"), null, calendarBlock)}
+
+          <!-- Reviews -->
+          {@render panel(t("decks.reviews"), null, reviewsBlock)}
+
+          <!-- Card Counts -->
+          {@render panel(t("decks.cardCounts"), cardCountsToggle, cardCountsBlock)}
+
+          <!-- Review Intervals -->
+          {@render panel(t("decks.intervals"), null, intervalsBlock)}
+
+          <!-- Card Ease -->
+          {@render panel(t("decks.cardEase"), null, easeBlock)}
+
+          <!-- Retention -->
+          {@render panel(t("decks.retention"), null, retentionBlock)}
+
+          <!-- Hourly -->
+          {@render panel(t("decks.hourly"), hoursRangeBtns, hoursBlock)}
+
+          <!-- Answer Buttons -->
+          {@render panel(t("decks.answerButtons"), buttonsRangeBtns, buttonsBlock)}
+
+          <!-- Added -->
+          {@render panel(t("decks.added"), null, addedBlock)}
+        </section>
+
+        {#snippet todayBlock()}
+          {#if graph!.today.answer_count === 0}
+            <p class="mt-2 text-sm text-(--color-fg-muted)">{t("decks.todayEmpty")}</p>
           {:else}
-            <p class="mt-3 text-sm text-(--color-fg-default)">
+            <p class="mt-2 text-sm text-(--color-fg-default)">
               {t("decks.todayCount", {
-                count: graph.today.answer_count,
-                minutes: formatDuration(graph.today.answer_millis),
+                count: graph!.today.answer_count,
+                minutes: formatDuration(graph!.today.answer_millis),
               })}
             </p>
           {/if}
-        </section>
+        {/snippet}
 
-        <section
-          class="animate-count rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
-          style="animation-delay: 280ms; animation-fill-mode: backwards;"
-        >
-          <div class="flex flex-wrap items-baseline justify-between gap-3">
-            <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
-              {t("decks.futureDue")}
-            </h2>
-            <div class="flex gap-1 text-[11px]">
-              {@render rangeBtn(31, t("decks.range1m"))}
-              {@render rangeBtn(92, t("decks.range3m"))}
-              {@render rangeBtn(365, t("decks.range1y"))}
-            </div>
+        {#snippet futureDueRange()}
+          <div class="flex gap-1 text-[11px]">
+            {@render rangeBtn(31, t("decks.range1m"))}
+            {@render rangeBtn(92, t("decks.range3m"))}
+            {@render rangeBtn(365, t("decks.range1y"))}
           </div>
+        {/snippet}
+
+        {#snippet futureDueBlock()}
           <p class="mt-1 text-xs text-(--color-fg-subtle)">
             {t("decks.futureDueDesc", { days: graphDays })}
           </p>
-          <div class="mt-3 text-(--color-fg-muted)">
-            <FutureDueChart buckets={graph.future_due} days={graphDays} />
+          <div class="mt-2 text-(--color-fg-muted)">
+            <FutureDueChart buckets={futureDueChartBuckets} days={graphDays} />
           </div>
           <div class="mt-1 flex justify-between text-[11px] text-(--color-fg-subtle) tabular-nums">
-            <span>{t("decks.futureDueTotal", { count: graph.future_due_total })}</span>
-            <span>{t("decks.futureDueAvg", { avg: graph.future_due_avg_per_day.toFixed(1) })}</span>
+            <span>{t("decks.futureDueTotal", { count: graph!.future_due_total })}</span>
+            <span>{t("decks.futureDueAvg", { avg: graph!.future_due_avg_per_day.toFixed(1) })}</span>
           </div>
-        </section>
+        {/snippet}
+
+        {#snippet calendarBlock()}
+          <div class="mt-2 overflow-x-auto text-(--color-fg-muted)">
+            <CalendarHeatmap perDay={calendarPerDay} />
+          </div>
+        {/snippet}
+
+        {#snippet reviewsBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.reviewsDesc")}</p>
+          <div class="mt-2">
+            <StackedBarChart
+              columns={reviewsCols.cols}
+              series={reviewsCols.series}
+              minCol={reviewsCols.minDay}
+              xFormat={(c) => `${c}`}
+            />
+          </div>
+        {/snippet}
+
+        {#snippet cardCountsToggle()}
+          <label class="flex items-center gap-1.5 text-[11px] text-(--color-fg-muted)">
+            <input
+              type="checkbox"
+              bind:checked={separateInactive}
+              class="h-3 w-3 accent-(--color-accent-500)"
+            />
+            {t("decks.separateInactive")}
+          </label>
+        {/snippet}
+
+        {#snippet cardCountsBlock()}
+          <div class="mt-3">
+            <CardCountsPie
+              counts={separateInactive ? graph!.card_counts_separate : graph!.card_counts_combined}
+            />
+          </div>
+        {/snippet}
+
+        {#snippet intervalsBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.intervalsDesc")}</p>
+          <div class="mt-2 text-(--color-fg-muted)">
+            <HistogramChart
+              buckets={graph!.intervals}
+              xFormat={(v) => `${v}d`}
+              color="var(--color-accent-500)"
+            />
+          </div>
+        {/snippet}
+
+        {#snippet easeBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.cardEaseDesc")}</p>
+          <div class="mt-2 text-(--color-fg-muted)">
+            <HistogramChart
+              buckets={graph!.eases.map((b) => ({ key: Math.round(b.key / 10), value: b.value }))}
+              xFormat={(v) => `${v}%`}
+              color="var(--color-success)"
+            />
+          </div>
+          {#if graph!.eases_average > 0}
+            <p class="mt-1 text-center text-[11px] text-(--color-fg-subtle)">
+              Median ease: {(graph!.eases_average / 10).toFixed(0)}%
+            </p>
+          {/if}
+        {/snippet}
+
+        {#snippet retentionBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.retentionDesc")}</p>
+          <div class="mt-3">
+            <RetentionTable {...graph!.retention} />
+          </div>
+        {/snippet}
+
+        {#snippet hoursRangeBtns()}
+          <div class="flex gap-1 text-[11px]">
+            {@render hRangeBtn("one_month", t("decks.range1m"))}
+            {@render hRangeBtn("three_months", t("decks.range3m"))}
+            {@render hRangeBtn("one_year", t("decks.range1y"))}
+          </div>
+        {/snippet}
+
+        {#snippet hoursBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.hourlyDesc")}</p>
+          <div class="mt-2 text-(--color-fg-muted)">
+            <HoursChart hours={graph!.hours[hoursRange]} />
+          </div>
+        {/snippet}
+
+        {#snippet buttonsRangeBtns()}
+          <div class="flex gap-1 text-[11px]">
+            {@render bRangeBtn("one_month", t("decks.range1m"))}
+            {@render bRangeBtn("three_months", t("decks.range3m"))}
+            {@render bRangeBtn("one_year", t("decks.range1y"))}
+          </div>
+        {/snippet}
+
+        {#snippet buttonsBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.answerButtonsDesc")}</p>
+          <div class="mt-2 text-(--color-fg-muted)">
+            <ButtonsChart counts={graph!.buttons[buttonsRange]} />
+          </div>
+        {/snippet}
+
+        {#snippet addedBlock()}
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">{t("decks.addedDesc")}</p>
+          <div class="mt-2 text-(--color-fg-muted)">
+            <StackedBarChart
+              columns={addedCols.cols}
+              series={[{ label: "Added", color: "var(--color-accent-500)", values: addedCols.values }]}
+              minCol={addedCols.minDay}
+              xFormat={(c) => `${c}`}
+            />
+          </div>
+        {/snippet}
       {/if}
     </div>
   {:else}
@@ -320,11 +554,51 @@
   />
 {/if}
 
+{#snippet panel(title: string, controls: import("svelte").Snippet | null, body: import("svelte").Snippet)}
+  <section class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)">
+    <div class="flex flex-wrap items-baseline justify-between gap-3">
+      <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
+        {title}
+      </h2>
+      {#if controls}{@render controls()}{/if}
+    </div>
+    {@render body()}
+  </section>
+{/snippet}
+
 {#snippet rangeBtn(days: number, label: string)}
   {@const active = graphDays === days}
   <button
     type="button"
     onclick={() => (graphDays = days)}
+    class="rounded-(--radius-sm) px-2 py-0.5 transition-colors
+      {active
+      ? 'bg-(--color-accent-500) text-(--color-fg-onAccent)'
+      : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+  >
+    {label}
+  </button>
+{/snippet}
+
+{#snippet hRangeBtn(range: "one_month" | "three_months" | "one_year", label: string)}
+  {@const active = hoursRange === range}
+  <button
+    type="button"
+    onclick={() => (hoursRange = range)}
+    class="rounded-(--radius-sm) px-2 py-0.5 transition-colors
+      {active
+      ? 'bg-(--color-accent-500) text-(--color-fg-onAccent)'
+      : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+  >
+    {label}
+  </button>
+{/snippet}
+
+{#snippet bRangeBtn(range: "one_month" | "three_months" | "one_year", label: string)}
+  {@const active = buttonsRange === range}
+  <button
+    type="button"
+    onclick={() => (buttonsRange = range)}
     class="rounded-(--radius-sm) px-2 py-0.5 transition-colors
       {active
       ? 'bg-(--color-accent-500) text-(--color-fg-onAccent)'

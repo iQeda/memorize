@@ -50,19 +50,135 @@ pub struct TodayStats {
 }
 
 #[derive(Serialize, Debug, Default)]
-pub struct FutureDueBucket {
+pub struct Bucket<K: Serialize> {
+    pub key: K,
+    pub value: u32,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct CardCountsBreakdown {
+    pub new_cards: u32,
+    pub learn: u32,
+    pub relearn: u32,
+    pub young: u32,
+    pub mature: u32,
+    pub suspended: u32,
+    pub buried: u32,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct ReviewsBucket {
     pub day: i32,
-    pub count: u32,
+    pub learn: u32,
+    pub relearn: u32,
+    pub young: u32,
+    pub mature: u32,
+    pub filtered: u32,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct ButtonsCounts {
+    pub learning: Vec<u32>,
+    pub young: Vec<u32>,
+    pub mature: Vec<u32>,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct ButtonsByRange {
+    pub one_month: ButtonsCounts,
+    pub three_months: ButtonsCounts,
+    pub one_year: ButtonsCounts,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct HourBucket {
+    pub hour: u32,
+    pub total: u32,
+    pub correct: u32,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct HoursByRange {
+    pub one_month: Vec<HourBucket>,
+    pub three_months: Vec<HourBucket>,
+    pub one_year: Vec<HourBucket>,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct TrueRetention {
+    pub young_passed: u32,
+    pub young_failed: u32,
+    pub mature_passed: u32,
+    pub mature_failed: u32,
+}
+
+#[derive(Serialize, Debug, Default)]
+pub struct RetentionStats {
+    pub today: TrueRetention,
+    pub yesterday: TrueRetention,
+    pub week: TrueRetention,
+    pub month: TrueRetention,
+    pub year: TrueRetention,
+    pub all_time: TrueRetention,
 }
 
 #[derive(Serialize, Debug, Default)]
 pub struct DeckGraphStats {
     pub today: TodayStats,
-    pub future_due: Vec<FutureDueBucket>,
+    pub future_due: Vec<Bucket<i32>>,
     pub future_due_total: u32,
     pub future_due_avg_per_day: f32,
     pub future_due_have_backlog: bool,
     pub daily_load: u32,
+    pub card_counts_separate: CardCountsBreakdown,
+    pub card_counts_combined: CardCountsBreakdown,
+    pub intervals: Vec<Bucket<u32>>,
+    pub eases: Vec<Bucket<u32>>,
+    pub eases_average: f32,
+    pub reviews: Vec<ReviewsBucket>,
+    pub added: Vec<Bucket<i32>>,
+    pub buttons: ButtonsByRange,
+    pub hours: HoursByRange,
+    pub retention: RetentionStats,
+}
+
+fn map_to_buckets<K: Ord + Copy + Serialize>(m: std::collections::HashMap<K, u32>) -> Vec<Bucket<K>> {
+    let mut v: Vec<Bucket<K>> = m
+        .into_iter()
+        .map(|(key, value)| Bucket { key, value })
+        .collect();
+    v.sort_by_key(|b| b.key);
+    v
+}
+
+fn convert_buttons(b: anki_proto::stats::graphs_response::buttons::ButtonCounts) -> ButtonsCounts {
+    ButtonsCounts {
+        learning: b.learning,
+        young: b.young,
+        mature: b.mature,
+    }
+}
+
+fn convert_hours(hs: Vec<anki_proto::stats::graphs_response::hours::Hour>) -> Vec<HourBucket> {
+    hs.into_iter()
+        .enumerate()
+        .map(|(i, h)| HourBucket {
+            hour: i as u32,
+            total: h.total,
+            correct: h.correct,
+        })
+        .collect()
+}
+
+fn convert_retention(
+    r: anki_proto::stats::graphs_response::true_retention_stats::TrueRetention,
+) -> TrueRetention {
+    TrueRetention {
+        young_passed: r.young_passed,
+        young_failed: r.young_failed,
+        mature_passed: r.mature_passed,
+        mature_failed: r.mature_failed,
+    }
 }
 
 #[tauri::command]
@@ -79,21 +195,57 @@ pub async fn deck_graph_stats(
 
     let today = resp.today.unwrap_or_default();
     let fd = resp.future_due.unwrap_or_default();
+    let cc = resp.card_counts.unwrap_or_default();
+    let intervals = resp.intervals.unwrap_or_default();
+    let eases = resp.eases.unwrap_or_default();
+    let reviews_proto = resp.reviews.unwrap_or_default();
+    let added_proto = resp.added.unwrap_or_default();
+    let buttons = resp.buttons.unwrap_or_default();
+    let hours = resp.hours.unwrap_or_default();
+    let retention = resp.true_retention.unwrap_or_default();
 
     let max_day = days as i32;
-    let mut buckets: Vec<FutureDueBucket> = fd
+    let mut future_due_buckets: Vec<Bucket<i32>> = fd
         .future_due
         .into_iter()
         .filter(|(d, _)| *d >= 0 && *d < max_day)
-        .map(|(day, count)| FutureDueBucket { day, count })
+        .map(|(key, value)| Bucket { key, value })
         .collect();
-    buckets.sort_by_key(|b| b.day);
-    let total: u32 = buckets.iter().map(|b| b.count).sum();
+    future_due_buckets.sort_by_key(|b| b.key);
+    let total: u32 = future_due_buckets.iter().map(|b| b.value).sum();
     let avg = if max_day > 0 {
         total as f32 / max_day as f32
     } else {
         0.0
     };
+
+    let cc_sep = cc.excluding_inactive.unwrap_or_default();
+    let cc_comb = cc.including_inactive.unwrap_or_default();
+    let convert_cc = |c: anki_proto::stats::graphs_response::card_counts::Counts| {
+        CardCountsBreakdown {
+            new_cards: c.new_cards,
+            learn: c.learn,
+            relearn: c.relearn,
+            young: c.young,
+            mature: c.mature,
+            suspended: c.suspended,
+            buried: c.buried,
+        }
+    };
+
+    let mut reviews_vec: Vec<ReviewsBucket> = reviews_proto
+        .count
+        .into_iter()
+        .map(|(day, r)| ReviewsBucket {
+            day,
+            learn: r.learn,
+            relearn: r.relearn,
+            young: r.young,
+            mature: r.mature,
+            filtered: r.filtered,
+        })
+        .collect();
+    reviews_vec.sort_by_key(|b| b.day);
 
     Ok(DeckGraphStats {
         today: TodayStats {
@@ -106,11 +258,36 @@ pub async fn deck_graph_stats(
             review_count: today.review_count,
             relearn_count: today.relearn_count,
         },
-        future_due: buckets,
+        future_due: future_due_buckets,
         future_due_total: total,
         future_due_avg_per_day: avg,
         future_due_have_backlog: fd.have_backlog,
         daily_load: fd.daily_load,
+        card_counts_separate: convert_cc(cc_sep),
+        card_counts_combined: convert_cc(cc_comb),
+        intervals: map_to_buckets(intervals.intervals),
+        eases: map_to_buckets(eases.eases),
+        eases_average: eases.average,
+        reviews: reviews_vec,
+        added: map_to_buckets(added_proto.added),
+        buttons: ButtonsByRange {
+            one_month: buttons.one_month.map(convert_buttons).unwrap_or_default(),
+            three_months: buttons.three_months.map(convert_buttons).unwrap_or_default(),
+            one_year: buttons.one_year.map(convert_buttons).unwrap_or_default(),
+        },
+        hours: HoursByRange {
+            one_month: convert_hours(hours.one_month),
+            three_months: convert_hours(hours.three_months),
+            one_year: convert_hours(hours.one_year),
+        },
+        retention: RetentionStats {
+            today: retention.today.map(convert_retention).unwrap_or_default(),
+            yesterday: retention.yesterday.map(convert_retention).unwrap_or_default(),
+            week: retention.week.map(convert_retention).unwrap_or_default(),
+            month: retention.month.map(convert_retention).unwrap_or_default(),
+            year: retention.year.map(convert_retention).unwrap_or_default(),
+            all_time: retention.all_time.map(convert_retention).unwrap_or_default(),
+        },
     })
 }
 
