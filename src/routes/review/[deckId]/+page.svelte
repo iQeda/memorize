@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, BookOpen } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, BookOpen, Pencil, Copy, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
   import CardFrame from "$lib/components/CardFrame.svelte";
+  import NoteEditor from "$lib/components/NoteEditor.svelte";
   import { onMount, onDestroy } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
@@ -13,14 +14,28 @@
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
     card_id: number;
+    note_id: number;
     question_html: string;
     answer_html: string;
     css: string;
     remaining: Counts;
   };
   type NextCard =
-    | { kind: "card"; card_id: number; question_html: string; answer_html: string; css: string; remaining: Counts }
+    | {
+        kind: "card";
+        card_id: number;
+        note_id: number;
+        question_html: string;
+        answer_html: string;
+        css: string;
+        remaining: Counts;
+      }
     | { kind: "done"; new: number; learning: number; review: number };
+  type RenderedCard = {
+    question_html: string;
+    answer_html: string;
+    css: string;
+  };
 
   const deckId = $derived(Number($page.params.deckId));
 
@@ -68,6 +83,7 @@
       if (r.kind === "card") {
         current = {
           card_id: r.card_id,
+          note_id: r.note_id,
           question_html: r.question_html,
           answer_html: r.answer_html,
           css: r.css,
@@ -82,6 +98,30 @@
       }
     } catch (e) {
       error = String(e);
+    }
+  }
+
+  let editing = $state(false);
+
+  function openEditor() {
+    if (!current) return;
+    editing = true;
+  }
+
+  async function reloadCurrent() {
+    if (!current) return;
+    try {
+      const r = await invoke<RenderedCard>("get_card_render", {
+        cardId: current.card_id,
+      });
+      current = {
+        ...current,
+        question_html: r.question_html,
+        answer_html: r.answer_html,
+        css: r.css,
+      };
+    } catch (e) {
+      console.error("get_card_render failed", e);
     }
   }
 
@@ -107,6 +147,8 @@
   let naniInput = $state<HTMLInputElement | null>(null);
   let naniBusy = $state(false);
   let naniError = $state<string | null>(null);
+  let naniInfo = $state<string | null>(null);
+  let naniInfoTimer: ReturnType<typeof setTimeout> | null = null;
 
   function frontWord(): string {
     if (!current) return "";
@@ -117,12 +159,33 @@
     return (doc.body.textContent ?? "").trim().replace(/\s+/g, " ");
   }
 
+  function flashInfo(msg: string) {
+    naniInfo = msg;
+    if (naniInfoTimer) clearTimeout(naniInfoTimer);
+    naniInfoTimer = setTimeout(() => {
+      naniInfo = null;
+      naniInfoTimer = null;
+    }, 4500);
+  }
+
+  async function copyError() {
+    if (!naniError) return;
+    try {
+      await navigator.clipboard.writeText(naniError);
+      flashInfo("Copied");
+    } catch (e) {
+      console.error("clipboard copy failed", e);
+    }
+  }
+
   async function naniLookup() {
     if (naniBusy) return;
     const word = frontWord();
     if (!word || !naniInput) return;
     naniBusy = true;
-    naniError = null;
+    // Don't auto-clear naniError on retry — the user often wants to copy
+    // the previous error text. They dismiss it explicitly via the X button.
+    naniInfo = null;
     // A real <input> is exposed to macOS Accessibility / Services as a
     // text container with a live selection — that's what Nani reads when
     // its global Cmd+J fires. Selecting in the iframe / arbitrary spans
@@ -134,6 +197,8 @@
     naniInput.setSelectionRange(0, word.length);
     try {
       await invoke("nani_lookup", { word });
+      naniError = null;
+      flashInfo("Copied");
     } catch (e) {
       console.error("nani_lookup failed", e);
       naniError = e instanceof Error ? e.message : String(e);
@@ -155,18 +220,41 @@
     // any rating key would race with naniLookup and progress the deck
     // before the user even sees the lookup result.
     if (naniBusy) return;
-    if (e.target instanceof HTMLInputElement) return;
+    // The editor mounts its own inputs/textarea; let it handle its own keys.
+    if (editing) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    // Esc — leave the review session and return to the deck overview.
+    if (e.key === "Escape") {
+      e.preventDefault();
+      void goto("/");
+      return;
+    }
+    // `e` (no modifiers) — open the note editor for the current card.
+    // Available regardless of question/answer side; mirrors Anki's E shortcut.
+    if (
+      (e.key === "e" || e.key === "E") &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      current
+    ) {
+      e.preventDefault();
+      openEditor();
+      return;
+    }
+    // Nani lookup works on either side — sometimes you need a definition
+    // before flipping to the answer.
+    if (shortcuts.isNani(e.key)) {
+      e.preventDefault();
+      void naniLookup();
+      return;
+    }
     if (!showingAnswer && (e.key === " " || e.key === "Enter")) {
       e.preventDefault();
       flip();
       return;
     }
     if (showingAnswer) {
-      if (shortcuts.isNani(e.key)) {
-        e.preventDefault();
-        void naniLookup();
-        return;
-      }
       const rating = shortcuts.ratingFor(e.key);
       if (rating) {
         e.preventDefault();
@@ -210,6 +298,7 @@
     >
       <ArrowLeft size={14} />
       {t("reviewer.back")}
+      <span class="ml-1 font-mono text-[10px] opacity-70">Esc</span>
     </button>
     <p class="flex items-center gap-6 text-xs text-(--color-fg-subtle)">
       <span class="number-tabular">
@@ -242,14 +331,27 @@
         </span>
       </span>
     </p>
-    <button
-      type="button"
-      onclick={startSession}
-      class="grid h-7 w-7 place-items-center rounded-(--radius-md) text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
-      aria-label={t("reviewer.reload")}
-    >
-      <RotateCcw size={14} />
-    </button>
+    <div class="flex items-center gap-1">
+      {#if current}
+        <button
+          type="button"
+          onclick={openEditor}
+          class="grid h-7 w-7 place-items-center rounded-(--radius-md) text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
+          aria-label={t("settings.shortcut.editNote")}
+          title="{t('settings.shortcut.editNote')} (E)"
+        >
+          <Pencil size={14} />
+        </button>
+      {/if}
+      <button
+        type="button"
+        onclick={startSession}
+        class="grid h-7 w-7 place-items-center rounded-(--radius-md) text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
+        aria-label={t("reviewer.reload")}
+      >
+        <RotateCcw size={14} />
+      </button>
+    </div>
   </div>
 
   <div
@@ -319,12 +421,25 @@
         {#if !showingAnswer}
           <button
             type="button"
+            onclick={naniLookup}
+            in:fade={{ duration: 160, easing: cubicOut }}
+            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            title="Nani Search"
+          >
+            <span class="flex items-center gap-1.5 text-sm font-medium">
+              <BookOpen size={14} strokeWidth={2.25} />
+              Nani
+            </span>
+            <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
+          </button>
+          <button
+            type="button"
             onclick={flip}
             in:fade={{ duration: 160, easing: cubicOut }}
-            class="rounded-(--radius-md) bg-(--color-accent-500) px-8 py-2.5 text-sm font-medium text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all hover:bg-(--color-accent-600) hover:shadow-(--shadow-glow) active:scale-[0.97]"
+            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) bg-(--color-accent-500) px-5 py-2.5 text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-accent-600) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
           >
-            {t("reviewer.showAnswer")}
-            <span class="ml-2 font-mono text-[10px] opacity-70">Space</span>
+            <span class="text-sm font-medium">{t("reviewer.showAnswer")}</span>
+            <span class="font-mono text-[10px] opacity-70">Space</span>
           </button>
         {:else}
           <button
@@ -358,13 +473,42 @@
   {#if naniError}
     <div
       role="alert"
-      class="pointer-events-auto fixed bottom-6 left-1/2 z-20 max-w-md -translate-x-1/2 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-danger)/10 px-4 py-2 text-xs text-(--color-danger) shadow-(--shadow-card)"
+      class="pointer-events-auto fixed bottom-6 left-1/2 z-20 flex max-w-lg -translate-x-1/2 gap-2 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-danger)/10 px-4 py-2.5 text-xs text-(--color-danger) shadow-(--shadow-card) select-text"
     >
-      <p class="font-medium">Nani lookup failed</p>
-      <p class="mt-0.5 break-all opacity-80">{naniError}</p>
-      <p class="mt-1 text-[10px] opacity-70">
-        macOS &gt; Privacy &amp; Security &gt; Accessibility で memorize に権限を付与してください。
-      </p>
+      <div class="min-w-0 flex-1">
+        <p class="font-medium">Nani lookup failed</p>
+        <p class="mt-0.5 font-mono text-[11px] break-all opacity-90 select-all">{naniError}</p>
+        <p class="mt-1 text-[10px] opacity-70">
+          macOS &gt; Privacy &amp; Security &gt; Accessibility で Memorize に権限を付与してください。
+        </p>
+      </div>
+      <div class="flex shrink-0 flex-col gap-1">
+        <button
+          type="button"
+          onclick={copyError}
+          aria-label="Copy error"
+          title="Copy error"
+          class="grid h-5 w-5 place-items-center rounded text-(--color-danger) transition-colors hover:bg-(--color-danger)/20"
+        >
+          <Copy size={12} />
+        </button>
+        <button
+          type="button"
+          onclick={() => (naniError = null)}
+          aria-label="Dismiss"
+          title="Dismiss"
+          class="grid h-5 w-5 place-items-center rounded text-(--color-danger) transition-colors hover:bg-(--color-danger)/20"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    </div>
+  {:else if naniInfo}
+    <div
+      role="status"
+      class="pointer-events-auto fixed bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-elevated) px-3 py-1.5 text-xs text-(--color-fg-default) shadow-(--shadow-card) select-text"
+    >
+      {naniInfo}
     </div>
   {/if}
 
@@ -376,3 +520,12 @@
     class="pointer-events-none fixed top-0 left-[-10000px] h-4 w-px"
   />
 </div>
+
+{#if editing && current}
+  <NoteEditor
+    mode="edit"
+    noteId={current.note_id}
+    onClose={() => (editing = false)}
+    onSaved={() => void reloadCurrent()}
+  />
+{/if}

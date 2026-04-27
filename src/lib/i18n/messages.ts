@@ -149,6 +149,7 @@ export const messages = {
     "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
     "settings.shortcut.openLauncher": "Quick deck switcher",
+    "settings.shortcut.editNote": "Edit current note",
     "settings.startup": "Startup",
     "settings.startup.autoLabel": "Launch at login",
     "settings.startup.autoBody":
@@ -399,6 +400,7 @@ export const messages = {
     "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
     "settings.shortcut.openLauncher": "デッキをクイック切替",
+    "settings.shortcut.editNote": "現在のノートを編集",
     "settings.startup": "起動",
     "settings.startup.autoLabel": "ログイン時に自動起動",
     "settings.startup.autoBody":

@@ -190,16 +190,27 @@
           {/if}
 
           {#each notetype.field_names as fname, i (i)}
-            <label class="block">
+            <div>
               <span class="mb-1 block text-[11px] tracking-wider text-(--color-fg-subtle) uppercase">
                 {fname}
               </span>
-              <textarea
-                bind:value={fields[i]}
-                rows="3"
-                class="w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-2 font-sans text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
-              ></textarea>
-            </label>
+              <!--
+                Anki note fields are stored as HTML, so a <textarea> would
+                show raw <b>/<i>/<br> markup. A contenteditable div renders
+                the markup, lets the user edit visually, and the standard
+                Cmd+B / Cmd+I / Cmd+U / Enter (=> <br>) commands work via
+                the browser's built-in editing. bind:innerHTML keeps the
+                state field in sync with the rendered DOM.
+              -->
+              <div
+                contenteditable="true"
+                role="textbox"
+                aria-label={fname}
+                aria-multiline="true"
+                bind:innerHTML={fields[i]}
+                class="block min-h-[3rem] w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-2 text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500) [&_*]:max-w-full"
+              ></div>
+            </div>
           {/each}
 
           <label class="block">

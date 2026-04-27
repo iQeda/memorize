@@ -10,6 +10,7 @@ use tauri::State;
 #[derive(Serialize, Debug)]
 pub struct StudyCard {
     pub card_id: i64,
+    pub note_id: i64,
     pub question_html: String,
     pub answer_html: String,
     pub css: String,
@@ -73,9 +74,11 @@ pub async fn get_next_card(state: State<'_, AppState>) -> AppResult<NextCard> {
     };
 
     let card_id = qc.card.id();
+    let note_id = qc.card.note_id();
     let rendered = col.render_existing_card(card_id, false, false)?;
     let card = StudyCard {
         card_id: card_id.0,
+        note_id: note_id.0,
         question_html: render_nodes(&rendered.qnodes),
         answer_html: render_nodes(&rendered.anodes),
         css: rendered.css,

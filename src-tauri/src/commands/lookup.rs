@@ -50,14 +50,20 @@ fn impl_nani_lookup_macos(word: String) -> AppResult<()> {
     }
 
     // Synthesize Cmd+J at the OS level via AppleScript / System Events.
-    let status = Command::new("osascript")
+    // Use .output() (not .status()) so we can surface stderr — without it,
+    // the most common failure ("not authorized to send keystrokes …
+    // Accessibility permission missing") is invisible to the user.
+    let output = Command::new("osascript")
         .arg("-e")
         .arg(r#"tell application "System Events" to keystroke "j" using command down"#)
-        .status()
+        .output()
         .map_err(|e| AppError::Anyhow(anyhow::anyhow!("osascript failed: {e}")))?;
-    if !status.success() {
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(AppError::Anyhow(anyhow::anyhow!(
-            "osascript exited with {status}"
+            "osascript exited with {}: {}",
+            output.status,
+            stderr.trim()
         )));
     }
     Ok(())

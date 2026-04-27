@@ -3,7 +3,6 @@
   import {
     Search,
     Settings as SettingsIcon,
-    Brain,
     Plus,
     Check,
     X,
@@ -224,26 +223,13 @@
   class="relative flex h-full shrink-0 flex-col border-r border-(--color-border-default) bg-(--color-bg-sunken)"
   style="width: {width}px;"
 >
-  <div
-    use:draggable
-    class="flex h-11 items-center pr-4 pl-[78px]"
-  >
-    <a
-      href="/"
-      data-sveltekit-preload-data="hover"
-      class="no-drag flex items-center gap-2 rounded-md px-1 -mx-1 py-0.5 transition-colors hover:bg-(--color-bg-overlay)"
-      aria-label={t("nav.home")}
-    >
-      <div
-        class="grid h-6 w-6 place-items-center rounded-md bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)"
-      >
-        <Brain size={14} strokeWidth={2.5} />
-      </div>
-      <span class="font-display text-sm font-medium tracking-tight">
-        Memorize
-      </span>
-    </a>
-  </div>
+  <!--
+    Empty draggable strip aligned with macOS traffic-light buttons. The
+    branding (Brain logo + "Memorize" text) used to live here but was
+    redundant — the app icon in the Dock already conveys identity, and
+    nothing else clickable wants this slot.
+  -->
+  <div use:draggable class="h-11"></div>
 
   <nav class="flex flex-col gap-0.5 px-2 pt-1">
     {#each navItems as item (item.href)}

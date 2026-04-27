@@ -185,6 +185,36 @@
     if (selected && totalDue > 0) goto(`/review/${selected.id}/`);
   }
 
+  function onKey(e: KeyboardEvent) {
+    if (e.repeat || e.defaultPrevented) return;
+    // Skip when the user is typing in a form field (deck rename, note editor,
+    // launcher search, etc).
+    const target = e.target as HTMLElement | null;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target?.isContentEditable
+    ) {
+      return;
+    }
+    if (e.key === "Enter" && selected && totalDue > 0) {
+      e.preventDefault();
+      startStudy();
+      return;
+    }
+    if (
+      (e.key === "n" || e.key === "N") &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      collection.isOpen
+    ) {
+      e.preventDefault();
+      showAddNote = true;
+    }
+  }
+
   let showAddNote = $state(false);
 
   async function onWordAdded() {
@@ -210,6 +240,8 @@
     muted: "text-(--color-fg-muted)",
   };
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 <div class="mx-auto h-full max-w-5xl px-8 py-10">
   {#if !collection.isOpen}
@@ -283,6 +315,7 @@
         >
           <Plus size={12} strokeWidth={2.5} />
           {t("decks.addWord")}
+          <span class="ml-1 font-mono text-[10px] opacity-70">N</span>
         </button>
       </header>
 
@@ -307,6 +340,7 @@
             class="transition-transform duration-300 group-hover:rotate-12 group-disabled:rotate-0"
           />
           {t("decks.studyNow")}
+          <span class="ml-1 font-mono text-[10px] opacity-70">↵</span>
         </button>
         <p class="text-xs text-(--color-fg-subtle) tabular-nums">
           {totalDue > 0
