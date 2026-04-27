@@ -45,6 +45,7 @@
   const fixedShortcuts = $derived([
     { keys: ["Space"], label: t("settings.shortcut.spaceLabel") },
     { keys: ["⌘", ","], label: t("settings.shortcut.openSettings") },
+    { keys: ["⌘", "F / K"], label: t("settings.shortcut.openLauncher") },
   ]);
 
   let recordingFor = $state<Action | null>(null);

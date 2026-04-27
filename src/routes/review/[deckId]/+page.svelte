@@ -105,6 +105,8 @@
   }
 
   let naniInput = $state<HTMLInputElement | null>(null);
+  let naniBusy = $state(false);
+  let naniError = $state<string | null>(null);
 
   function frontWord(): string {
     if (!current) return "";
@@ -116,8 +118,11 @@
   }
 
   async function naniLookup() {
+    if (naniBusy) return;
     const word = frontWord();
     if (!word || !naniInput) return;
+    naniBusy = true;
+    naniError = null;
     // A real <input> is exposed to macOS Accessibility / Services as a
     // text container with a live selection — that's what Nani reads when
     // its global Cmd+J fires. Selecting in the iframe / arbitrary spans
@@ -131,16 +136,25 @@
       await invoke("nani_lookup", { word });
     } catch (e) {
       console.error("nani_lookup failed", e);
+      naniError = e instanceof Error ? e.message : String(e);
     } finally {
       // Nani has already read the selection by now (osascript Cmd+J ran
       // synchronously inside the await). Blur so subsequent rating keys
       // (1/2/3/4) don't get swallowed by the input element — onKey skips
       // events whose target is an <input>.
       naniInput.blur();
+      naniBusy = false;
     }
   }
 
   function onKey(e: KeyboardEvent) {
+    // Auto-repeat would re-fire naniLookup mid-flight, or trigger a
+    // rating right after Nani returns when the user is still holding a key.
+    if (e.repeat) return;
+    // While Nani is in flight (osascript / Cmd+J / Nani app focus switch)
+    // any rating key would race with naniLookup and progress the deck
+    // before the user even sees the lookup result.
+    if (naniBusy) return;
     if (e.target instanceof HTMLInputElement) return;
     if (!showingAnswer && (e.key === " " || e.key === "Enter")) {
       e.preventDefault();
@@ -341,6 +355,19 @@
       </div>
     {/if}
   </div>
+  {#if naniError}
+    <div
+      role="alert"
+      class="pointer-events-auto fixed bottom-6 left-1/2 z-20 max-w-md -translate-x-1/2 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-danger)/10 px-4 py-2 text-xs text-(--color-danger) shadow-(--shadow-card)"
+    >
+      <p class="font-medium">Nani lookup failed</p>
+      <p class="mt-0.5 break-all opacity-80">{naniError}</p>
+      <p class="mt-1 text-[10px] opacity-70">
+        macOS &gt; Privacy &amp; Security &gt; Accessibility で memorize に権限を付与してください。
+      </p>
+    </div>
+  {/if}
+
   <input
     bind:this={naniInput}
     type="text"

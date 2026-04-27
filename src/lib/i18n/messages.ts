@@ -148,6 +148,7 @@ export const messages = {
     "settings.shortcut.nani": "Nani lookup",
     "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
+    "settings.shortcut.openLauncher": "Quick deck switcher",
     "settings.startup": "Startup",
     "settings.startup.autoLabel": "Launch at login",
     "settings.startup.autoBody":
@@ -165,6 +166,14 @@ export const messages = {
     "updater.available": "Version {version} is available.",
     "updater.downloading": "Downloading… {percent}%",
     "updater.installing": "Installing…",
+    "launcher.title": "Quick deck switcher",
+    "launcher.placeholder": "Search decks…",
+    "launcher.empty": "No decks match",
+    "launcher.noDecks": "No decks in this collection",
+    "launcher.close": "Close",
+    "launcher.hintNavigate": "Navigate",
+    "launcher.hintSelect": "Select",
+    "launcher.hintClose": "Close",
 
     // Backup
     "backup.title": "Backup",
@@ -389,6 +398,7 @@ export const messages = {
     "settings.shortcut.nani": "Nani 検索",
     "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
+    "settings.shortcut.openLauncher": "デッキをクイック切替",
     "settings.startup": "起動",
     "settings.startup.autoLabel": "ログイン時に自動起動",
     "settings.startup.autoBody":
@@ -406,6 +416,14 @@ export const messages = {
     "updater.available": "バージョン {version} が利用可能です。",
     "updater.downloading": "ダウンロード中… {percent}%",
     "updater.installing": "インストール中…",
+    "launcher.title": "クイック切替",
+    "launcher.placeholder": "デッキを検索…",
+    "launcher.empty": "該当するデッキがありません",
+    "launcher.noDecks": "デッキがありません",
+    "launcher.close": "閉じる",
+    "launcher.hintNavigate": "移動",
+    "launcher.hintSelect": "選択",
+    "launcher.hintClose": "閉じる",
 
     // Backup
     "backup.title": "Backup",

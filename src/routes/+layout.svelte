@@ -3,6 +3,7 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import TitleBar from "$lib/components/TitleBar.svelte";
   import PageTransition from "$lib/components/PageTransition.svelte";
+  import Launcher from "$lib/components/Launcher.svelte";
   import { theme } from "$lib/stores/theme.svelte";
   import { collection } from "$lib/stores/collection.svelte";
   import { checkForAppUpdates } from "$lib/updater";
@@ -10,6 +11,7 @@
   import { onMount } from "svelte";
 
   let { children } = $props();
+  let launcherOpen = $state(false);
 
   function isTextField(target: EventTarget | null): boolean {
     const el = target as HTMLElement | null;
@@ -28,6 +30,18 @@
     if ((e.metaKey || e.ctrlKey) && e.key === ",") {
       e.preventDefault();
       void goto("/settings/");
+      return;
+    }
+    // ⌘F / ⌘K (macOS) / Ctrl+F / Ctrl+K (other) → quick deck launcher.
+    // Override the webview's default in-page find — we don't ship one and
+    // a no-op Cmd+F would surprise users coming from other apps. Cmd+K is
+    // the de-facto command palette shortcut.
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      (e.key === "f" || e.key === "F" || e.key === "k" || e.key === "K")
+    ) {
+      e.preventDefault();
+      launcherOpen = true;
       return;
     }
     if (isTextField(e.target)) return;
@@ -61,3 +75,5 @@
     </main>
   </div>
 </div>
+
+<Launcher bind:open={launcherOpen} />
