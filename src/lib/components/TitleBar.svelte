@@ -40,13 +40,17 @@
   class="flex h-11 shrink-0 items-center justify-end gap-1 border-b border-(--color-border-default) bg-(--color-bg-elevated) px-3"
 >
   {#if sync.busy && sync.busyReason}
-    <span class="hidden truncate text-[11px] text-(--color-fg-subtle) sm:inline">
+    <span class="max-w-[260px] truncate text-[11px] text-(--color-fg-subtle)">
       {sync.busyReason}
     </span>
   {:else if sync.lastError}
-    <span class="hidden items-center gap-1 text-[11px] text-(--color-danger) sm:inline-flex">
-      <AlertCircle size={11} />
-      Sync エラー
+    <span class="flex max-w-[260px] items-center gap-1 truncate text-[11px] text-(--color-danger)">
+      <AlertCircle size={11} class="shrink-0" />
+      <span class="truncate">Sync エラー</span>
+    </span>
+  {:else if sync.lastMessage && !sync.busy}
+    <span class="max-w-[260px] truncate text-[11px] text-(--color-fg-subtle)">
+      {sync.lastMessage}
     </span>
   {/if}
 
