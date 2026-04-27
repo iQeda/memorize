@@ -231,10 +231,24 @@ class SyncStore {
             upload_ok: r.upload_ok,
             download_ok: r.download_ok,
           };
-          this.lastMessage = `フル同期が必要です${pendingHint}`;
+          if (r.server_message) this.lastMessage = r.server_message;
+          // Auto-pick if only one direction is safe; otherwise let the user decide.
+          if (r.upload_ok && !r.download_ok) {
+            this.lastMessage = "フル同期 (アップロード) を自動実行します…";
+            await this.fullUpload();
+            return;
+          }
+          if (r.download_ok && !r.upload_ok) {
+            this.lastMessage = "フル同期 (ダウンロード) を自動実行します…";
+            await this.fullDownload();
+            return;
+          }
+          this.lastMessage = `フル同期が必要 (両側に未同期変更あり) - 手動選択してください${pendingHint}`;
           break;
       }
-      if (r.server_message) this.lastMessage += ` — ${r.server_message}`;
+      if (r.server_message && r.kind !== "full_required") {
+        this.lastMessage += ` — ${r.server_message}`;
+      }
     } catch (e) {
       this.lastError = String(e);
     }
