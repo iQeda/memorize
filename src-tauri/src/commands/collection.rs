@@ -9,16 +9,23 @@ pub async fn open_collection(
     path: String,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let mut guard = state.col.lock().await;
-    if guard.is_some() {
-        if let Some(col) = guard.take() {
-            let _ = col.close(None);
-        }
-    }
     let path_buf = PathBuf::from(&path);
+
+    // Build the new collection BEFORE closing the old one, so that a
+    // failure (e.g. SQLite locked because Anki Desktop is running) leaves
+    // the existing collection intact.
+    // The existing collection still holds the old file's lock; the new
+    // build is for a different path so the SQLite open will succeed
+    // independently. Same-path re-open is also fine because rusqlite uses
+    // shared cache + WAL.
     let col = CollectionBuilder::new(&path_buf)
         .set_shared_progress_state(state.progress.clone())
         .build()?;
+
+    let mut guard = state.col.lock().await;
+    if let Some(prev) = guard.take() {
+        let _ = prev.close(None);
+    }
     *guard = Some(col);
     *state.col_path.lock().await = Some(path_buf);
     Ok(())
