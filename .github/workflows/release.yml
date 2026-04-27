@@ -145,6 +145,18 @@ jobs:
           fi
           echo "::notice::ad-hoc signature OK"
 
+      - name: Mark release as Latest
+        # tauri-action publishes with prerelease=true, so GitHub will not
+        # promote the new release to "Latest" automatically — and the
+        # in-app updater hits /releases/latest/download/latest.json, which
+        # only resolves against the Latest release. Flip the flag here so
+        # every signed build becomes the canonical update target.
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: gh release edit "$TAG" --latest --prerelease=false --repo "${{ github.repository }}"
+
       - name: Bump cask in iQeda/homebrew-tap
         # Only attempts the bump when a PAT secret is configured. Without
         # the secret the step prints a warning and exits 0 — useful so
