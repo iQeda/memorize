@@ -252,11 +252,17 @@ async fn full_sync(app: AppHandle, state: State<'_, AppState>, upload: bool) -> 
         .ok_or(AppError::CollectionNotOpen)?;
 
     let _emitter = ProgressEmitter::start(app, state.progress.clone());
+    tracing::info!(upload, "starting full_sync");
     let result = if upload {
         col.full_upload(auth, state.http.clone()).await
     } else {
         col.full_download(auth, state.http.clone()).await
     };
+    if let Err(ref e) = result {
+        tracing::error!(?e, "full_sync failed");
+    } else {
+        tracing::info!("full_sync ok");
+    }
 
     // Always try to re-open before returning, even if full_upload errored,
     // so the app doesn't end up in a "collection not open" state.
