@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply local patches against vendor/anki
-        run: ./scripts/apply-vendor-patches.sh
+        run: bash ./scripts/apply-vendor-patches.sh
 
       - name: Install protoc
         run: brew install protobuf
