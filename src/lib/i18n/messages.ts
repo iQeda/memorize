@@ -1,0 +1,392 @@
+// Centralized message catalogue. Add new keys here, then run them through `t()`.
+
+export const messages = {
+  en: {
+    // Welcome
+    "welcome.title": "Welcome",
+    "welcome.body":
+      "Open an existing Anki collection (.anki2) to begin.\nSync and Import / Export are handled by the standard Anki engine.",
+    "welcome.openExisting": "Open existing collection",
+    "welcome.createNew": "Create new collection",
+
+    // Sidebar
+    "sidebar.decks": "Decks",
+    "sidebar.newDeck": "New deck",
+    "sidebar.deckPlaceholder": "Deck name (a::b for nested)",
+    "sidebar.create": "Create",
+    "sidebar.cancel": "Cancel",
+    "sidebar.rename": "Rename",
+    "sidebar.delete": "Delete…",
+    "sidebar.empty": "No decks yet.\nCreate one with the + button.",
+    "sidebar.deleteConfirmTitle": "Delete deck",
+    "sidebar.deleteConfirmBody":
+      "Delete deck \"{name}\" and its children.\nAll cards and words inside will also be deleted.\n\nThis cannot be undone. Continue?",
+    "sidebar.deleteOk": "Delete",
+
+    // Nav
+    "nav.browse": "Browse",
+    "nav.settings": "Settings",
+    "nav.home": "Home",
+
+    // Title bar / Sync button
+    "titlebar.openCollectionFirst": "Open a collection first",
+    "titlebar.loginFirst": "Sign in to AnkiWeb first",
+    "titlebar.syncing": "Syncing…",
+    "titlebar.syncNow": "Sync now",
+    "titlebar.syncError": "Sync error",
+    "titlebar.toggleTheme": "Toggle theme",
+
+    // Decks page
+    "decks.selectedHeader": "Selected deck",
+    "decks.studyNow": "Study Now",
+    "decks.cardsWaiting": "{count} cards waiting",
+    "decks.allDoneToday": "All done for today",
+    "decks.addWord": "Add word to this deck",
+    "decks.empty": "No decks",
+    "decks.new": "New",
+    "decks.learning": "Learning",
+    "decks.review": "Review",
+    "decks.parentPath": "Parent path",
+
+    // Reviewer
+    "reviewer.back": "Back",
+    "reviewer.reload": "Reload",
+    "reviewer.loading": "Loading…",
+    "reviewer.done": "Done ✦",
+    "reviewer.sessionFinished": "All cards reviewed for this session",
+    "reviewer.backToDecks": "Back to decks",
+    "reviewer.question": "Question",
+    "reviewer.answer": "Answer",
+    "reviewer.showAnswer": "Show answer",
+    "reviewer.again": "Again",
+    "reviewer.hard": "Hard",
+    "reviewer.good": "Good",
+    "reviewer.easy": "Easy",
+
+    // Browse
+    "browse.filter": "Filter",
+    "browse.deck": "Deck",
+    "browse.allDecks": "All",
+    "browse.searchPlaceholder": "Search words / all fields",
+    "browse.searchHint": "Anki search syntax supported",
+    "browse.addWord": "Add word",
+    "browse.cardsCount": "{count} cards",
+    "browse.loading": "Loading…",
+    "browse.noHits": "No matches",
+    "browse.noCards": "No cards",
+    "browse.colWord": "Word",
+    "browse.colNote": "Note",
+    "browse.colTemplate": "Template",
+    "browse.empty": "(empty)",
+
+    // Note editor
+    "note.addTitle": "Add word",
+    "note.editTitle": "Edit word",
+    "note.notetype": "Notetype",
+    "note.tagsLabel": "Tags (space separated)",
+    "note.add": "Add",
+    "note.save": "Save",
+    "note.cancel": "Cancel",
+    "note.delete": "Delete",
+    "note.notetypeNotFound": "No notetype available",
+    "note.deleteConfirmTitle": "Delete word",
+    "note.deleteConfirmBody":
+      "This word and all related cards will be deleted. Continue?",
+    "note.deleteOk": "Delete",
+    "note.deleteCancel": "Cancel",
+
+    // Settings sections
+    "settings.title": "Settings",
+    "settings.language": "Language",
+    "settings.appearance": "Appearance",
+    "settings.themeLight": "Light",
+    "settings.themeDark": "Dark",
+    "settings.themeSystem": "System",
+    "settings.collection": "Collection",
+    "settings.collectionOpenedWithDecks": "{count} decks loaded",
+    "settings.collectionNotOpen": "No collection open",
+    "settings.closeCollection": "Close collection",
+    "settings.ankiDesktopDetected": "Anki Desktop collection detected",
+    "settings.ankiDesktopHint":
+      "This is the collection that's already syncing with AnkiWeb.\nSwitching here makes incremental (normal) sync work.",
+    "settings.switchToThis": "Switch to this collection",
+    "settings.shortcuts": "Keyboard shortcuts",
+    "settings.shortcut.again": "Again",
+    "settings.shortcut.hard": "Hard",
+    "settings.shortcut.good": "Good",
+    "settings.shortcut.easy": "Easy",
+    "settings.shortcut.spaceLabel": "Show answer / Good",
+    "settings.shortcut.openSettings": "Open Settings",
+
+    // Backup
+    "backup.title": "Backup",
+    "backup.autoLabel": "Auto-backup before sync",
+    "backup.autoBody":
+      "Writes a .colpkg into app data dir/backups/. Sync aborts if backup fails.",
+    "backup.now": "Backup now",
+    "backup.nowWithMedia": "Backup with media",
+    "backup.collectionRequired": "Open a collection to back up",
+    "backup.lastPath": "Last: {path}",
+    "backup.restoreLabel": "Restore from backup",
+    "backup.restoreBody":
+      "Overwrite the local collection with a .colpkg file",
+    "backup.restoreButton": "Restore…",
+    "backup.restoreConfirmTitle": "Restore collection",
+    "backup.restoreConfirmBody":
+      "The current collection will be completely replaced.\n\nFrom: {path}\n\nThis cannot be undone. Continue?",
+    "backup.restoreOk": "Restore",
+    "backup.restoreCancel": "Cancel",
+
+    // AnkiWeb Sync
+    "sync.title": "AnkiWeb Sync",
+    "sync.signedInAs": "{username} signed in",
+    "sync.logout": "Log out",
+    "sync.now": "Sync now",
+    "sync.collectionRequired": "Open a collection to sync",
+    "sync.uploadWarn": "Local → server (overwrite)",
+    "sync.downloadWarn": "Server → local (overwrite)",
+    "sync.uploadConfirmTitle": "Overwrite server",
+    "sync.downloadConfirmTitle": "Overwrite local",
+    "sync.uploadConfirmBody":
+      "AnkiWeb data will be replaced with the local collection.\n\nServer data will be lost and cannot be recovered. Continue?",
+    "sync.downloadConfirmBody":
+      "Local collection will be replaced with AnkiWeb data.\n\n(If auto-backup is enabled, a .colpkg backup will be made first.)\nContinue?",
+    "sync.uploadOk": "Upload",
+    "sync.downloadOk": "Download",
+    "sync.cancel": "Cancel",
+    "sync.loginIntro":
+      "Enter your AnkiWeb credentials. The host-key is stored locally in app data dir.",
+    "sync.username": "Username / email",
+    "sync.password": "Password",
+    "sync.customEndpoint": "Custom server (optional)",
+    "sync.login": "Sign in",
+    "sync.noChanges": "No changes",
+    "sync.normalDone": "Sync complete",
+    "sync.fullRequired": "Full sync required",
+    "sync.fullRequiredManual":
+      "Full sync required (both sides have unsynced changes) — choose manually",
+    "sync.autoUploading": "Running full upload…",
+    "sync.autoDownloading": "Running full download…",
+    "sync.uploadDone": "Full upload complete",
+    "sync.downloadDone": "Full download complete",
+    "sync.creatingBackup": "Creating backup…",
+    "sync.syncing": "Syncing…",
+    "sync.uploadRunning": "Local → server overwrite running…",
+    "sync.downloadRunning": "Server → local overwrite running…",
+    "sync.backupAborted": "Backup failed; {label} aborted: {error}",
+
+    // Import / Export
+    "io.title": "Import / Export (.apkg)",
+    "io.importLabel": "Import .apkg",
+    "io.importBody":
+      "Merge into the current collection. Scheduling state is preserved.",
+    "io.importPick": "Choose file…",
+    "io.exportLabel": "Export all decks as .apkg",
+    "io.exportBody": "For sharing, migration, or backup",
+    "io.exportButton": "Export…",
+    "io.includeMedia": "Include media",
+    "io.includeScheduling": "Include scheduling",
+    "io.includeDeckConfigs": "Include deck configs",
+    "io.lastExport": "Last export: {path}",
+    "io.statNew": "new",
+    "io.statUpdated": "updated",
+    "io.statDuplicate": "duplicate",
+    "io.statConflicting": "conflicting",
+    "io.statFound": "found",
+  },
+  ja: {
+    // Welcome
+    "welcome.title": "ようこそ",
+    "welcome.body":
+      "既存の Anki コレクション (.anki2) を開いて始めましょう。\nSync・Import / Export は Anki 公式エンジンで処理されます。",
+    "welcome.openExisting": "既存のコレクションを開く",
+    "welcome.createNew": "新規コレクションを作成",
+
+    // Sidebar
+    "sidebar.decks": "デッキ",
+    "sidebar.newDeck": "新規デッキ",
+    "sidebar.deckPlaceholder": "デッキ名 (a::b でネスト)",
+    "sidebar.create": "作成",
+    "sidebar.cancel": "キャンセル",
+    "sidebar.rename": "名前を変更",
+    "sidebar.delete": "削除…",
+    "sidebar.empty": "デッキがまだありません。\n+ から作成してください。",
+    "sidebar.deleteConfirmTitle": "デッキを削除",
+    "sidebar.deleteConfirmBody":
+      "デッキ「{name}」とその子デッキを削除します。\n含まれるすべてのカードと単語データも削除されます。\n\nこの操作は取り消せません。続行しますか？",
+    "sidebar.deleteOk": "削除",
+
+    // Nav
+    "nav.browse": "Browse",
+    "nav.settings": "Settings",
+    "nav.home": "Home",
+
+    // Title bar / Sync button
+    "titlebar.openCollectionFirst": "コレクションを開いてください",
+    "titlebar.loginFirst": "AnkiWeb にログインしてください",
+    "titlebar.syncing": "同期中…",
+    "titlebar.syncNow": "今すぐ同期",
+    "titlebar.syncError": "Sync エラー",
+    "titlebar.toggleTheme": "テーマ切替",
+
+    // Decks page
+    "decks.selectedHeader": "選択中のデッキ",
+    "decks.studyNow": "Study Now",
+    "decks.cardsWaiting": "{count} cards waiting",
+    "decks.allDoneToday": "今日は終わりました",
+    "decks.addWord": "このデッキに単語を追加",
+    "decks.empty": "デッキがありません",
+    "decks.new": "New",
+    "decks.learning": "Learning",
+    "decks.review": "Review",
+    "decks.parentPath": "親パス",
+
+    // Reviewer
+    "reviewer.back": "戻る",
+    "reviewer.reload": "再読込",
+    "reviewer.loading": "読み込み中…",
+    "reviewer.done": "完了 ✦",
+    "reviewer.sessionFinished": "このセッションのカードは終わりました",
+    "reviewer.backToDecks": "デッキ一覧へ",
+    "reviewer.question": "問題",
+    "reviewer.answer": "解答",
+    "reviewer.showAnswer": "解答を表示",
+    "reviewer.again": "Again",
+    "reviewer.hard": "Hard",
+    "reviewer.good": "Good",
+    "reviewer.easy": "Easy",
+
+    // Browse
+    "browse.filter": "Filter",
+    "browse.deck": "デッキ",
+    "browse.allDecks": "すべて",
+    "browse.searchPlaceholder": "単語・全フィールドを検索",
+    "browse.searchHint": "Anki search syntax 対応",
+    "browse.addWord": "単語を追加",
+    "browse.cardsCount": "{count} cards",
+    "browse.loading": "読み込み中…",
+    "browse.noHits": "ヒットしませんでした",
+    "browse.noCards": "カードがありません",
+    "browse.colWord": "単語",
+    "browse.colNote": "Note",
+    "browse.colTemplate": "Template",
+    "browse.empty": "(空)",
+
+    // Note editor
+    "note.addTitle": "単語を追加",
+    "note.editTitle": "単語を編集",
+    "note.notetype": "Notetype",
+    "note.tagsLabel": "Tags (空白区切り)",
+    "note.add": "追加",
+    "note.save": "保存",
+    "note.cancel": "キャンセル",
+    "note.delete": "削除",
+    "note.notetypeNotFound": "ノートタイプが見つかりません",
+    "note.deleteConfirmTitle": "単語を削除",
+    "note.deleteConfirmBody":
+      "この単語と関連するカードがすべて削除されます。続行しますか？",
+    "note.deleteOk": "削除",
+    "note.deleteCancel": "キャンセル",
+
+    // Settings sections
+    "settings.title": "Settings",
+    "settings.language": "Language",
+    "settings.appearance": "Appearance",
+    "settings.themeLight": "Light",
+    "settings.themeDark": "Dark",
+    "settings.themeSystem": "System",
+    "settings.collection": "Collection",
+    "settings.collectionOpenedWithDecks": "{count} 個のデッキで開いています",
+    "settings.collectionNotOpen": "コレクションが開いていません",
+    "settings.closeCollection": "コレクションを閉じる",
+    "settings.ankiDesktopDetected": "Anki Desktop のコレクションが検出されました",
+    "settings.ankiDesktopHint":
+      "こちらは AnkiWeb と同期済みの可能性が高いコレクションです。\nこちらに切り替えれば差分同期 (normal sync) が動くはずです。",
+    "settings.switchToThis": "このコレクションに切り替え",
+    "settings.shortcuts": "Keyboard shortcuts",
+    "settings.shortcut.again": "Again",
+    "settings.shortcut.hard": "Hard",
+    "settings.shortcut.good": "Good",
+    "settings.shortcut.easy": "Easy",
+    "settings.shortcut.spaceLabel": "解答を表示 / Good",
+    "settings.shortcut.openSettings": "設定を開く",
+
+    // Backup
+    "backup.title": "Backup",
+    "backup.autoLabel": "同期前に自動バックアップ",
+    "backup.autoBody":
+      "app data dir/backups/ に .colpkg を作成。失敗したら同期は中止",
+    "backup.now": "今すぐバックアップ",
+    "backup.nowWithMedia": "メディアも含めてバックアップ",
+    "backup.collectionRequired": "バックアップにはコレクションを開く必要があります",
+    "backup.lastPath": "最終: {path}",
+    "backup.restoreLabel": "バックアップから復元",
+    "backup.restoreBody": ".colpkg でローカルコレクションを完全に上書きします",
+    "backup.restoreButton": "復元…",
+    "backup.restoreConfirmTitle": "コレクションを復元",
+    "backup.restoreConfirmBody":
+      "現在のコレクションを完全に置き換えます。\n\n復元元: {path}\n\nこの操作は取り消せません。続行しますか？",
+    "backup.restoreOk": "復元する",
+    "backup.restoreCancel": "キャンセル",
+
+    // AnkiWeb Sync
+    "sync.title": "AnkiWeb Sync",
+    "sync.signedInAs": "{username} としてログイン中",
+    "sync.logout": "ログアウト",
+    "sync.now": "今すぐ同期",
+    "sync.collectionRequired": "同期にはコレクションを開く必要があります",
+    "sync.uploadWarn": "ローカル → サーバー (上書き)",
+    "sync.downloadWarn": "サーバー → ローカル (上書き)",
+    "sync.uploadConfirmTitle": "サーバー側を上書き",
+    "sync.downloadConfirmTitle": "ローカル側を上書き",
+    "sync.uploadConfirmBody":
+      "ローカルのコレクションで AnkiWeb サーバー側を上書きします。\n\nサーバー側のデータは消えて元に戻せません。続行しますか？",
+    "sync.downloadConfirmBody":
+      "AnkiWeb サーバーのコレクションでローカル側を上書きします。\n\n（自動バックアップが ON なら事前に .colpkg が作成されます）\n続行しますか？",
+    "sync.uploadOk": "アップロード",
+    "sync.downloadOk": "ダウンロード",
+    "sync.cancel": "キャンセル",
+    "sync.loginIntro":
+      "AnkiWeb の認証情報を入力してログインします。host-key は app data dir にローカル保存されます。",
+    "sync.username": "ユーザー名 / メールアドレス",
+    "sync.password": "パスワード",
+    "sync.customEndpoint": "カスタムサーバー (任意)",
+    "sync.login": "ログイン",
+    "sync.noChanges": "変更なし",
+    "sync.normalDone": "同期完了",
+    "sync.fullRequired": "フル同期が必要です",
+    "sync.fullRequiredManual":
+      "フル同期が必要 (両側に未同期変更あり) - 手動選択してください",
+    "sync.autoUploading": "フル同期 (アップロード) を自動実行します…",
+    "sync.autoDownloading": "フル同期 (ダウンロード) を自動実行します…",
+    "sync.uploadDone": "フルアップロード完了",
+    "sync.downloadDone": "フルダウンロード完了",
+    "sync.creatingBackup": "バックアップ作成中…",
+    "sync.syncing": "同期中…",
+    "sync.uploadRunning": "ローカル → サーバーへ上書き中…",
+    "sync.downloadRunning": "サーバー → ローカルへ上書き中…",
+    "sync.backupAborted": "バックアップ失敗のため {label} を中止: {error}",
+
+    // Import / Export
+    "io.title": "Import / Export (.apkg)",
+    "io.importLabel": "Apkg を Import",
+    "io.importBody":
+      "現在のコレクションにマージ。スケジューリング情報も復元",
+    "io.importPick": "ファイルを選択…",
+    "io.exportLabel": "全デッキを Apkg として Export",
+    "io.exportBody": "共有・移行用 (1 ファイルにまとめて出力)",
+    "io.exportButton": "Export…",
+    "io.includeMedia": "メディアを含める",
+    "io.includeScheduling": "スケジューリングを含める",
+    "io.includeDeckConfigs": "デッキ設定を含める",
+    "io.lastExport": "最終 Export: {path}",
+    "io.statNew": "new",
+    "io.statUpdated": "updated",
+    "io.statDuplicate": "duplicate",
+    "io.statConflicting": "conflicting",
+    "io.statFound": "found",
+  },
+} as const;
+
+export type Locale = keyof typeof messages;
+export type MessageKey = keyof (typeof messages)["en"];

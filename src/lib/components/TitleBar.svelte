@@ -6,6 +6,7 @@
   import { goto } from "$app/navigation";
   import { draggable } from "$lib/actions/draggable";
   import { onMount } from "svelte";
+  import { t } from "$lib/i18n";
 
   onMount(() => {
     void sync.refresh();
@@ -26,12 +27,12 @@
 
   const syncTitle = $derived(
     !collection.isOpen
-      ? "コレクションを開いてください"
+      ? t("titlebar.openCollectionFirst")
       : !sync.loggedIn
-        ? "AnkiWeb にログインしてください"
+        ? t("titlebar.loginFirst")
         : sync.busy
-          ? (sync.busyReason ?? "同期中…")
-          : "今すぐ同期",
+          ? (sync.busyReason ?? t("titlebar.syncing"))
+          : t("titlebar.syncNow"),
   );
 </script>
 
@@ -46,7 +47,7 @@
   {:else if sync.lastError}
     <span class="flex max-w-[260px] items-center gap-1 truncate text-[11px] text-(--color-danger)">
       <AlertCircle size={11} class="shrink-0" />
-      <span class="truncate">Sync エラー</span>
+      <span class="truncate">{t("titlebar.syncError")}</span>
     </span>
   {:else if sync.lastMessage && !sync.busy}
     <span class="max-w-[260px] truncate text-[11px] text-(--color-fg-subtle)">
@@ -78,7 +79,7 @@
     type="button"
     onclick={() => theme.toggle()}
     class="grid h-7 w-7 place-items-center rounded-md text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default) active:scale-[0.96]"
-    aria-label="Toggle theme"
+    aria-label={t("titlebar.toggleTheme")}
   >
     {#if theme.resolved === "dark"}
       <Sun size={15} strokeWidth={2} />

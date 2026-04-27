@@ -3,6 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
+  import { i18n, t, type Locale } from "$lib/i18n";
   import { onMount } from "svelte";
   import {
     CheckCircle2,
@@ -19,45 +20,38 @@
     FilePlus2,
   } from "lucide-svelte";
 
-  const themeOptions: { value: Theme; label: string }[] = [
-    { value: "light", label: "Light" },
-    { value: "dark", label: "Dark" },
-    { value: "system", label: "System" },
+  const localeOptions: { value: Locale; label: string }[] = [
+    { value: "en", label: "English" },
+    { value: "ja", label: "日本語" },
   ];
 
-  const shortcuts = [
-    { keys: ["1"], label: "Again" },
-    { keys: ["2"], label: "Hard" },
-    { keys: ["3"], label: "Good" },
-    { keys: ["4"], label: "Easy" },
-    { keys: ["Space"], label: "解答を表示 / Good" },
-    { keys: ["⌘", ","], label: "設定を開く" },
-  ];
+  const themeOptions = $derived<{ value: Theme; label: string }[]>([
+    { value: "light", label: t("settings.themeLight") },
+    { value: "dark", label: t("settings.themeDark") },
+    { value: "system", label: t("settings.themeSystem") },
+  ]);
+
+  const shortcuts = $derived([
+    { keys: ["1"], label: t("settings.shortcut.again") },
+    { keys: ["2"], label: t("settings.shortcut.hard") },
+    { keys: ["3"], label: t("settings.shortcut.good") },
+    { keys: ["4"], label: t("settings.shortcut.easy") },
+    { keys: ["Space"], label: t("settings.shortcut.spaceLabel") },
+    { keys: ["⌘", ","], label: t("settings.shortcut.openSettings") },
+  ]);
 
   let username = $state("");
   let password = $state("");
   let endpoint = $state("");
 
+  // ---- Import / Export (.apkg) ----
+  let exportWithScheduling = $state(false);
+  let exportWithMedia = $state(true);
+  let exportWithDeckConfigs = $state(true);
+
   onMount(() => {
     void sync.refresh();
   });
-
-  async function confirmFullSync(direction: "upload" | "download") {
-    const { confirm } = await import("@tauri-apps/plugin-dialog");
-    const msg =
-      direction === "upload"
-        ? `ローカルのコレクションで AnkiWeb サーバー側を上書きします。\n\nサーバー側のデータは消えて元に戻せません。続行しますか？`
-        : `AnkiWeb サーバーのコレクションでローカル側を上書きします。\n\n（自動バックアップが ON なら事前に .colpkg が作成されます）\n続行しますか？`;
-    const ok = await confirm(msg, {
-      title: direction === "upload" ? "サーバー側を上書き" : "ローカル側を上書き",
-      kind: "warning",
-      okLabel: direction === "upload" ? "アップロード" : "ダウンロード",
-      cancelLabel: "キャンセル",
-    });
-    if (!ok) return;
-    if (direction === "upload") await sync.fullUpload();
-    else await sync.fullDownload();
-  }
 
   async function handleLogin(e: SubmitEvent) {
     e.preventDefault();
@@ -67,29 +61,27 @@
     } catch {}
   }
 
-  async function handleManualBackup(includeMedia: boolean) {
-    try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const stamp = new Date()
-        .toISOString()
-        .replace(/[-:T]/g, "")
-        .replace(/\.\d+Z$/, "");
-      const picked = await save({
-        defaultPath: `memorize-${stamp}.colpkg`,
-        filters: [{ name: "Anki collection package", extensions: ["colpkg"] }],
-      });
-      if (typeof picked === "string") {
-        await sync.manualBackup(picked, includeMedia);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  async function confirmFullSync(direction: "upload" | "download") {
+    const { confirm } = await import("@tauri-apps/plugin-dialog");
+    const ok = await confirm(
+      direction === "upload"
+        ? t("sync.uploadConfirmBody")
+        : t("sync.downloadConfirmBody"),
+      {
+        title:
+          direction === "upload"
+            ? t("sync.uploadConfirmTitle")
+            : t("sync.downloadConfirmTitle"),
+        kind: "warning",
+        okLabel:
+          direction === "upload" ? t("sync.uploadOk") : t("sync.downloadOk"),
+        cancelLabel: t("sync.cancel"),
+      },
+    );
+    if (!ok) return;
+    if (direction === "upload") await sync.fullUpload();
+    else await sync.fullDownload();
   }
-
-  // ---- Import / Export (.apkg) ----
-  let exportWithScheduling = $state(false);
-  let exportWithMedia = $state(true);
-  let exportWithDeckConfigs = $state(true);
 
   async function handleImport() {
     try {
@@ -131,6 +123,25 @@
     }
   }
 
+  async function handleManualBackup(includeMedia: boolean) {
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:T]/g, "")
+        .replace(/\.\d+Z$/, "");
+      const picked = await save({
+        defaultPath: `memorize-${stamp}.colpkg`,
+        filters: [{ name: "Anki collection package", extensions: ["colpkg"] }],
+      });
+      if (typeof picked === "string") {
+        await sync.manualBackup(picked, includeMedia);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   async function handleRestore() {
     try {
       const { open, confirm } = await import("@tauri-apps/plugin-dialog");
@@ -141,15 +152,12 @@
       });
       if (typeof picked !== "string") return;
 
-      const ok = await confirm(
-        `現在のコレクションを完全に置き換えます。\n\n復元元: ${picked}\n\nこの操作は取り消せません。続行しますか？`,
-        {
-          title: "コレクションを復元",
-          kind: "warning",
-          okLabel: "復元する",
-          cancelLabel: "キャンセル",
-        },
-      );
+      const ok = await confirm(t("backup.restoreConfirmBody", { path: picked }), {
+        title: t("backup.restoreConfirmTitle"),
+        kind: "warning",
+        okLabel: t("backup.restoreOk"),
+        cancelLabel: t("backup.restoreCancel"),
+      });
       if (!ok) return;
 
       await sync.restore(picked);
@@ -172,11 +180,38 @@
 {/snippet}
 
 <div class="mx-auto max-w-2xl px-8 py-10">
-  <h1 class="font-display text-3xl font-medium tracking-tight">Settings</h1>
+  <h1 class="font-display text-3xl font-medium tracking-tight">
+    {t("settings.title")}
+  </h1>
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      Backup
+      {t("settings.language")}
+    </h2>
+    <div
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-1 shadow-(--shadow-subtle)"
+    >
+      <div class="grid grid-cols-2 gap-1">
+        {#each localeOptions as opt (opt.value)}
+          {@const active = i18n.locale === opt.value}
+          <button
+            type="button"
+            onclick={() => i18n.set(opt.value)}
+            class="rounded-(--radius-md) px-3 py-2 text-sm transition-colors
+              {active
+              ? 'bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)'
+              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+          >
+            {opt.label}
+          </button>
+        {/each}
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-10 space-y-3">
+    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      {t("backup.title")}
     </h2>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
@@ -185,17 +220,15 @@
         <div class="flex items-center gap-2.5">
           <Shield size={16} class="text-(--color-success)" />
           <div class="text-sm">
-            <p class="text-(--color-fg-default)">同期前に自動バックアップ</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
-              app data dir/backups/ に <code>.colpkg</code> を作成。失敗したら同期は中止
-            </p>
+            <p class="text-(--color-fg-default)">{t("backup.autoLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("backup.autoBody")}</p>
           </div>
         </div>
         <button
           type="button"
           onclick={() => sync.setAutoBackup(!sync.autoBackupBeforeSync)}
           aria-pressed={sync.autoBackupBeforeSync}
-          aria-label="同期前に自動バックアップ"
+          aria-label={t("backup.autoLabel")}
           class="relative h-5 w-9 shrink-0 rounded-full transition-colors {sync.autoBackupBeforeSync
             ? 'bg-(--color-accent-500)'
             : 'bg-(--color-bg-overlay)'}"
@@ -216,7 +249,7 @@
           class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
         >
           <Save size={12} />
-          今すぐバックアップ
+          {t("backup.now")}
         </button>
         <button
           type="button"
@@ -225,18 +258,18 @@
           class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
         >
           <Save size={12} />
-          メディアも含めてバックアップ
+          {t("backup.nowWithMedia")}
         </button>
       </div>
 
       {#if !collection.isOpen}
         <p class="mt-3 text-xs text-(--color-fg-subtle)">
-          バックアップにはコレクションを開く必要があります
+          {t("backup.collectionRequired")}
         </p>
       {/if}
       {#if sync.lastBackupPath}
         <p class="mt-3 truncate font-mono text-[11px] text-(--color-fg-subtle)">
-          最終: {sync.lastBackupPath}
+          {t("backup.lastPath", { path: sync.lastBackupPath })}
         </p>
       {/if}
 
@@ -246,10 +279,8 @@
         <div class="flex items-center gap-2.5">
           <History size={16} class="text-(--color-warning)" />
           <div class="text-sm">
-            <p class="text-(--color-fg-default)">バックアップから復元</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
-              <code>.colpkg</code> でローカルコレクションを完全に上書きします
-            </p>
+            <p class="text-(--color-fg-default)">{t("backup.restoreLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("backup.restoreBody")}</p>
           </div>
         </div>
         <button
@@ -259,7 +290,7 @@
           class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-1.5 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
         >
           <History size={12} />
-          復元…
+          {t("backup.restoreButton")}
         </button>
       </div>
     </div>
@@ -267,7 +298,7 @@
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      AnkiWeb Sync
+      {t("sync.title")}
     </h2>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
@@ -277,8 +308,7 @@
           <div class="flex items-center gap-2.5">
             <CheckCircle2 size={16} class="text-(--color-success)" />
             <span class="text-sm">
-              <span class="text-(--color-fg-default)">{sync.username}</span>
-              <span class="text-(--color-fg-subtle)"> としてログイン中</span>
+              {t("sync.signedInAs", { username: sync.username ?? "" })}
             </span>
           </div>
           <button
@@ -288,7 +318,7 @@
             class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
           >
             <LogOut size={12} />
-            ログアウト
+            {t("sync.logout")}
           </button>
         </div>
 
@@ -304,7 +334,7 @@
             {:else}
               <RefreshCw size={14} />
             {/if}
-            {sync.busy && sync.busyReason ? sync.busyReason : "今すぐ同期"}
+            {sync.busy && sync.busyReason ? sync.busyReason : t("sync.now")}
           </button>
 
           {#if sync.fullSyncRequired}
@@ -315,7 +345,7 @@
                 disabled={sync.busy}
                 class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
               >
-                <Upload size={12} /> ローカル → サーバー (上書き)
+                <Upload size={12} /> {t("sync.uploadWarn")}
               </button>
             {/if}
             {#if sync.fullSyncRequired.download_ok}
@@ -325,16 +355,14 @@
                 disabled={sync.busy}
                 class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-2 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
               >
-                <Download size={12} /> サーバー → ローカル (上書き)
+                <Download size={12} /> {t("sync.downloadWarn")}
               </button>
             {/if}
           {/if}
         </div>
 
         {#if !collection.isOpen}
-          <p class="mt-3 text-xs text-(--color-fg-subtle)">
-            同期にはコレクションを開く必要があります
-          </p>
+          <p class="mt-3 text-xs text-(--color-fg-subtle)">{t("sync.collectionRequired")}</p>
         {/if}
         {#if sync.lastMessage}
           <p class="mt-3 flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
@@ -350,13 +378,9 @@
         {/if}
       {:else}
         <form onsubmit={handleLogin} class="space-y-3">
-          <p class="text-xs text-(--color-fg-muted)">
-            AnkiWeb の認証情報を入力してログインします。host-key は OS キーチェーン (macOS Keychain) に保存されます。
-          </p>
+          <p class="text-xs text-(--color-fg-muted)">{t("sync.loginIntro")}</p>
           <label class="block">
-            <span class="mb-1 block text-xs text-(--color-fg-muted)"
-              >ユーザー名 / メールアドレス</span
-            >
+            <span class="mb-1 block text-xs text-(--color-fg-muted)">{t("sync.username")}</span>
             <input
               type="text"
               autocomplete="username"
@@ -366,7 +390,7 @@
             />
           </label>
           <label class="block">
-            <span class="mb-1 block text-xs text-(--color-fg-muted)">パスワード</span>
+            <span class="mb-1 block text-xs text-(--color-fg-muted)">{t("sync.password")}</span>
             <input
               type="password"
               autocomplete="current-password"
@@ -376,7 +400,7 @@
             />
           </label>
           <details class="text-xs text-(--color-fg-subtle)">
-            <summary class="cursor-pointer">カスタムサーバー (任意)</summary>
+            <summary class="cursor-pointer">{t("sync.customEndpoint")}</summary>
             <input
               type="text"
               placeholder="https://sync.ankiweb.net/"
@@ -392,7 +416,7 @@
             {#if sync.busy}
               <Loader2 size={14} class="animate-spin" />
             {/if}
-            ログイン
+            {t("sync.login")}
           </button>
           {#if sync.lastError}
             <p class="flex items-start gap-1.5 text-xs text-(--color-danger)">
@@ -407,20 +431,17 @@
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      Import / Export (.apkg)
+      {t("io.title")}
     </h2>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
     >
-      <!-- Import -->
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-2.5">
           <FilePlus2 size={16} class="text-(--color-accent-500)" />
           <div class="text-sm">
-            <p class="text-(--color-fg-default)">Apkg を Import</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
-              現在のコレクションにマージ。スケジューリング情報も復元
-            </p>
+            <p class="text-(--color-fg-default)">{t("io.importLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("io.importBody")}</p>
           </div>
         </div>
         <button
@@ -434,18 +455,18 @@
           {:else}
             <FilePlus2 size={12} />
           {/if}
-          ファイルを選択…
+          {t("io.importPick")}
         </button>
       </div>
 
       {#if pkg.lastImport}
         <div class="mt-3 grid grid-cols-3 gap-2 text-xs sm:grid-cols-5">
           {#each [
-            { label: "new", value: pkg.lastImport.new },
-            { label: "updated", value: pkg.lastImport.updated },
-            { label: "duplicate", value: pkg.lastImport.duplicate },
-            { label: "conflicting", value: pkg.lastImport.conflicting },
-            { label: "found", value: pkg.lastImport.found_notes }
+            { label: t("io.statNew"), value: pkg.lastImport.new },
+            { label: t("io.statUpdated"), value: pkg.lastImport.updated },
+            { label: t("io.statDuplicate"), value: pkg.lastImport.duplicate },
+            { label: t("io.statConflicting"), value: pkg.lastImport.conflicting },
+            { label: t("io.statFound"), value: pkg.lastImport.found_notes }
           ] as stat (stat.label)}
             <div class="rounded-(--radius-sm) bg-(--color-bg-overlay) px-2 py-1.5 text-center">
               <p class="text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
@@ -461,16 +482,13 @@
 
       <hr class="my-4 border-(--color-border-default)" />
 
-      <!-- Export -->
       <div class="space-y-3">
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-2.5">
             <Package size={16} class="text-(--color-accent-500)" />
             <div class="text-sm">
-              <p class="text-(--color-fg-default)">全デッキを Apkg として Export</p>
-              <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
-                共有・移行用 (1 ファイルにまとめて出力)
-              </p>
+              <p class="text-(--color-fg-default)">{t("io.exportLabel")}</p>
+              <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("io.exportBody")}</p>
             </div>
           </div>
           <button
@@ -484,20 +502,20 @@
             {:else}
               <Package size={12} />
             {/if}
-            Export…
+            {t("io.exportButton")}
           </button>
         </div>
 
         <div class="flex flex-wrap gap-x-5 gap-y-2 pl-7 text-xs">
-          {@render checkbox("メディアを含める", exportWithMedia, (v) => (exportWithMedia = v))}
-          {@render checkbox("スケジューリングを含める", exportWithScheduling, (v) => (exportWithScheduling = v))}
-          {@render checkbox("デッキ設定を含める", exportWithDeckConfigs, (v) => (exportWithDeckConfigs = v))}
+          {@render checkbox(t("io.includeMedia"), exportWithMedia, (v) => (exportWithMedia = v))}
+          {@render checkbox(t("io.includeScheduling"), exportWithScheduling, (v) => (exportWithScheduling = v))}
+          {@render checkbox(t("io.includeDeckConfigs"), exportWithDeckConfigs, (v) => (exportWithDeckConfigs = v))}
         </div>
       </div>
 
       {#if pkg.lastExportPath}
         <p class="mt-3 truncate font-mono text-[11px] text-(--color-fg-subtle)">
-          最終 Export: {pkg.lastExportPath}
+          {t("io.lastExport", { path: pkg.lastExportPath })}
         </p>
       {/if}
       {#if pkg.lastError}
@@ -511,7 +529,7 @@
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      Appearance
+      {t("settings.appearance")}
     </h2>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-1 shadow-(--shadow-subtle)"
@@ -536,14 +554,14 @@
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      Collection
+      {t("settings.collection")}
     </h2>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-4 shadow-(--shadow-subtle)"
     >
       {#if collection.isOpen}
         <p class="text-sm text-(--color-fg-default)">
-          {collection.decks.length} 個のデッキで開いています
+          {t("settings.collectionOpenedWithDecks", { count: collection.decks.length })}
         </p>
         {#if collection.currentPath}
           <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
@@ -555,12 +573,10 @@
           onclick={() => collection.close()}
           class="mt-3 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-sm text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
         >
-          コレクションを閉じる
+          {t("settings.closeCollection")}
         </button>
       {:else}
-        <p class="text-sm text-(--color-fg-muted)">
-          コレクションが開いていません
-        </p>
+        <p class="text-sm text-(--color-fg-muted)">{t("settings.collectionNotOpen")}</p>
       {/if}
 
       {#if collection.ankiDesktopPath && collection.ankiDesktopPath !== collection.currentPath}
@@ -568,14 +584,13 @@
           class="mt-4 rounded-(--radius-md) border border-(--color-accent-500)/40 bg-(--color-accent-500)/8 p-3 text-xs"
         >
           <p class="text-(--color-fg-default)">
-            Anki Desktop のコレクションが検出されました
+            {t("settings.ankiDesktopDetected")}
           </p>
           <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
             {collection.ankiDesktopPath}
           </p>
-          <p class="mt-2 leading-relaxed text-(--color-fg-muted)">
-            こちらは AnkiWeb と同期済みの可能性が高いコレクションです。<br />
-            これに切り替えれば差分同期 (normal sync) が動くはずです。
+          <p class="mt-2 leading-relaxed whitespace-pre-line text-(--color-fg-muted)">
+            {t("settings.ankiDesktopHint")}
           </p>
           <button
             type="button"
@@ -586,7 +601,7 @@
             }}
             class="mt-2 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) hover:bg-(--color-accent-600) active:scale-[0.97]"
           >
-            このコレクションに切り替え
+            {t("settings.switchToThis")}
           </button>
         </div>
       {/if}
@@ -595,7 +610,7 @@
 
   <section class="mt-10 space-y-3">
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      Keyboard shortcuts
+      {t("settings.shortcuts")}
     </h2>
     <div
       class="overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) shadow-(--shadow-subtle)"

@@ -1,5 +1,6 @@
 import { invoke } from "$lib/ipc";
 import { browser } from "$app/environment";
+import { t } from "$lib/i18n";
 
 type SyncStatus = { logged_in: boolean; username: string | null };
 
@@ -49,19 +50,17 @@ function fmtBytes(n: number): string {
 function describeProgress(p: ProgressEvent): string {
   switch (p.kind) {
     case "media_sync":
-      return `メディア: ${p.checked} 件確認 / ↓${p.downloaded_files} ↑${p.uploaded_files}`;
+      return `media: ${p.checked} / ↓${p.downloaded_files} ↑${p.uploaded_files}`;
     case "normal_sync":
-      return `${p.stage}: 追加 ${p.local_update}/${p.remote_update} 削除 ${p.local_remove}/${p.remote_remove}`;
+      return `${p.stage}: +${p.local_update}/${p.remote_update}  -${p.local_remove}/${p.remote_remove}`;
     case "full_sync":
       return p.total_bytes > 0
         ? `${fmtBytes(p.transferred_bytes)} / ${fmtBytes(p.total_bytes)}`
-        : `${fmtBytes(p.transferred_bytes)} 転送中…`;
+        : `${fmtBytes(p.transferred_bytes)}`;
     case "import":
-      return "Import 中…";
     case "export":
-      return "Export 中…";
     default:
-      return "処理中…";
+      return p.kind;
   }
 }
 
@@ -113,7 +112,7 @@ class SyncStore {
   ): Promise<T> {
     if (this.autoBackupBeforeSync) {
       this.busy = true;
-      this.busyReason = "バックアップ作成中…";
+      this.busyReason = t("sync.creatingBackup");
       try {
         const r = await invoke<AutoBackupResult>("auto_backup", {
           includeMedia: false,
@@ -122,7 +121,10 @@ class SyncStore {
       } catch (e) {
         this.busy = false;
         this.busyReason = null;
-        this.lastError = `バックアップ失敗のため ${label} を中止: ${e}`;
+        this.lastError = t("sync.backupAborted", {
+          label,
+          error: String(e),
+        });
         throw e;
       }
     }
@@ -138,12 +140,12 @@ class SyncStore {
 
   async manualBackup(outPath: string, includeMedia: boolean) {
     this.busy = true;
-    this.busyReason = "バックアップ作成中…";
+    this.busyReason = t("sync.creatingBackup");
     this.lastError = null;
     try {
       await invoke("export_colpkg", { outPath, includeMedia });
       this.lastBackupPath = outPath;
-      this.lastMessage = `バックアップ作成: ${outPath}`;
+      this.lastMessage = t("backup.lastPath", { path: outPath });
     } catch (e) {
       this.lastError = String(e);
     } finally {
@@ -154,12 +156,12 @@ class SyncStore {
 
   async restore(inPath: string) {
     this.busy = true;
-    this.busyReason = "復元中…";
+    this.busyReason = t("backup.restoreButton");
     this.lastError = null;
     this.lastMessage = null;
     try {
       await invoke("import_colpkg", { inPath });
-      this.lastMessage = `復元完了: ${inPath}`;
+      this.lastMessage = t("backup.lastPath", { path: inPath });
     } catch (e) {
       this.lastError = String(e);
     } finally {
@@ -211,20 +213,16 @@ class SyncStore {
     this.lastMessage = null;
     this.fullSyncRequired = null;
     try {
-      const r = await this.runWithAutoBackup("同期中…", () =>
+      const r = await this.runWithAutoBackup(t("sync.syncing"), () =>
         invoke<SyncReport>("sync_now"),
       );
       this.lastReport = r;
-      const pendingHint =
-        r.local_pending_notes > 0 || r.local_pending_cards > 0
-          ? ` / 未同期 ${r.local_pending_notes} 単語 + ${r.local_pending_cards} カード`
-          : "";
       switch (r.kind) {
         case "no_changes":
-          this.lastMessage = `変更なし${pendingHint}`;
+          this.lastMessage = t("sync.noChanges");
           break;
         case "normal_done":
-          this.lastMessage = `同期完了${pendingHint}`;
+          this.lastMessage = t("sync.normalDone");
           break;
         case "full_required":
           this.fullSyncRequired = {
@@ -232,18 +230,17 @@ class SyncStore {
             download_ok: r.download_ok,
           };
           if (r.server_message) this.lastMessage = r.server_message;
-          // Auto-pick if only one direction is safe; otherwise let the user decide.
           if (r.upload_ok && !r.download_ok) {
-            this.lastMessage = "フル同期 (アップロード) を自動実行します…";
+            this.lastMessage = t("sync.autoUploading");
             await this.fullUpload();
             return;
           }
           if (r.download_ok && !r.upload_ok) {
-            this.lastMessage = "フル同期 (ダウンロード) を自動実行します…";
+            this.lastMessage = t("sync.autoDownloading");
             await this.fullDownload();
             return;
           }
-          this.lastMessage = `フル同期が必要 (両側に未同期変更あり) - 手動選択してください${pendingHint}`;
+          this.lastMessage = t("sync.fullRequiredManual");
           break;
       }
       if (r.server_message && r.kind !== "full_required") {
@@ -258,11 +255,11 @@ class SyncStore {
     this.lastError = null;
     const endpointOverride = this.lastReport?.new_endpoint ?? null;
     try {
-      await this.runWithAutoBackup("ローカル → サーバーへ上書き中…", () =>
+      await this.runWithAutoBackup(t("sync.uploadRunning"), () =>
         invoke("sync_full_upload", { endpointOverride }),
       );
       this.fullSyncRequired = null;
-      this.lastMessage = "フルアップロード完了";
+      this.lastMessage = t("sync.uploadDone");
     } catch (e) {
       this.lastError = String(e);
     }
@@ -272,11 +269,11 @@ class SyncStore {
     this.lastError = null;
     const endpointOverride = this.lastReport?.new_endpoint ?? null;
     try {
-      await this.runWithAutoBackup("サーバー → ローカルへ上書き中…", () =>
+      await this.runWithAutoBackup(t("sync.downloadRunning"), () =>
         invoke("sync_full_download", { endpointOverride }),
       );
       this.fullSyncRequired = null;
-      this.lastMessage = "フルダウンロード完了";
+      this.lastMessage = t("sync.downloadDone");
     } catch (e) {
       this.lastError = String(e);
     }

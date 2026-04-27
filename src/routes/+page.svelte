@@ -3,6 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
+  import { t } from "$lib/i18n";
 
   const selected = $derived(collection.selectedDeck);
   const totalDue = $derived(
@@ -33,7 +34,6 @@
         filters: [{ name: "Anki collection", extensions: ["anki2"] }],
       });
       if (typeof picked !== "string") return;
-      // CollectionBuilder creates the SQLite db on first build if not present.
       await collection.open(picked);
     } catch (e) {
       console.error(e);
@@ -74,11 +74,10 @@
         </div>
         <div class="space-y-2">
           <h1 class="font-display text-3xl font-medium tracking-tight">
-            ようこそ
+            {t("welcome.title")}
           </h1>
-          <p class="text-sm leading-relaxed text-(--color-fg-muted)">
-            既存の Anki コレクション (.anki2) を開いて始めましょう。
-            <br />Sync・Import / Export は後の Phase で対応します。
+          <p class="text-sm leading-relaxed whitespace-pre-line text-(--color-fg-muted)">
+            {t("welcome.body")}
           </p>
         </div>
         <div class="flex w-full flex-col gap-2">
@@ -88,7 +87,7 @@
             class="flex items-center justify-center gap-2 rounded-(--radius-md) bg-(--color-accent-500) px-5 py-2.5 text-sm font-medium whitespace-nowrap text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all duration-200 hover:bg-(--color-accent-600) active:scale-[0.97]"
           >
             <FolderOpen size={16} strokeWidth={2.25} />
-            既存のコレクションを開く
+            {t("welcome.openExisting")}
           </button>
           <button
             type="button"
@@ -96,7 +95,7 @@
             class="flex items-center justify-center gap-2 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-sm font-medium whitespace-nowrap text-(--color-fg-default) shadow-(--shadow-subtle) transition-all duration-200 hover:bg-(--color-bg-overlay) active:scale-[0.97]"
           >
             <FilePlus size={16} strokeWidth={2.25} />
-            新規コレクションを作成
+            {t("welcome.createNew")}
           </button>
         </div>
         {#if collection.error}
@@ -110,7 +109,7 @@
         <p
           class="text-[11px] font-semibold tracking-[0.14em] text-(--color-fg-subtle) uppercase"
         >
-          選択中のデッキ
+          {t("decks.selectedHeader")}
         </p>
         <h1
           class="mt-1.5 font-display text-[2.25rem] leading-tight font-medium tracking-tight"
@@ -125,9 +124,9 @@
       </header>
 
       <div class="grid grid-cols-3 gap-4">
-        {@render countCard("New", selected.new_count, "accent", 0)}
-        {@render countCard("Learning", selected.learn_count, "warning", 60)}
-        {@render countCard("Review", selected.review_count, "success", 120)}
+        {@render countCard(t("decks.new"), selected.new_count, "accent", 0)}
+        {@render countCard(t("decks.learning"), selected.learn_count, "warning", 60)}
+        {@render countCard(t("decks.review"), selected.review_count, "success", 120)}
       </div>
 
       <div class="flex flex-col items-center gap-3">
@@ -142,10 +141,12 @@
             strokeWidth={2.25}
             class="transition-transform duration-300 group-hover:rotate-12 group-disabled:rotate-0"
           />
-          Study Now
+          {t("decks.studyNow")}
         </button>
         <p class="text-xs text-(--color-fg-subtle) tabular-nums">
-          {totalDue > 0 ? `${totalDue} cards waiting` : "今日は終わりました"}
+          {totalDue > 0
+            ? t("decks.cardsWaiting", { count: totalDue })
+            : t("decks.allDoneToday")}
         </p>
         <button
           type="button"
@@ -153,7 +154,7 @@
           class="mt-1 flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
         >
           <Plus size={12} strokeWidth={2.5} />
-          このデッキに単語を追加
+          {t("decks.addWord")}
         </button>
       </div>
     </div>
@@ -161,7 +162,7 @@
     <div class="grid h-full place-items-center">
       <div class="flex flex-col items-center gap-3 text-(--color-fg-muted)">
         <Plus size={32} strokeWidth={1.5} />
-        <p class="text-sm">デッキがありません</p>
+        <p class="text-sm">{t("decks.empty")}</p>
       </div>
     </div>
   {/if}

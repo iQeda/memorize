@@ -15,6 +15,7 @@
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import { goto } from "$app/navigation";
   import { tick } from "svelte";
+  import { t } from "$lib/i18n";
 
   async function selectDeck(deck: DeckSummary) {
     collection.selectedDeckId = deck.id;
@@ -108,23 +109,20 @@
   async function deleteDeck(deck: DeckSummary) {
     menu = null;
     const { confirm } = await import("@tauri-apps/plugin-dialog");
-    const ok = await confirm(
-      `デッキ「${deck.name}」とその子デッキを削除します。\n含まれるすべてのカードと単語データも削除されます。\n\nこの操作は取り消せません。続行しますか？`,
-      {
-        title: "デッキを削除",
-        kind: "warning",
-        okLabel: "削除",
-        cancelLabel: "キャンセル",
-      },
-    );
+    const ok = await confirm(t("sidebar.deleteConfirmBody", { name: deck.name }), {
+      title: t("sidebar.deleteConfirmTitle"),
+      kind: "warning",
+      okLabel: t("sidebar.deleteOk"),
+      cancelLabel: t("sidebar.cancel"),
+    });
     if (!ok) return;
     await collection.deleteDeck(deck.id);
   }
 
-  const navItems = [
-    { href: "/browse/", label: "Browse", icon: Search },
-    { href: "/settings/", label: "Settings", icon: SettingsIcon },
-  ];
+  const navItems = $derived([
+    { href: "/browse/", label: t("nav.browse"), icon: Search },
+    { href: "/settings/", label: t("nav.settings"), icon: SettingsIcon },
+  ]);
 
   function isActive(href: string): boolean {
     return $page.url.pathname.startsWith(href);
@@ -162,7 +160,7 @@
       href="/"
       data-sveltekit-preload-data="hover"
       class="no-drag flex items-center gap-2 rounded-md px-1 -mx-1 py-0.5 transition-colors hover:bg-(--color-bg-overlay)"
-      aria-label="Home"
+      aria-label={t("nav.home")}
     >
       <div
         class="grid h-6 w-6 place-items-center rounded-md bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)"
@@ -198,7 +196,7 @@
         <span
           class="text-[10px] font-semibold tracking-[0.14em] text-(--color-fg-subtle) uppercase"
         >
-          デッキ
+          {t("sidebar.decks")}
         </span>
         <div class="flex items-center gap-1">
           <span class="number-tabular text-[10px] text-(--color-fg-subtle)">
@@ -208,7 +206,7 @@
             type="button"
             onclick={startCreate}
             disabled={creating}
-            aria-label="新規デッキ"
+            aria-label={t("sidebar.newDeck")}
             class="grid h-4 w-4 place-items-center rounded text-(--color-fg-subtle) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default) disabled:opacity-40"
           >
             <Plus size={12} strokeWidth={2.5} />
@@ -222,13 +220,13 @@
             bind:this={newInputEl}
             bind:value={newName}
             onkeydown={onInputKey}
-            placeholder="デッキ名 (a::b でネスト)"
+            placeholder={t("sidebar.deckPlaceholder")}
             class="min-w-0 flex-1 rounded-(--radius-sm) border border-(--color-border-strong) bg-(--color-bg-elevated) px-2 py-0.5 text-xs outline-none focus:border-(--color-accent-500)"
           />
           <button
             type="button"
             onclick={submitCreate}
-            aria-label="作成"
+            aria-label={t("sidebar.create")}
             class="grid h-5 w-5 place-items-center rounded text-(--color-success) transition-colors hover:bg-(--color-bg-overlay)"
           >
             <Check size={12} strokeWidth={2.5} />
@@ -236,7 +234,7 @@
           <button
             type="button"
             onclick={cancelCreate}
-            aria-label="キャンセル"
+            aria-label={t("sidebar.cancel")}
             class="grid h-5 w-5 place-items-center rounded text-(--color-fg-subtle) transition-colors hover:bg-(--color-bg-overlay)"
           >
             <X size={12} strokeWidth={2.5} />
@@ -244,8 +242,8 @@
         </div>
       {/if}
       {#if collection.decks.length === 0 && !creating}
-        <p class="px-2.5 py-2 text-[11px] text-(--color-fg-subtle)">
-          デッキがまだありません。<br />+ から作成してください。
+        <p class="px-2.5 py-2 text-[11px] whitespace-pre-line text-(--color-fg-subtle)">
+          {t("sidebar.empty")}
         </p>
       {/if}
       {#each collection.decks as deck (deck.id)}
@@ -307,7 +305,7 @@
       class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--color-fg-default) hover:bg-(--color-bg-overlay)"
     >
       <Pencil size={12} strokeWidth={2} />
-      名前を変更
+      {t("sidebar.rename")}
     </button>
     <button
       type="button"
@@ -315,7 +313,7 @@
       class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-(--color-danger) hover:bg-(--color-danger)/10"
     >
       <Trash2 size={12} strokeWidth={2} />
-      削除…
+      {t("sidebar.delete")}
     </button>
   </ContextMenu>
 {/if}

@@ -7,6 +7,7 @@
   import { onMount, onDestroy } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
+  import { t } from "$lib/i18n";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -122,12 +123,14 @@
   }
 
   type Tone = "danger" | "warning" | "accent" | "success";
-  const buttons: { rating: keyof typeof ratingMap; label: string; tone: Tone }[] = [
-    { rating: "again", label: "Again", tone: "danger" },
-    { rating: "hard", label: "Hard", tone: "warning" },
-    { rating: "good", label: "Good", tone: "accent" },
-    { rating: "easy", label: "Easy", tone: "success" },
-  ];
+  const buttons = $derived<
+    { rating: keyof typeof ratingMap; label: string; tone: Tone }[]
+  >([
+    { rating: "again", label: t("reviewer.again"), tone: "danger" },
+    { rating: "hard", label: t("reviewer.hard"), tone: "warning" },
+    { rating: "good", label: t("reviewer.good"), tone: "accent" },
+    { rating: "easy", label: t("reviewer.easy"), tone: "success" },
+  ]);
 
   const toneBg: Record<Tone, string> = {
     accent:
@@ -152,7 +155,7 @@
       class="flex items-center gap-1.5 rounded-(--radius-md) px-2 py-1 text-sm text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
     >
       <ArrowLeft size={14} />
-      Back
+      {t("reviewer.back")}
     </button>
     <p class="flex items-center gap-6 text-xs text-(--color-fg-subtle)">
       <span class="number-tabular">
@@ -177,7 +180,7 @@
       type="button"
       onclick={startSession}
       class="grid h-7 w-7 place-items-center rounded-(--radius-md) text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
-      aria-label="Reload"
+      aria-label={t("reviewer.reload")}
     >
       <RotateCcw size={14} />
     </button>
@@ -198,21 +201,19 @@
 
   <div class="flex flex-1 flex-col items-center px-6 pt-12 pb-6">
     {#if loading}
-      <p class="text-sm text-(--color-fg-muted)">読み込み中…</p>
+      <p class="text-sm text-(--color-fg-muted)">{t("reviewer.loading")}</p>
     {:else if error}
       <p class="text-sm text-(--color-danger)">{error}</p>
     {:else if !current}
       <div in:scale={{ duration: 240, start: 0.92, easing: cubicOut }} class="text-center">
-        <p class="font-display text-3xl font-medium">完了 ✦</p>
-        <p class="mt-2 text-sm text-(--color-fg-muted)">
-          このセッションのカードは終わりました
-        </p>
+        <p class="font-display text-3xl font-medium">{t("reviewer.done")}</p>
+        <p class="mt-2 text-sm text-(--color-fg-muted)">{t("reviewer.sessionFinished")}</p>
         <button
           type="button"
           onclick={() => goto("/")}
           class="mt-6 rounded-(--radius-md) border border-(--color-border-strong) px-4 py-1.5 text-sm transition-colors hover:bg-(--color-bg-overlay)"
         >
-          デッキ一覧へ
+          {t("reviewer.backToDecks")}
         </button>
       </div>
     {:else}
@@ -227,7 +228,7 @@
               ? 'bg-(--color-fg-onAccent)/80'
               : 'bg-(--color-accent-500)'}"
           ></span>
-          {showingAnswer ? "解答" : "問題"}
+          {showingAnswer ? t("reviewer.answer") : t("reviewer.question")}
         </div>
         {#key current.card_id}
           <article
@@ -256,7 +257,7 @@
             in:fade={{ duration: 160, easing: cubicOut }}
             class="rounded-(--radius-md) bg-(--color-accent-500) px-8 py-2.5 text-sm font-medium text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all hover:bg-(--color-accent-600) hover:shadow-(--shadow-glow) active:scale-[0.97]"
           >
-            解答を表示
+            {t("reviewer.showAnswer")}
             <span class="ml-2 font-mono text-[10px] opacity-70">Space</span>
           </button>
         {:else}

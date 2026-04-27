@@ -5,6 +5,7 @@
   import { onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
+  import { t } from "$lib/i18n";
 
   type Props = {
     mode: "add" | "edit";
@@ -80,15 +81,12 @@
   async function deleteNote() {
     if (mode !== "edit" || noteId === undefined) return;
     const { confirm } = await import("@tauri-apps/plugin-dialog");
-    const ok = await confirm(
-      "この単語を削除します。関連するカードもすべて削除されます。続行しますか？",
-      {
-        title: "単語を削除",
-        kind: "warning",
-        okLabel: "削除",
-        cancelLabel: "キャンセル",
-      },
-    );
+    const ok = await confirm(t("note.deleteConfirmBody"), {
+      title: t("note.deleteConfirmTitle"),
+      kind: "warning",
+      okLabel: t("note.deleteOk"),
+      cancelLabel: t("note.deleteCancel"),
+    });
     if (!ok) return;
     const removed = await notes.deleteNotes([noteId]);
     if (removed > 0) {
@@ -130,7 +128,7 @@
       class="flex items-center justify-between border-b border-(--color-border-default) px-5 py-3"
     >
       <h2 class="text-sm font-semibold tracking-wide">
-        {mode === "add" ? "単語を追加" : "単語を編集"}
+        {mode === "add" ? t("note.addTitle") : t("note.editTitle")}
       </h2>
       <button
         type="button"
@@ -148,16 +146,14 @@
           <Loader2 size={20} class="animate-spin" />
         </div>
       {:else if !notetype}
-        <p class="text-sm text-(--color-danger)">
-          ノートタイプが見つかりません
-        </p>
+        <p class="text-sm text-(--color-danger)">{t("note.notetypeNotFound")}</p>
       {:else}
         <div class="space-y-3">
           {#if mode === "add"}
             <div class="grid grid-cols-2 gap-3">
               <label class="block">
                 <span class="mb-1 block text-[11px] tracking-wider text-(--color-fg-subtle) uppercase">
-                  Deck
+                  {t("browse.deck")}
                 </span>
                 <select
                   bind:value={deckId}
@@ -170,7 +166,7 @@
               </label>
               <label class="block">
                 <span class="mb-1 block text-[11px] tracking-wider text-(--color-fg-subtle) uppercase">
-                  Notetype
+                  {t("note.notetype")}
                 </span>
                 <select
                   value={notetype.id}
@@ -189,7 +185,7 @@
             </div>
           {:else}
             <p class="text-xs text-(--color-fg-subtle)">
-              Notetype: <span class="text-(--color-fg-default)">{notetype.name}</span>
+              {t("note.notetype")}: <span class="text-(--color-fg-default)">{notetype.name}</span>
             </p>
           {/if}
 
@@ -208,7 +204,7 @@
 
           <label class="block">
             <span class="mb-1 block text-[11px] tracking-wider text-(--color-fg-subtle) uppercase">
-              Tags (空白区切り)
+              {t("note.tagsLabel")}
             </span>
             <input
               type="text"
@@ -238,7 +234,7 @@
             disabled={notes.busy}
             class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-danger)/10 px-3 py-1.5 text-xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20 disabled:opacity-50"
           >
-            <Trash2 size={12} /> 削除
+            <Trash2 size={12} /> {t("note.delete")}
           </button>
         {/if}
       </div>
@@ -248,7 +244,7 @@
           onclick={onClose}
           class="rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) hover:bg-(--color-bg-overlay)"
         >
-          キャンセル
+          {t("note.cancel")}
         </button>
         <button
           type="button"
@@ -261,7 +257,7 @@
           {:else}
             <Save size={12} />
           {/if}
-          {mode === "add" ? "追加" : "保存"}
+          {mode === "add" ? t("note.add") : t("note.save")}
           <span class="ml-1 font-mono text-[10px] opacity-70">⌘↵</span>
         </button>
       </div>
