@@ -8,6 +8,39 @@
   };
   let { html, css, side }: Props = $props();
 
+  // Tags split to keep Svelte's tokenizer from prematurely closing this block.
+  const SCRIPT_OPEN = "<" + "script>";
+  const SCRIPT_CLOSE = "</" + "script>";
+
+  const wrapJaScript = `(function() {
+    var RE = /[\\u3000-\\u303F\\u3040-\\u309F\\u30A0-\\u30FF\\u31F0-\\u31FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF\\uFE30-\\uFE4F\\uFF00-\\uFFEF]+/g;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    var n;
+    while ((n = walker.nextNode())) {
+      if (n.parentNode && (n.parentNode.tagName === 'SCRIPT' || n.parentNode.tagName === 'STYLE')) continue;
+      nodes.push(n);
+    }
+    for (var i = 0; i < nodes.length; i++) {
+      var t = nodes[i];
+      var s = t.nodeValue || '';
+      if (!RE.test(s)) continue;
+      RE.lastIndex = 0;
+      var frag = document.createDocumentFragment();
+      var last = 0, m;
+      while ((m = RE.exec(s)) !== null) {
+        if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+        var span = document.createElement('span');
+        span.setAttribute('lang', 'ja');
+        span.textContent = m[0];
+        frag.appendChild(span);
+        last = m.index + m[0].length;
+      }
+      if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+      t.parentNode.replaceChild(frag, t);
+    }
+  })();`;
+
   const srcdoc = $derived.by(() => {
     const cardClass = side === "answer" ? "card answer" : "card";
     const baseTextColor =
@@ -100,36 +133,7 @@
 </head>
 <body class="${cardClass}">
 ${html}
-<script>
-(function() {
-  var RE = /[\\u3000-\\u303F\\u3040-\\u309F\\u30A0-\\u30FF\\u31F0-\\u31FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF\\uFE30-\\uFE4F\\uFF00-\\uFFEF]+/g;
-  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-  var nodes = [];
-  var n;
-  while ((n = walker.nextNode())) {
-    if (n.parentNode && (n.parentNode.tagName === 'SCRIPT' || n.parentNode.tagName === 'STYLE')) continue;
-    nodes.push(n);
-  }
-  for (var i = 0; i < nodes.length; i++) {
-    var t = nodes[i];
-    var s = t.nodeValue || '';
-    if (!RE.test(s)) continue;
-    RE.lastIndex = 0;
-    var frag = document.createDocumentFragment();
-    var last = 0, m;
-    while ((m = RE.exec(s)) !== null) {
-      if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
-      var span = document.createElement('span');
-      span.setAttribute('lang', 'ja');
-      span.textContent = m[0];
-      frag.appendChild(span);
-      last = m.index + m[0].length;
-    }
-    if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
-    t.parentNode.replaceChild(frag, t);
-  }
-})();
-</script>
+${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}
 </body>
 </html>`;
   });
