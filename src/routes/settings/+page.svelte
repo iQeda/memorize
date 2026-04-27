@@ -4,6 +4,7 @@
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
+  import { shortcuts, type Rating } from "$lib/stores/shortcuts.svelte";
   import { onMount } from "svelte";
   import {
     CheckCircle2,
@@ -31,14 +32,35 @@
     { value: "system", label: t("settings.themeSystem") },
   ]);
 
-  const shortcuts = $derived([
-    { keys: ["1"], label: t("settings.shortcut.again") },
-    { keys: ["2"], label: t("settings.shortcut.hard") },
-    { keys: ["3"], label: t("settings.shortcut.good") },
-    { keys: ["4"], label: t("settings.shortcut.easy") },
+  const ratingShortcuts = $derived<{ rating: Rating; label: string }[]>([
+    { rating: "again", label: t("settings.shortcut.again") },
+    { rating: "hard", label: t("settings.shortcut.hard") },
+    { rating: "good", label: t("settings.shortcut.good") },
+    { rating: "easy", label: t("settings.shortcut.easy") },
+  ]);
+
+  const fixedShortcuts = $derived([
     { keys: ["Space"], label: t("settings.shortcut.spaceLabel") },
     { keys: ["⌘", ","], label: t("settings.shortcut.openSettings") },
   ]);
+
+  let recordingFor = $state<Rating | null>(null);
+
+  function startRecord(rating: Rating) {
+    recordingFor = rating;
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.removeEventListener("keydown", handler, true);
+      if (e.key === "Escape") {
+        recordingFor = null;
+        return;
+      }
+      shortcuts.set(rating, e.key);
+      recordingFor = null;
+    };
+    window.addEventListener("keydown", handler, true);
+  }
 
   let username = $state("");
   let password = $state("");
@@ -615,11 +637,29 @@
     <div
       class="overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) shadow-(--shadow-subtle)"
     >
-      {#each shortcuts as s, i (s.label)}
+      {#each ratingShortcuts as s, i (s.rating)}
         <div
           class="flex items-center justify-between gap-4 px-4 py-2.5 {i > 0
             ? 'border-t border-(--color-border-default)'
             : ''}"
+        >
+          <span class="text-sm text-(--color-fg-default)">{s.label}</span>
+          <button
+            type="button"
+            onclick={() => startRecord(s.rating)}
+            class="rounded-(--radius-xs) border px-2 py-0.5 font-mono text-xs transition-colors
+              {recordingFor === s.rating
+              ? 'border-(--color-accent-500) bg-(--color-accent-500)/10 text-(--color-accent-500) animate-pulse'
+              : 'border-(--color-border-default) bg-(--color-bg-base) text-(--color-fg-muted) hover:border-(--color-border-strong) hover:text-(--color-fg-default)'}"
+            title={recordingFor === s.rating ? "Press a key… (Esc to cancel)" : "Click to rebind"}
+          >
+            {recordingFor === s.rating ? "…" : shortcuts.label(s.rating)}
+          </button>
+        </div>
+      {/each}
+      {#each fixedShortcuts as s, i (s.label)}
+        <div
+          class="flex items-center justify-between gap-4 border-t border-(--color-border-default) px-4 py-2.5"
         >
           <span class="text-sm text-(--color-fg-default)">{s.label}</span>
           <div class="flex gap-1">
@@ -632,6 +672,15 @@
           </div>
         </div>
       {/each}
+      <div class="flex items-center justify-end gap-2 border-t border-(--color-border-default) px-4 py-2">
+        <button
+          type="button"
+          onclick={() => shortcuts.reset()}
+          class="text-[11px] text-(--color-fg-subtle) hover:text-(--color-fg-default)"
+        >
+          Reset to default (1/2/3/4)
+        </button>
+      </div>
     </div>
   </section>
 </div>

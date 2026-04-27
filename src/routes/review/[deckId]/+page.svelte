@@ -8,6 +8,7 @@
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { t } from "$lib/i18n/index.svelte";
+  import { shortcuts } from "$lib/stores/shortcuts.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -31,7 +32,6 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let shownAt = $state<number>(0);
-  const ratingMap = { again: 1, hard: 2, good: 3, easy: 4 } as const;
 
   const totalDue = $derived(totals.new + totals.learning + totals.review);
   const progress = $derived(
@@ -89,7 +89,7 @@
     showingAnswer = true;
   }
 
-  async function answer(rating: keyof typeof ratingMap) {
+  async function answer(rating: "again" | "hard" | "good" | "easy") {
     if (!current) return;
     const ms = Math.min(60_000, Math.round(performance.now() - shownAt));
     try {
@@ -112,21 +112,18 @@
       return;
     }
     if (showingAnswer) {
-      // Space is intentionally NOT mapped here to avoid accidental Good
-      // submissions; use 1-4 explicitly.
-      const m = (
-        { "1": "again", "2": "hard", "3": "good", "4": "easy" } as const
-      )[e.key];
-      if (m) {
+      const rating = shortcuts.ratingFor(e.key);
+      if (rating) {
         e.preventDefault();
-        void answer(m);
+        void answer(rating);
       }
     }
   }
 
   type Tone = "danger" | "warning" | "accent" | "success";
+  type Rating = "again" | "hard" | "good" | "easy";
   const buttons = $derived<
-    { rating: keyof typeof ratingMap; label: string; tone: Tone }[]
+    { rating: Rating; label: string; tone: Tone }[]
   >([
     { rating: "again", label: t("reviewer.again"), tone: "danger" },
     { rating: "hard", label: t("reviewer.hard"), tone: "warning" },
@@ -271,7 +268,7 @@
               class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) px-5 py-2.5 shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97] {toneBg[b.tone]}"
             >
               <span class="text-sm font-medium">{b.label}</span>
-              <span class="font-mono text-[10px] opacity-70">{ratingMap[b.rating]}</span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label(b.rating)}</span>
             </button>
           {/each}
         {/if}
