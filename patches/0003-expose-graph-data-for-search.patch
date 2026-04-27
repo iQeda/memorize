@@ -3,8 +3,7 @@ Subject: [PATCH 3/3] Expose `Collection::graph_data_for_search` (was
  pub(crate)) so the Tauri stats panels can call it directly.
 
 Modification by iQeda for the memorize project (https://github.com/iQeda/memorize),
-on top of upstream ankitects/anki @ 35b727a. Originally created 2026-04-26,
-last updated 2026-04-27.
+on top of upstream ankitects/anki @ 35b727a. Originally created 2026-04-27.
 
 Per AGPL-3.0-or-later §5(a): this file is a modification of Anki's rslib,
 which is Copyright (C) Ankitects Pty Ltd, licensed under AGPL-3.0-or-later.

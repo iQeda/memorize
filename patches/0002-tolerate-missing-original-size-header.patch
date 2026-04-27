@@ -3,8 +3,7 @@ Subject: [PATCH 2/3] Tolerate sync responses missing the
  `anki-original-size` header (e.g. AnkiWeb `/upload` plain-text "OK").
 
 Modification by iQeda for the memorize project (https://github.com/iQeda/memorize),
-on top of upstream ankitects/anki @ 35b727a. Originally created 2026-04-12,
-last updated 2026-04-27.
+on top of upstream ankitects/anki @ 35b727a. Originally created 2026-04-27.
 
 Per AGPL-3.0-or-later §5(a): this file is a modification of Anki's rslib,
 which is Copyright (C) Ankitects Pty Ltd, licensed under AGPL-3.0-or-later.

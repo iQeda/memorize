@@ -108,9 +108,11 @@
 
   function frontWord(): string {
     if (!current) return "";
-    const div = document.createElement("div");
-    div.innerHTML = current.question_html;
-    return (div.textContent ?? "").trim().replace(/\s+/g, " ");
+    // DOMParser parses without attaching the result to the live document,
+    // so inline event handlers (e.g. <img onerror="…">) inside the card
+    // template never fire — safer than `div.innerHTML = …`.
+    const doc = new DOMParser().parseFromString(current.question_html, "text/html");
+    return (doc.body.textContent ?? "").trim().replace(/\s+/g, " ");
   }
 
   async function naniLookup() {
@@ -120,6 +122,8 @@
     // text container with a live selection — that's what Nani reads when
     // its global Cmd+J fires. Selecting in the iframe / arbitrary spans
     // does not reliably surface to the OS, so we route through this input.
+    // Do NOT add `aria-hidden` to the input element — that would remove
+    // it from the AX tree and Nani would no longer see the selection.
     naniInput.value = word;
     naniInput.focus();
     naniInput.setSelectionRange(0, word.length);
@@ -127,6 +131,12 @@
       await invoke("nani_lookup", { word });
     } catch (e) {
       console.error("nani_lookup failed", e);
+    } finally {
+      // Nani has already read the selection by now (osascript Cmd+J ran
+      // synchronously inside the await). Blur so subsequent rating keys
+      // (1/2/3/4) don't get swallowed by the input element — onKey skips
+      // events whose target is an <input>.
+      naniInput.blur();
     }
   }
 

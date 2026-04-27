@@ -38,7 +38,8 @@ jobs:
           echo "version=${VERSION:-stable}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@master
+        # Pinned to stable tag to avoid moving target on @master
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.rust.outputs.version }}
           targets: aarch64-apple-darwin

@@ -14,6 +14,10 @@
 
   const wrapJaScript = `(function() {
     var RE = /[\\u3000-\\u303F\\u3040-\\u309F\\u30A0-\\u30FF\\u31F0-\\u31FF\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF\\uFE30-\\uFE4F\\uFF00-\\uFFEF]+/g;
+    // Skip walking entirely for English-only cards (the common case for
+    // vocab learning) — saves a full text-node traversal per render.
+    if (!RE.test(document.body.textContent || '')) return;
+    RE.lastIndex = 0;
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
     var nodes = [];
     var n;
