@@ -1,0 +1,13 @@
+diff --git a/rslib/src/stats/graphs/mod.rs b/rslib/src/stats/graphs/mod.rs
+index 863b55c5a..bee27d4e4 100644
+--- a/rslib/src/stats/graphs/mod.rs
++++ b/rslib/src/stats/graphs/mod.rs
+@@ -28,7 +28,7 @@ struct GraphsContext {
+ }
+ 
+ impl Collection {
+-    pub(crate) fn graph_data_for_search(
++    pub fn graph_data_for_search(
+         &mut self,
+         search: &str,
+         days: u32,

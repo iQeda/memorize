@@ -28,6 +28,7 @@ pub fn run() {
             commands::decks::rename_deck,
             commands::decks::delete_deck,
             commands::decks::deck_stats,
+            commands::decks::deck_graph_stats,
             commands::cards::list_cards,
             commands::cards::list_due_cards,
             commands::reviewer::get_card_render,

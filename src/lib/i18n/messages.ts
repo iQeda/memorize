@@ -52,6 +52,16 @@ export const messages = {
     "decks.totalNotes": "Total words",
     "decks.suspended": "Suspended",
     "decks.buried": "Buried",
+    "decks.today": "Today",
+    "decks.todayEmpty": "No cards have been studied today.",
+    "decks.todayCount": "{count} reviews / {minutes}",
+    "decks.futureDue": "Future Due",
+    "decks.futureDueDesc": "Reviews due over the next {days} days",
+    "decks.futureDueTotal": "Total: {count}",
+    "decks.futureDueAvg": "Avg: {avg}/day",
+    "decks.range1m": "1 month",
+    "decks.range3m": "3 months",
+    "decks.range1y": "1 year",
 
     // Reviewer
     "reviewer.back": "Back",
@@ -250,6 +260,16 @@ export const messages = {
     "decks.totalNotes": "総単語数",
     "decks.suspended": "Suspended",
     "decks.buried": "Buried",
+    "decks.today": "今日",
+    "decks.todayEmpty": "今日はまだ学習していません。",
+    "decks.todayCount": "{count} 回レビュー / {minutes}",
+    "decks.futureDue": "今後の予定",
+    "decks.futureDueDesc": "今後 {days} 日間の予定レビュー数",
+    "decks.futureDueTotal": "合計: {count}",
+    "decks.futureDueAvg": "平均: {avg}/日",
+    "decks.range1m": "1 か月",
+    "decks.range3m": "3 か月",
+    "decks.range1y": "1 年",
 
     // Reviewer
     "reviewer.back": "戻る",

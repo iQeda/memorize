@@ -3,6 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
+  import FutureDueChart from "$lib/components/FutureDueChart.svelte";
   import { t } from "$lib/i18n/index.svelte";
   import { invoke } from "$lib/ipc";
 
@@ -15,28 +16,64 @@
     suspended: number;
     buried: number;
   };
+  type TodayStats = {
+    answer_count: number;
+    answer_millis: number;
+    correct_count: number;
+    mature_count: number;
+    mature_correct: number;
+    learn_count: number;
+    review_count: number;
+    relearn_count: number;
+  };
+  type FutureDueBucket = { day: number; count: number };
+  type DeckGraphStats = {
+    today: TodayStats;
+    future_due: FutureDueBucket[];
+    future_due_total: number;
+    future_due_avg_per_day: number;
+    future_due_have_backlog: boolean;
+    daily_load: number;
+  };
 
   let stats = $state<DeckStats | null>(null);
   let statsDeckId = $state<number | null>(null);
+  let graph = $state<DeckGraphStats | null>(null);
+  let graphDays = $state<number>(31);
 
   $effect(() => {
     const dId = collection.selectedDeckId;
+    const days = graphDays;
     if (dId === null || !collection.isOpen) {
       stats = null;
+      graph = null;
       statsDeckId = null;
       return;
     }
-    if (statsDeckId === dId && stats !== null) return;
     statsDeckId = dId;
     void (async () => {
       try {
-        stats = await invoke<DeckStats>("deck_stats", { deckId: dId });
+        const [s, g] = await Promise.all([
+          invoke<DeckStats>("deck_stats", { deckId: dId }),
+          invoke<DeckGraphStats>("deck_graph_stats", { deckId: dId, days }),
+        ]);
+        stats = s;
+        graph = g;
       } catch (e) {
-        console.error("deck_stats", e);
+        console.error("deck stats", e);
         stats = null;
+        graph = null;
       }
     })();
   });
+
+  function formatDuration(ms: number): string {
+    if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
+    const mins = Math.round(ms / 60_000);
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    return `${hrs}h ${mins % 60}m`;
+  }
 
   const selected = $derived(collection.selectedDeck);
   const totalDue = $derived(
@@ -214,6 +251,55 @@
           </dl>
         </section>
       {/if}
+
+      {#if graph}
+        <section
+          class="animate-count rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+          style="animation-delay: 240ms; animation-fill-mode: backwards;"
+        >
+          <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
+            {t("decks.today")}
+          </h2>
+          {#if graph.today.answer_count === 0}
+            <p class="mt-3 text-sm text-(--color-fg-muted)">
+              {t("decks.todayEmpty")}
+            </p>
+          {:else}
+            <p class="mt-3 text-sm text-(--color-fg-default)">
+              {t("decks.todayCount", {
+                count: graph.today.answer_count,
+                minutes: formatDuration(graph.today.answer_millis),
+              })}
+            </p>
+          {/if}
+        </section>
+
+        <section
+          class="animate-count rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+          style="animation-delay: 280ms; animation-fill-mode: backwards;"
+        >
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
+              {t("decks.futureDue")}
+            </h2>
+            <div class="flex gap-1 text-[11px]">
+              {@render rangeBtn(31, t("decks.range1m"))}
+              {@render rangeBtn(92, t("decks.range3m"))}
+              {@render rangeBtn(365, t("decks.range1y"))}
+            </div>
+          </div>
+          <p class="mt-1 text-xs text-(--color-fg-subtle)">
+            {t("decks.futureDueDesc", { days: graphDays })}
+          </p>
+          <div class="mt-3 text-(--color-fg-muted)">
+            <FutureDueChart buckets={graph.future_due} days={graphDays} />
+          </div>
+          <div class="mt-1 flex justify-between text-[11px] text-(--color-fg-subtle) tabular-nums">
+            <span>{t("decks.futureDueTotal", { count: graph.future_due_total })}</span>
+            <span>{t("decks.futureDueAvg", { avg: graph.future_due_avg_per_day.toFixed(1) })}</span>
+          </div>
+        </section>
+      {/if}
     </div>
   {:else}
     <div class="grid h-full place-items-center">
@@ -233,6 +319,20 @@
     onSaved={onWordAdded}
   />
 {/if}
+
+{#snippet rangeBtn(days: number, label: string)}
+  {@const active = graphDays === days}
+  <button
+    type="button"
+    onclick={() => (graphDays = days)}
+    class="rounded-(--radius-sm) px-2 py-0.5 transition-colors
+      {active
+      ? 'bg-(--color-accent-500) text-(--color-fg-onAccent)'
+      : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+  >
+    {label}
+  </button>
+{/snippet}
 
 {#snippet stat(label: string, value: number, tone: "warning" | undefined = undefined)}
   <div class="flex flex-col gap-0.5">
