@@ -115,7 +115,7 @@ export const messages = {
     "settings.shortcut.hard": "Hard",
     "settings.shortcut.good": "Good",
     "settings.shortcut.easy": "Easy",
-    "settings.shortcut.spaceLabel": "Show answer / Good",
+    "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
 
     // Backup
@@ -308,7 +308,7 @@ export const messages = {
     "settings.shortcut.hard": "Hard",
     "settings.shortcut.good": "Good",
     "settings.shortcut.easy": "Easy",
-    "settings.shortcut.spaceLabel": "解答を表示 / Good",
+    "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
 
     // Backup

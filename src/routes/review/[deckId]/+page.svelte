@@ -112,8 +112,10 @@
       return;
     }
     if (showingAnswer) {
+      // Space is intentionally NOT mapped here to avoid accidental Good
+      // submissions; use 1-4 explicitly.
       const m = (
-        { "1": "again", "2": "hard", "3": "good", "4": "easy", " ": "good" } as const
+        { "1": "again", "2": "hard", "3": "good", "4": "easy" } as const
       )[e.key];
       if (m) {
         e.preventDefault();
