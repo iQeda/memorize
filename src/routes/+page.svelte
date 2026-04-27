@@ -4,6 +4,39 @@
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
   import { t } from "$lib/i18n/index.svelte";
+  import { invoke } from "$lib/ipc";
+
+  type DeckStats = {
+    total_cards: number;
+    total_notes: number;
+    new_cards: number;
+    learn_cards: number;
+    review_cards: number;
+    suspended: number;
+    buried: number;
+  };
+
+  let stats = $state<DeckStats | null>(null);
+  let statsDeckId = $state<number | null>(null);
+
+  $effect(() => {
+    const dId = collection.selectedDeckId;
+    if (dId === null || !collection.isOpen) {
+      stats = null;
+      statsDeckId = null;
+      return;
+    }
+    if (statsDeckId === dId && stats !== null) return;
+    statsDeckId = dId;
+    void (async () => {
+      try {
+        stats = await invoke<DeckStats>("deck_stats", { deckId: dId });
+      } catch (e) {
+        console.error("deck_stats", e);
+        stats = null;
+      }
+    })();
+  });
 
   const selected = $derived(collection.selectedDeck);
   const totalDue = $derived(
@@ -48,6 +81,11 @@
 
   async function onWordAdded() {
     await collection.refreshDecks();
+    if (statsDeckId !== null) {
+      try {
+        stats = await invoke<DeckStats>("deck_stats", { deckId: statsDeckId });
+      } catch {}
+    }
   }
 
   type Tone = "accent" | "warning" | "success";
@@ -159,6 +197,23 @@
             : t("decks.allDoneToday")}
         </p>
       </div>
+
+      {#if stats}
+        <section
+          class="animate-count rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+          style="animation-delay: 200ms; animation-fill-mode: backwards;"
+        >
+          <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
+            {t("decks.stats")}
+          </h2>
+          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
+            {@render stat(t("decks.totalCards"), stats.total_cards)}
+            {@render stat(t("decks.totalNotes"), stats.total_notes)}
+            {@render stat(t("decks.suspended"), stats.suspended, stats.suspended > 0 ? "warning" : undefined)}
+            {@render stat(t("decks.buried"), stats.buried)}
+          </dl>
+        </section>
+      {/if}
     </div>
   {:else}
     <div class="grid h-full place-items-center">
@@ -178,6 +233,21 @@
     onSaved={onWordAdded}
   />
 {/if}
+
+{#snippet stat(label: string, value: number, tone: "warning" | undefined = undefined)}
+  <div class="flex flex-col gap-0.5">
+    <dt class="text-[10px] tracking-[0.12em] text-(--color-fg-subtle) uppercase">
+      {label}
+    </dt>
+    <dd
+      class="number-tabular text-lg font-medium {tone === 'warning'
+        ? 'text-(--color-warning)'
+        : 'text-(--color-fg-default)'}"
+    >
+      {value}
+    </dd>
+  </div>
+{/snippet}
 
 {#snippet countCard(label: string, count: number, tone: Tone, delayMs: number)}
   <div

@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use anki::prelude::TimestampSecs;
+use anki::search::SortMode;
 use serde::Serialize;
 use tauri::State;
 
@@ -23,6 +24,65 @@ pub async fn list_decks(state: State<'_, AppState>) -> AppResult<Vec<DeckSummary
     let mut out = Vec::new();
     walk(&tree, 0, &mut out);
     Ok(out)
+}
+
+#[derive(Serialize, Debug)]
+pub struct DeckStats {
+    pub total_cards: u32,
+    pub total_notes: u32,
+    pub new_cards: u32,
+    pub learn_cards: u32,
+    pub review_cards: u32,
+    pub suspended: u32,
+    pub buried: u32,
+}
+
+#[tauri::command]
+pub async fn deck_stats(
+    deck_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<DeckStats> {
+    let mut guard = state.col.lock().await;
+    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+
+    let count = |col: &mut anki::collection::Collection, q: &str| -> u32 {
+        col.search_cards(q, SortMode::NoOrder)
+            .map(|v| v.len() as u32)
+            .unwrap_or(0)
+    };
+
+    let did = format!("did:{}", deck_id);
+    let total_cards = count(col, &did);
+    let new_cards = count(col, &format!("{did} is:new"));
+    let learn_cards = count(col, &format!("{did} is:learn"));
+    let review_cards = count(col, &format!("{did} is:review"));
+    let suspended = count(col, &format!("{did} is:suspended"));
+    let buried = count(col, &format!("{did} is:buried"));
+
+    // Distinct notes via SQL on the search results (cheap shortcut: pull
+    // note ids from cards). For accuracy we could also do a notes query.
+    let total_notes = col
+        .search_cards(&did, SortMode::NoOrder)
+        .map(|cids| {
+            let mut nids = std::collections::HashSet::<i64>::new();
+            for cid in cids {
+                if let Ok(Some(c)) = col.storage.get_card(cid) {
+                    nids.insert(c.note_id().0);
+                }
+            }
+            nids.len() as u32
+        })
+        .unwrap_or(0);
+
+    Ok(DeckStats {
+        total_cards,
+        total_notes,
+        new_cards,
+        learn_cards,
+        review_cards,
+        suspended,
+        buried,
+    })
 }
 
 #[tauri::command]

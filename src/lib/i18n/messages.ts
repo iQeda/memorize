@@ -47,6 +47,11 @@ export const messages = {
     "decks.learning": "Learning",
     "decks.review": "Review",
     "decks.parentPath": "Parent path",
+    "decks.stats": "Stats",
+    "decks.totalCards": "Total cards",
+    "decks.totalNotes": "Total words",
+    "decks.suspended": "Suspended",
+    "decks.buried": "Buried",
 
     // Reviewer
     "reviewer.back": "Back",
@@ -240,6 +245,11 @@ export const messages = {
     "decks.learning": "Learning",
     "decks.review": "Review",
     "decks.parentPath": "親パス",
+    "decks.stats": "統計",
+    "decks.totalCards": "総カード数",
+    "decks.totalNotes": "総単語数",
+    "decks.suspended": "Suspended",
+    "decks.buried": "Buried",
 
     // Reviewer
     "reviewer.back": "戻る",
