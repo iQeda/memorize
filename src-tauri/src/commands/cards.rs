@@ -47,23 +47,24 @@ async fn collect_cards(
 
 #[tauri::command]
 pub async fn list_cards(
-    deck_id: i64,
+    deck_id: Option<i64>,
     query: Option<String>,
     limit: u32,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<CardSummary>> {
-    let mut search = format!("did:{}", deck_id);
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(id) = deck_id {
+        parts.push(format!("did:{}", id));
+    }
     if let Some(q) = query.as_ref() {
         let trimmed = q.trim();
         if !trimmed.is_empty() {
             // Anki search: a bare token matches a substring across all fields.
             // Quote to keep multi-word phrases together.
-            search.push(' ');
-            search.push('"');
-            search.push_str(&trimmed.replace('"', "\\\""));
-            search.push('"');
+            parts.push(format!("\"{}\"", trimmed.replace('"', "\\\"")));
         }
     }
+    let search = parts.join(" ");
     collect_cards(&state, &search, limit).await
 }
 

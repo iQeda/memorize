@@ -15,7 +15,8 @@
   let query = $state("");
   let cards = $state<CardSummary[]>([]);
   let loading = $state(false);
-  let selectedDeckId = $derived(collection.selectedDeckId);
+  // null = "すべて" (no deck filter)
+  let filterDeckId = $state<number | null>(collection.selectedDeckId);
 
   let editorMode = $state<"add" | "edit" | null>(null);
   let editingNoteId = $state<number | null>(null);
@@ -23,9 +24,9 @@
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   $effect(() => {
-    const dId = selectedDeckId;
+    const dId = filterDeckId;
     const q = query;
-    if (dId === null || !collection.isOpen) {
+    if (!collection.isOpen) {
       cards = [];
       return;
     }
@@ -35,7 +36,7 @@
     }, 200);
   });
 
-  async function load(deckId: number, q: string) {
+  async function load(deckId: number | null, q: string) {
     loading = true;
     try {
       cards = await invoke<CardSummary[]>("list_cards", {
@@ -67,7 +68,7 @@
   }
 
   async function onSaved() {
-    if (selectedDeckId !== null) await load(selectedDeckId, query);
+    await load(filterDeckId, query);
     await collection.refreshDecks();
   }
 
@@ -90,6 +91,26 @@
     <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       Filter
     </h2>
+
+    <label class="block">
+      <span class="mb-1 block text-[11px] tracking-wider text-(--color-fg-subtle) uppercase">
+        Deck
+      </span>
+      <select
+        value={filterDeckId}
+        onchange={(e) => {
+          const v = (e.currentTarget as HTMLSelectElement).value;
+          filterDeckId = v === "" ? null : Number(v);
+        }}
+        class="w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-elevated) px-2 py-1.5 text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
+      >
+        <option value="">すべて</option>
+        {#each collection.decks as d (d.id)}
+          <option value={d.id}>{d.name}</option>
+        {/each}
+      </select>
+    </label>
+
     <div class="relative">
       <Search
         size={14}
@@ -119,7 +140,7 @@
       <button
         type="button"
         onclick={openAdd}
-        disabled={!collection.isOpen || selectedDeckId === null}
+        disabled={!collection.isOpen}
         class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) hover:bg-(--color-accent-600) active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-(--color-bg-overlay) disabled:text-(--color-fg-subtle) disabled:shadow-none"
       >
         <Plus size={12} strokeWidth={2.5} />
@@ -166,7 +187,7 @@
   <NoteEditor
     mode={editorMode}
     noteId={editingNoteId ?? undefined}
-    initialDeckId={selectedDeckId ?? undefined}
+    initialDeckId={filterDeckId ?? collection.selectedDeckId ?? undefined}
     onClose={closeEditor}
     {onSaved}
   />
