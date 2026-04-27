@@ -1,26 +1,39 @@
 import { browser } from "$app/environment";
 
 export type Rating = "again" | "hard" | "good" | "easy";
+export type Action = Rating | "nani";
 
 const STORAGE_KEY = "memorize:rating-keys";
 
-const defaults: Record<Rating, string> = {
+const defaults: Record<Action, string> = {
   again: "1",
   hard: "2",
   good: "3",
   easy: "4",
+  nani: "n",
 };
 
+function formatKey(k: string): string {
+  if (k === " ") return "Space";
+  if (k === "Enter") return "↵";
+  if (k === "Escape") return "Esc";
+  if (k === "ArrowUp") return "↑";
+  if (k === "ArrowDown") return "↓";
+  if (k === "ArrowLeft") return "←";
+  if (k === "ArrowRight") return "→";
+  return k.toUpperCase();
+}
+
 class ShortcutsStore {
-  keys = $state<Record<Rating, string>>({ ...defaults });
+  keys = $state<Record<Action, string>>({ ...defaults });
 
   constructor() {
     if (browser) {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
-          const parsed = JSON.parse(raw) as Partial<Record<Rating, string>>;
-          for (const r of Object.keys(defaults) as Rating[]) {
+          const parsed = JSON.parse(raw) as Partial<Record<Action, string>>;
+          for (const r of Object.keys(defaults) as Action[]) {
             if (typeof parsed[r] === "string" && parsed[r]!.length > 0) {
               this.keys[r] = parsed[r]!;
             }
@@ -30,9 +43,8 @@ class ShortcutsStore {
     }
   }
 
-  /** Set the key for a given rating. */
-  set(rating: Rating, key: string) {
-    this.keys[rating] = key;
+  set(action: Action, key: string) {
+    this.keys[action] = key;
     if (browser) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.keys));
     }
@@ -51,17 +63,13 @@ class ShortcutsStore {
     return null;
   }
 
-  /** Display label for a key (mostly raw). */
-  label(rating: Rating): string {
-    const k = this.keys[rating];
-    if (k === " ") return "Space";
-    if (k === "Enter") return "↵";
-    if (k === "Escape") return "Esc";
-    if (k === "ArrowUp") return "↑";
-    if (k === "ArrowDown") return "↓";
-    if (k === "ArrowLeft") return "←";
-    if (k === "ArrowRight") return "→";
-    return k.toUpperCase();
+  /** True iff `key` is bound to the Nani lookup action. */
+  isNani(key: string): boolean {
+    return this.keys.nani === key;
+  }
+
+  label(action: Action): string {
+    return formatKey(this.keys[action]);
   }
 }
 

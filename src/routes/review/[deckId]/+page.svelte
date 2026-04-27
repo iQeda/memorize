@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, BookOpen } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -104,6 +104,32 @@
     }
   }
 
+  let naniInput = $state<HTMLInputElement | null>(null);
+
+  function frontWord(): string {
+    if (!current) return "";
+    const div = document.createElement("div");
+    div.innerHTML = current.question_html;
+    return (div.textContent ?? "").trim().replace(/\s+/g, " ");
+  }
+
+  async function naniLookup() {
+    const word = frontWord();
+    if (!word || !naniInput) return;
+    // A real <input> is exposed to macOS Accessibility / Services as a
+    // text container with a live selection — that's what Nani reads when
+    // its global Cmd+J fires. Selecting in the iframe / arbitrary spans
+    // does not reliably surface to the OS, so we route through this input.
+    naniInput.value = word;
+    naniInput.focus();
+    naniInput.setSelectionRange(0, word.length);
+    try {
+      await invoke("nani_lookup", { word });
+    } catch (e) {
+      console.error("nani_lookup failed", e);
+    }
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return;
     if (!showingAnswer && (e.key === " " || e.key === "Enter")) {
@@ -112,6 +138,11 @@
       return;
     }
     if (showingAnswer) {
+      if (shortcuts.isNani(e.key)) {
+        e.preventDefault();
+        void naniLookup();
+        return;
+      }
       const rating = shortcuts.ratingFor(e.key);
       if (rating) {
         e.preventDefault();
@@ -160,18 +191,30 @@
       <span class="number-tabular">
         {cursor + (current ? 1 : 0)} / {initialTotal || totalDue || "—"}
       </span>
-      <span class="hidden items-center gap-3 sm:flex">
-        <span class="flex items-center gap-1.5">
-          <span class="h-1.5 w-1.5 rounded-full bg-(--color-accent-500)"></span>
-          <span class="number-tabular">{totals.new}</span>
+      <span class="hidden items-center gap-1.5 sm:flex">
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border-default) bg-(--color-bg-elevated) px-2 py-0.5"
+        >
+          <span class="text-[10px] font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+            {t("decks.new")}
+          </span>
+          <span class="number-tabular text-xs font-medium text-(--color-fg-default)">{totals.new}</span>
         </span>
-        <span class="flex items-center gap-1.5">
-          <span class="h-1.5 w-1.5 rounded-full bg-(--color-warning)"></span>
-          <span class="number-tabular">{totals.learning}</span>
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border-default) bg-(--color-bg-elevated) px-2 py-0.5"
+        >
+          <span class="text-[10px] font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+            {t("decks.learning")}
+          </span>
+          <span class="number-tabular text-xs font-medium text-(--color-fg-default)">{totals.learning}</span>
         </span>
-        <span class="flex items-center gap-1.5">
-          <span class="h-1.5 w-1.5 rounded-full bg-(--color-success)"></span>
-          <span class="number-tabular">{totals.review}</span>
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full border border-(--color-border-default) bg-(--color-bg-elevated) px-2 py-0.5"
+        >
+          <span class="text-[10px] font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+            {t("decks.review")}
+          </span>
+          <span class="number-tabular text-xs font-medium text-(--color-fg-default)">{totals.review}</span>
         </span>
       </span>
     </p>
@@ -216,7 +259,7 @@
         </button>
       </div>
     {:else}
-      <div class="relative w-full max-w-[720px]">
+      <div class="relative w-full">
         <div
           class="absolute -top-3.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold tracking-[0.18em] uppercase shadow-(--shadow-subtle) transition-all duration-200 {showingAnswer
             ? 'bg-(--color-success) text-(--color-fg-onAccent) ring-1 ring-(--color-success)/30 ring-offset-2 ring-offset-(--color-bg-base)'
@@ -247,7 +290,7 @@
       </div>
 
       <div
-        class="mt-8 flex h-16 w-full max-w-[720px] shrink-0 items-center justify-center gap-3"
+        class="mt-8 flex h-16 w-full shrink-0 items-center justify-center gap-3"
       >
         {#if !showingAnswer}
           <button
@@ -260,6 +303,19 @@
             <span class="ml-2 font-mono text-[10px] opacity-70">Space</span>
           </button>
         {:else}
+          <button
+            type="button"
+            onclick={naniLookup}
+            in:fade={{ duration: 200, easing: cubicOut }}
+            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            title="Nani Search"
+          >
+            <span class="flex items-center gap-1.5 text-sm font-medium">
+              <BookOpen size={14} strokeWidth={2.25} />
+              Nani
+            </span>
+            <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
+          </button>
           {#each buttons as b, i (b.rating)}
             <button
               type="button"
@@ -275,4 +331,11 @@
       </div>
     {/if}
   </div>
+  <input
+    bind:this={naniInput}
+    type="text"
+    readonly
+    tabindex="-1"
+    class="pointer-events-none fixed top-0 left-[-10000px] h-4 w-px"
+  />
 </div>

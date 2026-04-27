@@ -19,11 +19,11 @@
   }: Props = $props();
 
   const W = 720;
-  const H = 200;
-  const padL = 36;
-  const padR = 36;
-  const padT = 8;
-  const padB = 28;
+  const H = 140;
+  const padL = 28;
+  const padR = 28;
+  const padT = 6;
+  const padB = 20;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
@@ -49,8 +49,8 @@
   }
 </script>
 
-<svg viewBox="0 0 {W} {H}" class="h-[200px] w-full" aria-label="Stacked bar chart">
-  {#each tickValues() as v (v)}
+<svg viewBox="0 0 {W} {H}" class="h-[140px] w-full" preserveAspectRatio="none" aria-label="Stacked bar chart">
+  {#each tickValues() as v, i (i)}
     {@const y = padT + innerH - (v / maxTotal) * innerH}
     <line
       x1={padL}
@@ -65,10 +65,10 @@
       {v}
     </text>
   {/each}
-  {#each Array(columns) as _, i (i)}
+  {#each Array.from({ length: columns }) as _, i (i)}
     {@const x = padL + i * colW}
     <g>
-      {#each series as ser, sIdx (ser.label)}
+      {#each series as ser, sIdx (sIdx)}
         {@const value = ser.values[i] ?? 0}
         {@const before = series
           .slice(0, sIdx)
@@ -86,7 +86,7 @@
       {/each}
     </g>
   {/each}
-  {#each xTicks() as i (i)}
+  {#each xTicks() as i, idx (idx)}
     {@const x = padL + i * colW + colW / 2}
     <text x={x} y={H - 8} text-anchor="middle" class="fill-(--color-fg-subtle) text-[9px]">
       {xFormat(i + minCol)}
@@ -95,7 +95,7 @@
 </svg>
 
 <div class="mt-2 flex flex-wrap gap-3 text-[11px]">
-  {#each series as ser (ser.label)}
+  {#each series as ser, i (i)}
     <span class="flex items-center gap-1.5">
       <span class="h-2 w-2 rounded-sm" style="background:{ser.color}"></span>
       {ser.label}

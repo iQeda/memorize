@@ -1,7 +1,6 @@
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use anki::prelude::TimestampSecs;
-use anki::search::SortMode;
 use serde::Serialize;
 use tauri::State;
 
@@ -187,11 +186,13 @@ pub async fn deck_graph_stats(
     days: u32,
     state: State<'_, AppState>,
 ) -> AppResult<DeckGraphStats> {
+    tracing::info!(deck_id, days, "deck_graph_stats called");
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
 
     let search = format!("did:{}", deck_id);
     let resp = col.graph_data_for_search(&search, days)?;
+    tracing::info!("deck_graph_stats: graph_data_for_search ok");
 
     let today = resp.today.unwrap_or_default();
     let fd = resp.future_due.unwrap_or_default();
@@ -299,34 +300,34 @@ pub async fn deck_stats(
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
 
-    let count = |col: &mut anki::collection::Collection, q: &str| -> u32 {
-        col.search_cards(q, SortMode::NoOrder)
-            .map(|v| v.len() as u32)
-            .unwrap_or(0)
+    // Classify each card mutually exclusively by queue first.
+    // queue: -1 = Suspended, -2/-3 = Buried, 0 = New, 1/3 = Learn,
+    //        2 = Review.
+    let db = col.storage.db();
+    let count = |sql: &str| -> AppResult<u32> {
+        db.query_row(sql, [deck_id], |r| r.get(0))
+            .map_err(|e| AppError::Anyhow(anyhow::anyhow!(e)))
     };
-
-    let did = format!("did:{}", deck_id);
-    let total_cards = count(col, &did);
-    let new_cards = count(col, &format!("{did} is:new"));
-    let learn_cards = count(col, &format!("{did} is:learn"));
-    let review_cards = count(col, &format!("{did} is:review"));
-    let suspended = count(col, &format!("{did} is:suspended"));
-    let buried = count(col, &format!("{did} is:buried"));
-
-    // Distinct notes via SQL on the search results (cheap shortcut: pull
-    // note ids from cards). For accuracy we could also do a notes query.
-    let total_notes = col
-        .search_cards(&did, SortMode::NoOrder)
-        .map(|cids| {
-            let mut nids = std::collections::HashSet::<i64>::new();
-            for cid in cids {
-                if let Ok(Some(c)) = col.storage.get_card(cid) {
-                    nids.insert(c.note_id().0);
-                }
-            }
-            nids.len() as u32
-        })
-        .unwrap_or(0);
+    let in_deck = "(did = ?1 OR (odid != 0 AND odid = ?1))";
+    let total_cards = count(&format!("SELECT COUNT(*) FROM cards WHERE {in_deck}"))?;
+    let suspended = count(&format!(
+        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue = -1"
+    ))?;
+    let buried = count(&format!(
+        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue IN (-2, -3)"
+    ))?;
+    let new_cards = count(&format!(
+        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue = 0"
+    ))?;
+    let learn_cards = count(&format!(
+        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue IN (1, 3)"
+    ))?;
+    let review_cards = count(&format!(
+        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue = 2"
+    ))?;
+    let total_notes = count(&format!(
+        "SELECT COUNT(DISTINCT nid) FROM cards WHERE {in_deck}"
+    ))?;
 
     Ok(DeckStats {
         total_cards,

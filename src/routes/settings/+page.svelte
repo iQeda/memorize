@@ -4,7 +4,7 @@
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
-  import { shortcuts, type Rating } from "$lib/stores/shortcuts.svelte";
+  import { shortcuts, type Action } from "$lib/stores/shortcuts.svelte";
   import { onMount } from "svelte";
   import {
     CheckCircle2,
@@ -32,11 +32,12 @@
     { value: "system", label: t("settings.themeSystem") },
   ]);
 
-  const ratingShortcuts = $derived<{ rating: Rating; label: string }[]>([
-    { rating: "again", label: t("settings.shortcut.again") },
-    { rating: "hard", label: t("settings.shortcut.hard") },
-    { rating: "good", label: t("settings.shortcut.good") },
-    { rating: "easy", label: t("settings.shortcut.easy") },
+  const ratingShortcuts = $derived<{ action: Action; label: string }[]>([
+    { action: "again", label: t("settings.shortcut.again") },
+    { action: "hard", label: t("settings.shortcut.hard") },
+    { action: "good", label: t("settings.shortcut.good") },
+    { action: "easy", label: t("settings.shortcut.easy") },
+    { action: "nani", label: t("settings.shortcut.nani") },
   ]);
 
   const fixedShortcuts = $derived([
@@ -44,10 +45,10 @@
     { keys: ["⌘", ","], label: t("settings.shortcut.openSettings") },
   ]);
 
-  let recordingFor = $state<Rating | null>(null);
+  let recordingFor = $state<Action | null>(null);
 
-  function startRecord(rating: Rating) {
-    recordingFor = rating;
+  function startRecord(action: Action) {
+    recordingFor = action;
     const handler = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -56,7 +57,7 @@
         recordingFor = null;
         return;
       }
-      shortcuts.set(rating, e.key);
+      shortcuts.set(action, e.key);
       recordingFor = null;
     };
     window.addEventListener("keydown", handler, true);
@@ -637,7 +638,7 @@
     <div
       class="overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) shadow-(--shadow-subtle)"
     >
-      {#each ratingShortcuts as s, i (s.rating)}
+      {#each ratingShortcuts as s, i (s.action)}
         <div
           class="flex items-center justify-between gap-4 px-4 py-2.5 {i > 0
             ? 'border-t border-(--color-border-default)'
@@ -646,14 +647,14 @@
           <span class="text-sm text-(--color-fg-default)">{s.label}</span>
           <button
             type="button"
-            onclick={() => startRecord(s.rating)}
+            onclick={() => startRecord(s.action)}
             class="rounded-(--radius-xs) border px-2 py-0.5 font-mono text-xs transition-colors
-              {recordingFor === s.rating
+              {recordingFor === s.action
               ? 'border-(--color-accent-500) bg-(--color-accent-500)/10 text-(--color-accent-500) animate-pulse'
               : 'border-(--color-border-default) bg-(--color-bg-base) text-(--color-fg-muted) hover:border-(--color-border-strong) hover:text-(--color-fg-default)'}"
-            title={recordingFor === s.rating ? "Press a key… (Esc to cancel)" : "Click to rebind"}
+            title={recordingFor === s.action ? "Press a key… (Esc to cancel)" : "Click to rebind"}
           >
-            {recordingFor === s.rating ? "…" : shortcuts.label(s.rating)}
+            {recordingFor === s.action ? "…" : shortcuts.label(s.action)}
           </button>
         </div>
       {/each}
@@ -678,7 +679,7 @@
           onclick={() => shortcuts.reset()}
           class="text-[11px] text-(--color-fg-subtle) hover:text-(--color-fg-default)"
         >
-          Reset to default (1/2/3/4)
+          Reset to default (1/2/3/4 + n)
         </button>
       </div>
     </div>

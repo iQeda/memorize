@@ -7,11 +7,11 @@
   let { counts }: { counts: ButtonsCounts } = $props();
 
   const W = 720;
-  const H = 200;
-  const padL = 36;
-  const padR = 8;
-  const padT = 8;
-  const padB = 36;
+  const H = 140;
+  const padL = 28;
+  const padR = 6;
+  const padT = 6;
+  const padB = 24;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
@@ -37,8 +37,8 @@
   }
 </script>
 
-<svg viewBox="0 0 {W} {H}" class="h-[200px] w-full" aria-label="Answer buttons chart">
-  {#each tickValues() as v (v)}
+<svg viewBox="0 0 {W} {H}" class="h-[140px] w-full" preserveAspectRatio="none" aria-label="Answer buttons chart">
+  {#each tickValues() as v, ti (ti)}
     {@const y = padT + innerH - (v / maxValue) * innerH}
     <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="currentColor" class="text-(--color-border-default)" stroke-width="0.5" />
     <text x={padL - 6} y={y + 3} text-anchor="end" class="fill-(--color-fg-subtle) text-[9px]">{v}</text>

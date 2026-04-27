@@ -104,6 +104,7 @@
   let statsDeckId = $state<number | null>(null);
   let graph = $state<DeckGraphStats | null>(null);
   let graphDays = $state<number>(31);
+  let graphError = $state<string | null>(null);
 
   $effect(() => {
     const dId = collection.selectedDeckId;
@@ -112,21 +113,27 @@
       stats = null;
       graph = null;
       statsDeckId = null;
+      graphError = null;
       return;
     }
     statsDeckId = dId;
     void (async () => {
       try {
-        const [s, g] = await Promise.all([
-          invoke<DeckStats>("deck_stats", { deckId: dId }),
-          invoke<DeckGraphStats>("deck_graph_stats", { deckId: dId, days }),
-        ]);
-        stats = s;
-        graph = g;
+        stats = await invoke<DeckStats>("deck_stats", { deckId: dId });
       } catch (e) {
-        console.error("deck stats", e);
+        console.error("deck_stats", e);
         stats = null;
+      }
+      try {
+        graph = await invoke<DeckGraphStats>("deck_graph_stats", {
+          deckId: dId,
+          days,
+        });
+        graphError = null;
+      } catch (e) {
+        console.error("deck_graph_stats", e);
         graph = null;
+        graphError = String(e);
       }
     })();
   });
@@ -189,20 +196,22 @@
     }
   }
 
-  type Tone = "accent" | "warning" | "success";
+  type Tone = "accent" | "warning" | "success" | "muted";
   const toneRing: Record<Tone, string> = {
     accent: "from-(--color-accent-500)/15 to-(--color-accent-500)/0",
     warning: "from-(--color-warning)/15 to-(--color-warning)/0",
     success: "from-(--color-success)/15 to-(--color-success)/0",
+    muted: "from-(--color-fg-subtle)/8 to-(--color-fg-subtle)/0",
   };
   const toneText: Record<Tone, string> = {
     accent: "text-(--color-accent-500)",
     warning: "text-(--color-warning)",
     success: "text-(--color-success)",
+    muted: "text-(--color-fg-muted)",
   };
 </script>
 
-<div class="mx-auto h-full max-w-4xl px-8 py-12">
+<div class="mx-auto h-full max-w-5xl px-8 py-10">
   {#if !collection.isOpen}
     <div class="grid h-full place-items-center">
       <div class="flex max-w-md flex-col items-center gap-6 text-center">
@@ -243,7 +252,7 @@
       </div>
     </div>
   {:else if selected}
-    <div class="flex flex-col gap-12">
+    <div class="flex flex-col gap-8">
       <header class="animate-count flex items-start justify-between gap-4">
         <div class="min-w-0">
           <p
@@ -261,6 +270,11 @@
               {selected.name}
             </p>
           {/if}
+          {#if stats}
+            <p class="mt-2 text-xs text-(--color-fg-subtle) tabular-nums">
+              {t("decks.totalNotes")}: <span class="text-(--color-fg-muted)">{stats.total_notes}</span>
+            </p>
+          {/if}
         </div>
         <button
           type="button"
@@ -272,10 +286,12 @@
         </button>
       </header>
 
-      <div class="grid grid-cols-3 gap-4">
+      <div class="grid grid-cols-5 gap-3">
         {@render countCard(t("decks.new"), selected.new_count, "accent", 0)}
-        {@render countCard(t("decks.learning"), selected.learn_count, "warning", 60)}
-        {@render countCard(t("decks.review"), selected.review_count, "success", 120)}
+        {@render countCard(t("decks.learning"), selected.learn_count, "warning", 40)}
+        {@render countCard(t("decks.review"), selected.review_count, "success", 80)}
+        {@render countCard(t("decks.suspended"), stats?.suspended ?? 0, "muted", 120)}
+        {@render countCard(t("decks.buried"), stats?.buried ?? 0, "muted", 160)}
       </div>
 
       <div class="flex flex-col items-center gap-3">
@@ -299,20 +315,9 @@
         </p>
       </div>
 
-      {#if stats}
-        <section
-          class="animate-count rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
-          style="animation-delay: 200ms; animation-fill-mode: backwards;"
-        >
-          <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
-            {t("decks.stats")}
-          </h2>
-          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
-            {@render stat(t("decks.totalCards"), stats.total_cards)}
-            {@render stat(t("decks.totalNotes"), stats.total_notes)}
-            {@render stat(t("decks.suspended"), stats.suspended, stats.suspended > 0 ? "warning" : undefined)}
-            {@render stat(t("decks.buried"), stats.buried)}
-          </dl>
+      {#if graphError}
+        <section class="rounded-(--radius-lg) border border-(--color-danger)/40 bg-(--color-danger)/10 p-4 text-xs text-(--color-danger)">
+          deck_graph_stats failed: <span class="break-all font-mono">{graphError}</span>
         </section>
       {/if}
 
@@ -352,7 +357,7 @@
           return { cols, values, minDay };
         })()}
 
-        <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section class="grid auto-rows-[260px] grid-cols-1 gap-3 lg:grid-cols-2">
           <!-- Today -->
           {@render panel(t("decks.today"), null, todayBlock)}
 
@@ -555,14 +560,16 @@
 {/if}
 
 {#snippet panel(title: string, controls: import("svelte").Snippet | null, body: import("svelte").Snippet)}
-  <section class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)">
-    <div class="flex flex-wrap items-baseline justify-between gap-3">
-      <h2 class="text-[11px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
+  <section class="flex h-full flex-col overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-3.5 shadow-(--shadow-subtle)">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="text-[10px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase">
         {title}
       </h2>
       {#if controls}{@render controls()}{/if}
     </div>
-    {@render body()}
+    <div class="min-h-0 flex-1 overflow-hidden">
+      {@render body()}
+    </div>
   </section>
 {/snippet}
 
@@ -608,24 +615,9 @@
   </button>
 {/snippet}
 
-{#snippet stat(label: string, value: number, tone: "warning" | undefined = undefined)}
-  <div class="flex flex-col gap-0.5">
-    <dt class="text-[10px] tracking-[0.12em] text-(--color-fg-subtle) uppercase">
-      {label}
-    </dt>
-    <dd
-      class="number-tabular text-lg font-medium {tone === 'warning'
-        ? 'text-(--color-warning)'
-        : 'text-(--color-fg-default)'}"
-    >
-      {value}
-    </dd>
-  </div>
-{/snippet}
-
 {#snippet countCard(label: string, count: number, tone: Tone, delayMs: number)}
   <div
-    class="animate-count relative overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) px-6 py-7 shadow-(--shadow-subtle) transition-shadow hover:shadow-(--shadow-card)"
+    class="animate-count relative overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) px-3 py-5 shadow-(--shadow-subtle) transition-shadow hover:shadow-(--shadow-card)"
     style="animation-delay: {delayMs}ms; animation-fill-mode: backwards;"
   >
     <div
@@ -633,11 +625,11 @@
     ></div>
     <div class="relative flex flex-col items-center gap-1">
       <p
-        class="text-[10px] font-semibold tracking-[0.16em] text-(--color-fg-subtle) uppercase"
+        class="text-[9px] font-semibold tracking-[0.14em] text-(--color-fg-subtle) uppercase"
       >
         {label}
       </p>
-      <p class="number-tabular font-display text-5xl font-medium {toneText[tone]}">
+      <p class="number-tabular font-display text-4xl font-medium {toneText[tone]}">
         {count}
       </p>
     </div>

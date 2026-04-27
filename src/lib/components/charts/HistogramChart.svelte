@@ -22,11 +22,11 @@
   }: Props = $props();
 
   const W = 720;
-  const H = 200;
-  const padL = 36;
-  const padR = 36;
-  const padT = 8;
-  const padB = 28;
+  const H = 140;
+  const padL = 28;
+  const padR = 28;
+  const padT = 6;
+  const padB = 20;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
@@ -72,8 +72,8 @@
   }
 </script>
 
-<svg viewBox="0 0 {W} {H}" class="h-[200px] w-full" aria-label="Histogram">
-  {#each tickValues() as v (v)}
+<svg viewBox="0 0 {W} {H}" class="h-[140px] w-full" preserveAspectRatio="none" aria-label="Histogram">
+  {#each tickValues() as v, i (i)}
     {@const y = padT + innerH - (v / maxValue) * innerH}
     <line
       x1={padL}
@@ -93,7 +93,7 @@
       {v}
     </text>
   {/each}
-  {#each binned as b (b.key)}
+  {#each binned as b, i (i)}
     {@const x = padL + ((b.key - min) / span) * innerW}
     {@const h = (b.value / maxValue) * innerH}
     <rect
@@ -105,7 +105,7 @@
       opacity="0.85"
     />
   {/each}
-  {#each xTicks() as v (v)}
+  {#each xTicks() as v, i (i)}
     {@const x = padL + ((v - min) / span) * innerW}
     <text
       x={x}

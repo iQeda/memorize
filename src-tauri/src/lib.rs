@@ -51,6 +51,7 @@ pub fn run() {
             commands::notes::add_note,
             commands::notes::update_note,
             commands::notes::delete_notes,
+            commands::lookup::nani_lookup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running memorize");

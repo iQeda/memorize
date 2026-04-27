@@ -9,7 +9,7 @@
   const today = new Date();
   const todayDow = today.getDay();
   const cols = 53;
-  const cellSize = 11;
+  const cellSize = 9;
   const cellGap = 2;
   const W = cols * (cellSize + cellGap) + 18;
   const H = 7 * (cellSize + cellGap) + 4;

@@ -8,11 +8,11 @@
   let { buckets, days }: Props = $props();
 
   const W = 720;
-  const H = 220;
-  const padL = 36;
-  const padR = 36;
-  const padT = 8;
-  const padB = 28;
+  const H = 140;
+  const padL = 28;
+  const padR = 28;
+  const padT = 6;
+  const padB = 20;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
@@ -51,12 +51,12 @@
 
 <svg
   viewBox="0 0 {W} {H}"
-  class="h-[220px] w-full"
+  class="h-[140px] w-full"
   preserveAspectRatio="none"
   aria-label="Future due chart"
 >
   <!-- left axis ticks -->
-  {#each tickValues() as v (v)}
+  {#each tickValues() as v, i (i)}
     {@const y = padT + innerH - (v / maxCount) * innerH}
     <line
       x1={padL}
@@ -78,7 +78,7 @@
   {/each}
 
   <!-- bars -->
-  {#each Array(days) as _, i (i)}
+  {#each Array.from({ length: days }) as _, i (i)}
     {@const bucket = buckets.find((b) => b.day === i)}
     {@const c = bucket?.count ?? 0}
     {@const h = (c / maxCount) * innerH}
@@ -102,7 +102,7 @@
   />
 
   <!-- x axis ticks (every Nth day) -->
-  {#each [0, Math.floor(days / 4), Math.floor(days / 2), Math.floor((days * 3) / 4), days - 1] as i (i)}
+  {#each [0, Math.floor(days / 4), Math.floor(days / 2), Math.floor((days * 3) / 4), days - 1] as i, idx (idx)}
     {@const x = padL + i * barW + barW / 2}
     <text
       x={x}

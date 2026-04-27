@@ -47,8 +47,6 @@ export const messages = {
     "decks.learning": "Learning",
     "decks.review": "Review",
     "decks.parentPath": "Parent path",
-    "decks.stats": "Stats",
-    "decks.totalCards": "Total cards",
     "decks.totalNotes": "Total words",
     "decks.suspended": "Suspended",
     "decks.buried": "Buried",
@@ -147,6 +145,7 @@ export const messages = {
     "settings.shortcut.hard": "Hard",
     "settings.shortcut.good": "Good",
     "settings.shortcut.easy": "Easy",
+    "settings.shortcut.nani": "Nani lookup",
     "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
 
@@ -272,8 +271,6 @@ export const messages = {
     "decks.learning": "Learning",
     "decks.review": "Review",
     "decks.parentPath": "親パス",
-    "decks.stats": "統計",
-    "decks.totalCards": "総カード数",
     "decks.totalNotes": "総単語数",
     "decks.suspended": "Suspended",
     "decks.buried": "Buried",
@@ -372,6 +369,7 @@ export const messages = {
     "settings.shortcut.hard": "Hard",
     "settings.shortcut.good": "Good",
     "settings.shortcut.easy": "Easy",
+    "settings.shortcut.nani": "Nani 検索",
     "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
 
