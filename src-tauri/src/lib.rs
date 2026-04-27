@@ -26,7 +26,6 @@ pub fn run() {
             commands::decks::create_deck,
             commands::cards::list_cards,
             commands::cards::list_due_cards,
-            commands::cards::get_study_queue,
             commands::reviewer::get_card_render,
             commands::sync::sync_status,
             commands::sync::sync_login_cmd,

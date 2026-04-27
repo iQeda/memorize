@@ -11,6 +11,8 @@ pub struct CardSummary {
     pub note_id: i64,
     pub deck_id: i64,
     pub template_idx: u16,
+    /// First field of the underlying note (the "word" for vocab decks).
+    pub text: String,
 }
 
 async fn collect_cards(
@@ -26,11 +28,17 @@ async fn collect_cards(
     let mut out = Vec::new();
     for cid in cids.into_iter().take(limit as usize) {
         if let Some(card) = col.storage.get_card(cid)? {
+            let text = col
+                .storage
+                .get_note(card.note_id())?
+                .and_then(|n| n.fields().first().cloned())
+                .unwrap_or_default();
             out.push(CardSummary {
                 id: card.id().0,
                 note_id: card.note_id().0,
                 deck_id: card.deck_id().0,
                 template_idx: card.template_idx(),
+                text,
             });
         }
     }
@@ -40,10 +48,22 @@ async fn collect_cards(
 #[tauri::command]
 pub async fn list_cards(
     deck_id: i64,
+    query: Option<String>,
     limit: u32,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<CardSummary>> {
-    let search = format!("did:{}", deck_id);
+    let mut search = format!("did:{}", deck_id);
+    if let Some(q) = query.as_ref() {
+        let trimmed = q.trim();
+        if !trimmed.is_empty() {
+            // Anki search: a bare token matches a substring across all fields.
+            // Quote to keep multi-word phrases together.
+            search.push(' ');
+            search.push('"');
+            search.push_str(&trimmed.replace('"', "\\\""));
+            search.push('"');
+        }
+    }
     collect_cards(&state, &search, limit).await
 }
 
@@ -58,41 +78,3 @@ pub async fn list_due_cards(
     collect_cards(&state, &search, limit).await
 }
 
-#[derive(Debug, Serialize)]
-pub struct StudyQueue {
-    pub cards: Vec<CardSummary>,
-    pub new_count: u32,
-    pub learning_count: u32,
-    pub review_count: u32,
-}
-
-#[tauri::command]
-pub async fn get_study_queue(
-    deck_id: i64,
-    limit: u32,
-    state: State<'_, AppState>,
-) -> AppResult<StudyQueue> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-
-    col.set_current_deck(DeckId(deck_id))?;
-    let queued = col.get_queued_cards(limit as usize, false)?;
-
-    let cards = queued
-        .cards
-        .iter()
-        .map(|qc| CardSummary {
-            id: qc.card.id().0,
-            note_id: qc.card.note_id().0,
-            deck_id: qc.card.deck_id().0,
-            template_idx: qc.card.template_idx(),
-        })
-        .collect();
-
-    Ok(StudyQueue {
-        cards,
-        new_count: queued.new_count as u32,
-        learning_count: queued.learning_count as u32,
-        review_count: queued.review_count as u32,
-    })
-}

@@ -9,6 +9,7 @@
     note_id: number;
     deck_id: number;
     template_idx: number;
+    text: string;
   };
 
   let query = $state("");
@@ -19,20 +20,28 @@
   let editorMode = $state<"add" | "edit" | null>(null);
   let editingNoteId = $state<number | null>(null);
 
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
   $effect(() => {
-    if (selectedDeckId !== null && collection.isOpen) {
-      void load(selectedDeckId);
-    } else {
+    const dId = selectedDeckId;
+    const q = query;
+    if (dId === null || !collection.isOpen) {
       cards = [];
+      return;
     }
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      void load(dId, q);
+    }, 200);
   });
 
-  async function load(deckId: number) {
+  async function load(deckId: number, q: string) {
     loading = true;
     try {
       cards = await invoke<CardSummary[]>("list_cards", {
         deckId,
-        limit: 200,
+        query: q.trim() || null,
+        limit: 500,
       });
     } catch (e) {
       console.error(e);
@@ -41,16 +50,6 @@
       loading = false;
     }
   }
-
-  const filtered = $derived(
-    query.trim()
-      ? cards.filter(
-          (c) =>
-            String(c.id).includes(query.trim()) ||
-            String(c.note_id).includes(query.trim()),
-        )
-      : cards,
-  );
 
   function openAdd() {
     editingNoteId = null;
@@ -68,8 +67,19 @@
   }
 
   async function onSaved() {
-    if (selectedDeckId !== null) await load(selectedDeckId);
+    if (selectedDeckId !== null) await load(selectedDeckId, query);
     await collection.refreshDecks();
+  }
+
+  function stripHtml(s: string): string {
+    return s
+      .replace(/<br\s*\/?>(\r?\n)?/gi, " / ")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .trim();
   }
 </script>
 
@@ -89,13 +99,13 @@
       <input
         type="search"
         bind:value={query}
-        placeholder="card id / note id…"
+        placeholder="単語・全フィールドを検索"
         class="w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-elevated) py-1.5 pr-3 pl-7 text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
       />
     </div>
     <div class="flex items-center gap-1.5 text-xs text-(--color-fg-subtle)">
       <Filter size={12} strokeWidth={2} />
-      <span>id 部分一致のみ</span>
+      <span>Anki search syntax 対応</span>
     </div>
   </aside>
 
@@ -104,7 +114,7 @@
       class="flex h-12 items-center justify-between border-b border-(--color-border-default) px-6"
     >
       <p class="text-sm text-(--color-fg-muted)">
-        {#if loading}読み込み中…{:else}{filtered.length} cards{/if}
+        {#if loading}読み込み中…{:else}{cards.length} cards{/if}
       </p>
       <button
         type="button"
@@ -117,9 +127,9 @@
       </button>
     </header>
     <div class="flex-1 overflow-y-auto">
-      {#if filtered.length === 0 && !loading}
+      {#if cards.length === 0 && !loading}
         <div class="grid h-full place-items-center text-(--color-fg-subtle)">
-          <p class="text-sm">カードがありません</p>
+          <p class="text-sm">{query.trim() ? "ヒットしませんでした" : "カードがありません"}</p>
         </div>
       {:else}
         <table class="w-full text-sm">
@@ -127,20 +137,22 @@
             class="sticky top-0 bg-(--color-bg-base) text-left text-[11px] font-medium tracking-wider text-(--color-fg-subtle) uppercase"
           >
             <tr>
-              <th class="px-6 py-2.5">Card ID</th>
-              <th class="px-6 py-2.5">Note ID</th>
+              <th class="px-6 py-2.5">単語</th>
+              <th class="px-6 py-2.5">Note</th>
               <th class="px-6 py-2.5">Template</th>
             </tr>
           </thead>
           <tbody>
-            {#each filtered as c (c.id)}
+            {#each cards as c (c.id)}
               <tr
                 onclick={() => openEdit(c.note_id)}
                 class="cursor-pointer border-t border-(--color-border-default) hover:bg-(--color-bg-overlay)"
               >
-                <td class="px-6 py-2 font-mono tabular-nums">{c.id}</td>
-                <td class="px-6 py-2 font-mono tabular-nums text-(--color-fg-muted)">{c.note_id}</td>
-                <td class="px-6 py-2 text-(--color-fg-muted)">#{c.template_idx}</td>
+                <td class="max-w-[420px] truncate px-6 py-2 text-(--color-fg-default)">
+                  {stripHtml(c.text) || "(空)"}
+                </td>
+                <td class="px-6 py-2 font-mono text-xs tabular-nums text-(--color-fg-subtle)">{c.note_id}</td>
+                <td class="px-6 py-2 text-xs text-(--color-fg-muted)">#{c.template_idx}</td>
               </tr>
             {/each}
           </tbody>
