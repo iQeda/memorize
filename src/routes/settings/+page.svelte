@@ -543,8 +543,13 @@
     >
       {#if collection.isOpen}
         <p class="text-sm text-(--color-fg-default)">
-          コレクションを {collection.decks.length} 個のデッキで開いています
+          {collection.decks.length} 個のデッキで開いています
         </p>
+        {#if collection.currentPath}
+          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
+            {collection.currentPath}
+          </p>
+        {/if}
         <button
           type="button"
           onclick={() => collection.close()}
@@ -556,6 +561,34 @@
         <p class="text-sm text-(--color-fg-muted)">
           コレクションが開いていません
         </p>
+      {/if}
+
+      {#if collection.ankiDesktopPath && collection.ankiDesktopPath !== collection.currentPath}
+        <div
+          class="mt-4 rounded-(--radius-md) border border-(--color-accent-500)/40 bg-(--color-accent-500)/8 p-3 text-xs"
+        >
+          <p class="text-(--color-fg-default)">
+            Anki Desktop のコレクションが検出されました
+          </p>
+          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
+            {collection.ankiDesktopPath}
+          </p>
+          <p class="mt-2 leading-relaxed text-(--color-fg-muted)">
+            こちらは AnkiWeb と同期済みの可能性が高いコレクションです。<br />
+            これに切り替えれば差分同期 (normal sync) が動くはずです。
+          </p>
+          <button
+            type="button"
+            onclick={() => {
+              if (collection.ankiDesktopPath) {
+                void collection.open(collection.ankiDesktopPath);
+              }
+            }}
+            class="mt-2 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) hover:bg-(--color-accent-600) active:scale-[0.97]"
+          >
+            このコレクションに切り替え
+          </button>
+        </div>
       {/if}
     </div>
   </section>

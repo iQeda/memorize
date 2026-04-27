@@ -22,6 +22,7 @@ pub fn run() {
             commands::collection::open_collection,
             commands::collection::close_collection,
             commands::collection::is_open,
+            commands::collection::collection_info,
             commands::decks::list_decks,
             commands::decks::create_deck,
             commands::decks::rename_deck,

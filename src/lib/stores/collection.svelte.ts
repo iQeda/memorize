@@ -12,12 +12,29 @@ export type DeckSummary = {
 
 const LAST_PATH_KEY = "memorize:last-collection-path";
 
+type CollectionInfo = {
+  current_path: string | null;
+  anki_desktop_path: string | null;
+};
+
 class CollectionStore {
   isOpen = $state(false);
   decks = $state<DeckSummary[]>([]);
   selectedDeckId = $state<number | null>(null);
   loading = $state(false);
   error = $state<string | null>(null);
+  currentPath = $state<string | null>(null);
+  ankiDesktopPath = $state<string | null>(null);
+
+  async refreshInfo() {
+    try {
+      const info = await invoke<CollectionInfo>("collection_info");
+      this.currentPath = info.current_path;
+      this.ankiDesktopPath = info.anki_desktop_path;
+    } catch (e) {
+      console.error("collection.refreshInfo", e);
+    }
+  }
 
   /** Reconcile the frontend store with the backend AppState, and
    *  auto-reopen the last-used collection if the backend has none open
@@ -28,12 +45,14 @@ class CollectionStore {
       if (open) {
         this.isOpen = true;
         await this.refreshDecks();
+        await this.refreshInfo();
         return;
       }
       const lastPath = browser ? localStorage.getItem(LAST_PATH_KEY) : null;
       if (lastPath) {
         await this.open(lastPath, /* skipPersist */ true);
       }
+      await this.refreshInfo();
     } catch (e) {
       console.error("collection.refresh", e);
     }
@@ -49,6 +68,7 @@ class CollectionStore {
         localStorage.setItem(LAST_PATH_KEY, path);
       }
       await this.refreshDecks();
+      await this.refreshInfo();
     } catch (e) {
       this.error = String(e);
       this.isOpen = false;
