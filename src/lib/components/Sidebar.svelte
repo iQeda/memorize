@@ -14,7 +14,15 @@
   import { collection, type DeckSummary } from "$lib/stores/collection.svelte";
   import { draggable } from "$lib/actions/draggable";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
+  import { goto } from "$app/navigation";
   import { tick } from "svelte";
+
+  async function selectDeck(deck: DeckSummary) {
+    collection.selectedDeckId = deck.id;
+    if ($page.url.pathname !== "/") {
+      await goto("/");
+    }
+  }
 
   let creating = $state(false);
   let newName = $state("");
@@ -257,7 +265,7 @@
         {:else}
           <button
             type="button"
-            onclick={() => (collection.selectedDeckId = deck.id)}
+            onclick={() => selectDeck(deck)}
             oncontextmenu={(e) => openMenu(e, deck)}
             class="group flex w-full items-center justify-between gap-2 rounded-md py-1 pr-2 text-left text-sm transition-colors
               {active
