@@ -1,8 +1,21 @@
 diff --git a/rslib/src/sync/http_client/io_monitor.rs b/rslib/src/sync/http_client/io_monitor.rs
-index 602b672dd..d02e135d8 100644
+index 602b672dd..064e82649 100644
 --- a/rslib/src/sync/http_client/io_monitor.rs
 +++ b/rslib/src/sync/http_client/io_monitor.rs
-@@ -124,22 +124,33 @@ impl IoMonitor {
+@@ -120,26 +120,55 @@ impl IoMonitor {
+                 .await?
+                 .error_for_status()?;
+             map_redirect_to_error(&resp)?;
++            let resp_status = resp.status();
++            let resp_url = resp.url().to_string();
++            let resp_headers = format!("{:?}", resp.headers());
++            tracing::debug!(
++                status = %resp_status,
++                url = %resp_url,
++                headers = %resp_headers,
++                "sync response"
++            );
+             let response_total = resp
                  .headers()
                  .get(&ORIGINAL_SIZE)
                  .and_then(|v| v.to_str().ok())
@@ -44,10 +57,19 @@ index 602b672dd..d02e135d8 100644
 +                // returns a small plain-text response ("OK" or an error
 +                // message) WITHOUT the anki-original-size header and
 +                // WITHOUT zstd encoding. Read the body raw in that case.
-+                resp.bytes()
++                let body = resp
++                    .bytes()
 +                    .await
-+                    .or_http_err(StatusCode::SEE_OTHER, "reading raw body")?
-+                    .to_vec()
++                    .or_http_err(StatusCode::SEE_OTHER, "reading raw body")?;
++                let preview =
++                    String::from_utf8_lossy(&body[..body.len().min(200)]).into_owned();
++                tracing::info!(
++                    status = %resp_status,
++                    body_len = body.len(),
++                    body_preview = %preview,
++                    "sync response (no original-size)"
++                );
++                body.to_vec()
 +            };
              Ok::<_, HttpError>(buf)
          };
