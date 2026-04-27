@@ -105,22 +105,32 @@
     </div>
   {:else if selected}
     <div class="flex flex-col gap-12">
-      <header class="animate-count">
-        <p
-          class="text-[11px] font-semibold tracking-[0.14em] text-(--color-fg-subtle) uppercase"
-        >
-          {t("decks.selectedHeader")}
-        </p>
-        <h1
-          class="mt-1.5 font-display text-[2.25rem] leading-tight font-medium tracking-tight"
-        >
-          {selected.name.split("::").at(-1)}
-        </h1>
-        {#if selected.name.includes("::")}
-          <p class="mt-1 font-mono text-xs text-(--color-fg-subtle)">
-            {selected.name}
+      <header class="animate-count flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <p
+            class="text-[11px] font-semibold tracking-[0.14em] text-(--color-fg-subtle) uppercase"
+          >
+            {t("decks.selectedHeader")}
           </p>
-        {/if}
+          <h1
+            class="mt-1.5 truncate font-display text-[2.25rem] leading-tight font-medium tracking-tight"
+          >
+            {selected.name.split("::").at(-1)}
+          </h1>
+          {#if selected.name.includes("::")}
+            <p class="mt-1 truncate font-mono text-xs text-(--color-fg-subtle)">
+              {selected.name}
+            </p>
+          {/if}
+        </div>
+        <button
+          type="button"
+          onclick={() => (showAddNote = true)}
+          class="shrink-0 mt-1 flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) transition-all hover:bg-(--color-accent-600) hover:shadow-(--shadow-card) active:scale-[0.97]"
+        >
+          <Plus size={12} strokeWidth={2.5} />
+          {t("decks.addWord")}
+        </button>
       </header>
 
       <div class="grid grid-cols-3 gap-4">
@@ -148,14 +158,6 @@
             ? t("decks.cardsWaiting", { count: totalDue })
             : t("decks.allDoneToday")}
         </p>
-        <button
-          type="button"
-          onclick={() => (showAddNote = true)}
-          class="mt-1 flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
-        >
-          <Plus size={12} strokeWidth={2.5} />
-          {t("decks.addWord")}
-        </button>
       </div>
     </div>
   {:else}
