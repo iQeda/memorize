@@ -57,6 +57,7 @@
 
   <button
     type="button"
+    onmousedown={(e) => e.preventDefault()}
     onclick={handleSync}
     disabled={sync.busy}
     class="grid h-7 w-7 place-items-center rounded-md transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.96] disabled:opacity-60

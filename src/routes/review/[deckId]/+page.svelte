@@ -5,11 +5,13 @@
   import { invoke } from "$lib/ipc";
   import CardFrame from "$lib/components/CardFrame.svelte";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { t } from "$lib/i18n/index.svelte";
   import { shortcuts } from "$lib/stores/shortcuts.svelte";
+  import { sync } from "$lib/stores/sync.svelte";
+  import { collection } from "$lib/stores/collection.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -54,13 +56,41 @@
   );
 
   onMount(async () => {
-    window.addEventListener("keydown", onKey);
     await startSession();
   });
 
-  onDestroy(() => {
-    window.removeEventListener("keydown", onKey);
+  // `totals` は `get_next_card` の `remaining` でしか更新されないため、
+  // 解答中に Sync が完了して別端末からの変更が入っても、次の rating まで
+  // バッジが古いままになる。Sync 完了 (busy: true → false) を検知して
+  // `list_decks` の最新値で塗り直す。`get_next_card` の remaining は
+  // 「現在カードを除く残り」なのに対し `list_decks` は全件を返すので、
+  // 現在カードの種類に応じて 1 引いて差を吸収する。
+  let prevSyncBusy = false;
+  $effect(() => {
+    const isBusy = sync.busy;
+    if (prevSyncBusy && !isBusy && current) {
+      void refreshTotalsAfterSync();
+    }
+    prevSyncBusy = isBusy;
   });
+
+  async function refreshTotalsAfterSync() {
+    await collection.refreshDecks();
+    const d = collection.decks.find((x) => x.id === deckId);
+    if (!d) return;
+    const next = { new: d.new_count, learning: d.learn_count, review: d.review_count };
+    // 現在カードの 1 枚分は remaining から除外したいが、その種類は
+    // フロントエンドに渡っていない。totals の前回値との差分で推定する：
+    // 前回 totals に存在し、かつ今回の next で 0 でないカテゴリを 1 減算。
+    const adjusted = { ...next };
+    if (totals.new > 0 && adjusted.new > 0) adjusted.new -= 1;
+    else if (totals.learning > 0 && adjusted.learning > 0) adjusted.learning -= 1;
+    else if (totals.review > 0 && adjusted.review > 0) adjusted.review -= 1;
+    totals = adjusted;
+    // ヘッダーの "X / Y" 分母も Sync で増減した分だけ追従させる。
+    // cursor は既に答えた枚数、+1 は現在カード、残り 3 カテゴリの合計が今後分。
+    initialTotal = cursor + adjusted.new + adjusted.learning + adjusted.review + 1;
+  }
 
   async function startSession() {
     loading = true;
@@ -126,7 +156,7 @@
   }
 
   function flip() {
-    showingAnswer = true;
+    showingAnswer = !showingAnswer;
   }
 
   async function answer(rating: "again" | "hard" | "good" | "easy") {
@@ -158,6 +188,24 @@
     const doc = new DOMParser().parseFromString(current.question_html, "text/html");
     return (doc.body.textContent ?? "").trim().replace(/\s+/g, " ");
   }
+
+  // Anki テンプレートの answer 側は通常 `{{FrontSide}}<hr id=answer>{{Back}}` 構造で、
+  // answer_html に質問部分が含まれる。フリップ後は答えだけ見せたいので hr#answer を
+  // 境に前半 (質問) を削除した HTML を返す。hr#answer が無いカスタムテンプレートは
+  // そのまま返す（破壊しない）。
+  const answerOnlyHtml = $derived.by(() => {
+    if (!current) return "";
+    const html = current.answer_html;
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const hr = doc.querySelector('hr#answer, hr[id="answer"]');
+    if (!hr || !hr.parentElement) return html;
+    const parent = hr.parentElement;
+    while (parent.firstChild && parent.firstChild !== hr) {
+      parent.removeChild(parent.firstChild);
+    }
+    parent.removeChild(hr);
+    return doc.body.innerHTML;
+  });
 
   function flashInfo(msg: string) {
     naniInfo = msg;
@@ -249,7 +297,7 @@
       void naniLookup();
       return;
     }
-    if (!showingAnswer && (e.key === " " || e.key === "Enter")) {
+    if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
       flip();
       return;
@@ -401,16 +449,38 @@
         {#key current.card_id}
           <article
             in:fade={{ duration: 220, easing: cubicOut, delay: 60 }}
-            style="height: 420px; min-height: 420px; max-height: 420px;"
-            class="block w-full shrink-0 overflow-hidden rounded-(--radius-xl) border bg-(--color-bg-elevated) shadow-(--shadow-card) transition-[border-color,box-shadow] duration-200 {showingAnswer
-              ? 'border-(--color-success)/50 shadow-(--shadow-glow)'
-              : 'border-(--color-border-default)'}"
+            style="height: 420px; min-height: 420px; max-height: 420px; perspective: 2000px;"
+            class="block w-full shrink-0"
           >
-            <CardFrame
-              html={showingAnswer ? current.answer_html : current.question_html}
-              css={current.css}
-              side={showingAnswer ? "answer" : "question"}
-            />
+            <div
+              class="relative h-full w-full transition-transform duration-500 ease-out"
+              style="transform-style: preserve-3d; transform: rotateY({showingAnswer ? 180 : 0}deg);"
+            >
+              <div
+                style="backface-visibility: hidden; -webkit-backface-visibility: hidden;"
+                class="absolute inset-0 overflow-hidden rounded-(--radius-xl) border bg-(--color-bg-elevated) shadow-(--shadow-card) transition-[border-color,box-shadow] duration-200 {showingAnswer
+                  ? 'border-(--color-success)/50 shadow-(--shadow-glow)'
+                  : 'border-(--color-border-default)'}"
+              >
+                <CardFrame
+                  html={current.question_html}
+                  css={current.css}
+                  side="question"
+                />
+              </div>
+              <div
+                style="backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg);"
+                class="absolute inset-0 overflow-hidden rounded-(--radius-xl) border bg-(--color-bg-elevated) shadow-(--shadow-card) transition-[border-color,box-shadow] duration-200 {showingAnswer
+                  ? 'border-(--color-success)/50 shadow-(--shadow-glow)'
+                  : 'border-(--color-border-default)'}"
+              >
+                <CardFrame
+                  html={answerOnlyHtml}
+                  css={current.css}
+                  side="answer"
+                />
+              </div>
+            </div>
           </article>
         {/key}
       </div>
@@ -436,7 +506,7 @@
             type="button"
             onclick={flip}
             in:fade={{ duration: 160, easing: cubicOut }}
-            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) bg-(--color-accent-500) px-5 py-2.5 text-(--color-fg-onAccent) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-accent-600) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
           >
             <span class="text-sm font-medium">{t("reviewer.showAnswer")}</span>
             <span class="font-mono text-[10px] opacity-70">Space</span>
@@ -454,6 +524,15 @@
               Nani
             </span>
             <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
+          </button>
+          <button
+            type="button"
+            onclick={flip}
+            in:fade={{ duration: 200, easing: cubicOut }}
+            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+          >
+            <span class="text-sm font-medium">{t("reviewer.showProblem")}</span>
+            <span class="font-mono text-[10px] opacity-70">Space</span>
           </button>
           {#each buttons as b, i (b.rating)}
             <button
@@ -520,6 +599,8 @@
     class="pointer-events-none fixed top-0 left-[-10000px] h-4 w-px"
   />
 </div>
+
+<svelte:window onkeydown={onKey} />
 
 {#if editing && current}
   <NoteEditor
