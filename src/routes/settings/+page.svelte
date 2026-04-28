@@ -19,6 +19,7 @@
     History,
     Package,
     FilePlus2,
+    FolderOpen,
     Power,
     DownloadCloud,
   } from "lucide-svelte";
@@ -40,6 +41,41 @@
     { action: "good", label: t("settings.shortcut.good") },
     { action: "easy", label: t("settings.shortcut.easy") },
     { action: "nani", label: t("settings.shortcut.nani") },
+  ]);
+
+  type TocGroup = {
+    id: string;
+    title: string;
+    items: { id: string; label: string }[];
+  };
+  const tocGroups = $derived<TocGroup[]>([
+    {
+      id: "data",
+      title: t("settings.group.data"),
+      items: [
+        { id: "collection", label: t("settings.collection") },
+        { id: "sync", label: t("sync.title") },
+        { id: "backup", label: t("backup.title") },
+        { id: "io", label: t("io.title") },
+      ],
+    },
+    {
+      id: "preferences",
+      title: t("settings.group.preferences"),
+      items: [
+        { id: "language", label: t("settings.language") },
+        { id: "appearance", label: t("settings.appearance") },
+        { id: "startup", label: t("settings.startup") },
+      ],
+    },
+    {
+      id: "app",
+      title: t("settings.group.app"),
+      items: [
+        { id: "updates", label: t("updater.title") },
+        { id: "shortcuts", label: t("settings.shortcuts") },
+      ],
+    },
   ]);
 
   const fixedShortcuts = $derived([
@@ -327,127 +363,137 @@
   </label>
 {/snippet}
 
-<div class="mx-auto max-w-2xl px-8 py-10">
-  <h1 class="font-display text-3xl font-medium tracking-tight">
-    {t("settings.title")}
-  </h1>
-
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      {t("settings.language")}
-    </h2>
-    <div
-      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-1 shadow-(--shadow-subtle)"
-    >
-      <div class="grid grid-cols-2 gap-1">
-        {#each localeOptions as opt (opt.value)}
-          {@const active = i18n.locale === opt.value}
-          <button
-            type="button"
-            onclick={() => i18n.set(opt.value)}
-            class="rounded-(--radius-md) px-3 py-2 text-sm transition-colors
-              {active
-              ? 'bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)'
-              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
-          >
-            {opt.label}
-          </button>
+<div
+  class="mx-auto grid max-w-6xl gap-10 px-8 py-10 md:grid-cols-[200px_minmax(0,1fr)]"
+>
+  <aside class="md:sticky md:top-6 md:self-start">
+    <nav aria-labelledby="toc-heading">
+      <p
+        id="toc-heading"
+        class="mb-3 text-[10px] font-semibold tracking-[0.18em] text-(--color-fg-subtle) uppercase"
+      >
+        {t("settings.contents")}
+      </p>
+      <div class="space-y-4">
+        {#each tocGroups as group (group.id)}
+          <section aria-labelledby="toc-group-{group.id}">
+            <h3
+              id="toc-group-{group.id}"
+              class="mb-1 text-[10px] font-semibold tracking-[0.18em] text-(--color-fg-default) uppercase"
+            >
+              {group.title}
+            </h3>
+            <ul class="space-y-0.5">
+              {#each group.items as item (item.id)}
+                <li>
+                  <a
+                    href="#{item.id}"
+                    class="block rounded-(--radius-sm) px-2 py-1 text-xs text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          </section>
         {/each}
       </div>
-    </div>
-  </section>
+    </nav>
+  </aside>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      {t("backup.title")}
-    </h2>
+  <div class="min-w-0 max-w-2xl">
+    <header class="space-y-2">
+      <h1 class="font-display text-3xl font-medium tracking-tight">
+        {t("settings.title")}
+      </h1>
+      <p class="text-sm text-(--color-fg-muted)">
+        {t("settings.subtitle")}
+      </p>
+    </header>
+
+    <h2
+    class="mt-12 mb-2 font-display text-xl font-medium tracking-tight text-(--color-fg-default)"
+  >
+    {t("settings.group.data")}
+  </h2>
+  <section id="collection" class="mt-4 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      {t("settings.collection")}
+    </h3>
     <div
-      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-4 shadow-(--shadow-subtle)"
     >
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2.5">
-          <Shield size={16} class="text-(--color-success)" />
-          <div class="text-sm">
-            <p class="text-(--color-fg-default)">{t("backup.autoLabel")}</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("backup.autoBody")}</p>
-          </div>
+      {#if collection.isOpen}
+        <p class="text-sm text-(--color-fg-default)">
+          {t("settings.collectionOpenedWithDecks", { count: collection.decks.length })}
+        </p>
+        {#if collection.currentPath}
+          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
+            {collection.currentPath}
+          </p>
+        {/if}
+        <button
+          type="button"
+          onclick={() => collection.close()}
+          class="mt-3 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-sm text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
+        >
+          {t("settings.closeCollection")}
+        </button>
+      {:else}
+        <p class="text-sm text-(--color-fg-muted)">{t("settings.collectionNotOpen")}</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onclick={() => collection.pickAndOpen()}
+            class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) transition-colors hover:bg-(--color-accent-600) active:scale-[0.97]"
+          >
+            <FolderOpen size={12} />
+            {t("welcome.openExisting")}
+          </button>
+          <button
+            type="button"
+            onclick={() => collection.createNew()}
+            class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
+          >
+            <FilePlus2 size={12} />
+            {t("welcome.createNew")}
+          </button>
         </div>
-        <button
-          type="button"
-          onclick={() => sync.setAutoBackup(!sync.autoBackupBeforeSync)}
-          aria-pressed={sync.autoBackupBeforeSync}
-          aria-label={t("backup.autoLabel")}
-          class="relative h-5 w-9 shrink-0 rounded-full transition-colors {sync.autoBackupBeforeSync
-            ? 'bg-(--color-accent-500)'
-            : 'bg-(--color-bg-overlay)'}"
-        >
-          <span
-            class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {sync.autoBackupBeforeSync
-              ? 'left-[18px]'
-              : 'left-0.5'}"
-          ></span>
-        </button>
-      </div>
-
-      <div class="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onclick={() => handleManualBackup(false)}
-          disabled={sync.busy || !collection.isOpen}
-          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
-        >
-          <Save size={12} />
-          {t("backup.now")}
-        </button>
-        <button
-          type="button"
-          onclick={() => handleManualBackup(true)}
-          disabled={sync.busy || !collection.isOpen}
-          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
-        >
-          <Save size={12} />
-          {t("backup.nowWithMedia")}
-        </button>
-      </div>
-
-      {#if !collection.isOpen}
-        <p class="mt-3 text-xs text-(--color-fg-subtle)">
-          {t("backup.collectionRequired")}
-        </p>
-      {/if}
-      {#if sync.lastBackupPath}
-        <p class="mt-3 truncate font-mono text-[11px] text-(--color-fg-subtle)">
-          {t("backup.lastPath", { path: sync.lastBackupPath })}
-        </p>
       {/if}
 
-      <hr class="my-4 border-(--color-border-default)" />
-
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2.5">
-          <History size={16} class="text-(--color-warning)" />
-          <div class="text-sm">
-            <p class="text-(--color-fg-default)">{t("backup.restoreLabel")}</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("backup.restoreBody")}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onclick={handleRestore}
-          disabled={sync.busy || !collection.isOpen}
-          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-1.5 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
+      {#if collection.ankiDesktopPath && collection.ankiDesktopPath !== collection.currentPath}
+        <div
+          class="mt-4 rounded-(--radius-md) border border-(--color-accent-500)/40 bg-(--color-accent-500)/8 p-3 text-xs"
         >
-          <History size={12} />
-          {t("backup.restoreButton")}
-        </button>
-      </div>
+          <p class="text-(--color-fg-default)">
+            {t("settings.ankiDesktopDetected")}
+          </p>
+          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
+            {collection.ankiDesktopPath}
+          </p>
+          <p class="mt-2 leading-relaxed whitespace-pre-line text-(--color-fg-muted)">
+            {t("settings.ankiDesktopHint")}
+          </p>
+          <button
+            type="button"
+            onclick={() => {
+              if (collection.ankiDesktopPath) {
+                void collection.open(collection.ankiDesktopPath);
+              }
+            }}
+            class="mt-2 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) hover:bg-(--color-accent-600) active:scale-[0.97]"
+          >
+            {t("settings.switchToThis")}
+          </button>
+        </div>
+      {/if}
     </div>
   </section>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+  <section id="sync" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       {t("sync.title")}
-    </h2>
+    </h3>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
     >
@@ -577,10 +623,98 @@
     </div>
   </section>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+  <section id="backup" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      {t("backup.title")}
+    </h3>
+    <div
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+    >
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <Shield size={16} class="text-(--color-success)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("backup.autoLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("backup.autoBody")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={() => sync.setAutoBackup(!sync.autoBackupBeforeSync)}
+          aria-pressed={sync.autoBackupBeforeSync}
+          aria-label={t("backup.autoLabel")}
+          class="relative h-5 w-9 shrink-0 rounded-full transition-colors {sync.autoBackupBeforeSync
+            ? 'bg-(--color-accent-500)'
+            : 'bg-(--color-bg-overlay)'}"
+        >
+          <span
+            class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {sync.autoBackupBeforeSync
+              ? 'left-[18px]'
+              : 'left-0.5'}"
+          ></span>
+        </button>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onclick={() => handleManualBackup(false)}
+          disabled={sync.busy || !collection.isOpen}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
+        >
+          <Save size={12} />
+          {t("backup.now")}
+        </button>
+        <button
+          type="button"
+          onclick={() => handleManualBackup(true)}
+          disabled={sync.busy || !collection.isOpen}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
+        >
+          <Save size={12} />
+          {t("backup.nowWithMedia")}
+        </button>
+      </div>
+
+      {#if !collection.isOpen}
+        <p class="mt-3 text-xs text-(--color-fg-subtle)">
+          {t("backup.collectionRequired")}
+        </p>
+      {/if}
+      {#if sync.lastBackupPath}
+        <p class="mt-3 truncate font-mono text-[11px] text-(--color-fg-subtle)">
+          {t("backup.lastPath", { path: sync.lastBackupPath })}
+        </p>
+      {/if}
+
+      <hr class="my-4 border-(--color-border-default)" />
+
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <History size={16} class="text-(--color-warning)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("backup.restoreLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("backup.restoreBody")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={handleRestore}
+          disabled={sync.busy || !collection.isOpen}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-warning)/40 bg-(--color-warning)/10 px-3 py-1.5 text-xs font-medium text-(--color-warning) hover:bg-(--color-warning)/20 disabled:opacity-50"
+        >
+          <History size={12} />
+          {t("backup.restoreButton")}
+        </button>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="io" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       {t("io.title")}
-    </h2>
+    </h3>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
     >
@@ -675,10 +809,65 @@
     </div>
   </section>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+  <h2
+    class="mt-12 mb-2 font-display text-xl font-medium tracking-tight text-(--color-fg-default)"
+  >
+    {t("settings.group.preferences")}
+  </h2>
+  <section id="language" class="mt-4 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      {t("settings.language")}
+    </h3>
+    <div
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-1 shadow-(--shadow-subtle)"
+    >
+      <div class="grid grid-cols-2 gap-1">
+        {#each localeOptions as opt (opt.value)}
+          {@const active = i18n.locale === opt.value}
+          <button
+            type="button"
+            onclick={() => i18n.set(opt.value)}
+            class="rounded-(--radius-md) px-3 py-2 text-sm transition-colors
+              {active
+              ? 'bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)'
+              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+          >
+            {opt.label}
+          </button>
+        {/each}
+      </div>
+    </div>
+  </section>
+
+  <section id="appearance" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      {t("settings.appearance")}
+    </h3>
+    <div
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-1 shadow-(--shadow-subtle)"
+    >
+      <div class="grid grid-cols-3 gap-1">
+        {#each themeOptions as opt (opt.value)}
+          {@const active = theme.preference === opt.value}
+          <button
+            type="button"
+            onclick={() => theme.set(opt.value)}
+            class="rounded-(--radius-md) px-3 py-2 text-sm transition-colors
+              {active
+              ? 'bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)'
+              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+          >
+            {opt.label}
+          </button>
+        {/each}
+      </div>
+    </div>
+  </section>
+
+  <section id="startup" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       {t("settings.startup")}
-    </h2>
+    </h3>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
     >
@@ -716,10 +905,15 @@
     </div>
   </section>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+  <h2
+    class="mt-12 mb-2 font-display text-xl font-medium tracking-tight text-(--color-fg-default)"
+  >
+    {t("settings.group.app")}
+  </h2>
+  <section id="updates" class="mt-4 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       {t("updater.title")}
-    </h2>
+    </h3>
     <div
       class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
     >
@@ -795,91 +989,11 @@
     </div>
   </section>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      {t("settings.appearance")}
-    </h2>
-    <div
-      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-1 shadow-(--shadow-subtle)"
-    >
-      <div class="grid grid-cols-3 gap-1">
-        {#each themeOptions as opt (opt.value)}
-          {@const active = theme.preference === opt.value}
-          <button
-            type="button"
-            onclick={() => theme.set(opt.value)}
-            class="rounded-(--radius-md) px-3 py-2 text-sm transition-colors
-              {active
-              ? 'bg-(--color-accent-500) text-(--color-fg-onAccent) shadow-(--shadow-subtle)'
-              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
-          >
-            {opt.label}
-          </button>
-        {/each}
-      </div>
-    </div>
-  </section>
 
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      {t("settings.collection")}
-    </h2>
-    <div
-      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-4 shadow-(--shadow-subtle)"
-    >
-      {#if collection.isOpen}
-        <p class="text-sm text-(--color-fg-default)">
-          {t("settings.collectionOpenedWithDecks", { count: collection.decks.length })}
-        </p>
-        {#if collection.currentPath}
-          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
-            {collection.currentPath}
-          </p>
-        {/if}
-        <button
-          type="button"
-          onclick={() => collection.close()}
-          class="mt-3 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-sm text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
-        >
-          {t("settings.closeCollection")}
-        </button>
-      {:else}
-        <p class="text-sm text-(--color-fg-muted)">{t("settings.collectionNotOpen")}</p>
-      {/if}
-
-      {#if collection.ankiDesktopPath && collection.ankiDesktopPath !== collection.currentPath}
-        <div
-          class="mt-4 rounded-(--radius-md) border border-(--color-accent-500)/40 bg-(--color-accent-500)/8 p-3 text-xs"
-        >
-          <p class="text-(--color-fg-default)">
-            {t("settings.ankiDesktopDetected")}
-          </p>
-          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
-            {collection.ankiDesktopPath}
-          </p>
-          <p class="mt-2 leading-relaxed whitespace-pre-line text-(--color-fg-muted)">
-            {t("settings.ankiDesktopHint")}
-          </p>
-          <button
-            type="button"
-            onclick={() => {
-              if (collection.ankiDesktopPath) {
-                void collection.open(collection.ankiDesktopPath);
-              }
-            }}
-            class="mt-2 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) hover:bg-(--color-accent-600) active:scale-[0.97]"
-          >
-            {t("settings.switchToThis")}
-          </button>
-        </div>
-      {/if}
-    </div>
-  </section>
-
-  <section class="mt-10 space-y-3">
-    <h2 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+  <section id="shortcuts" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       {t("settings.shortcuts")}
-    </h2>
+    </h3>
     <div
       class="overflow-hidden rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) shadow-(--shadow-subtle)"
     >
@@ -929,4 +1043,5 @@
       </div>
     </div>
   </section>
+  </div>
 </div>

@@ -153,33 +153,8 @@
       : 0,
   );
 
-  async function pickAndOpen() {
-    try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const picked = await open({
-        multiple: false,
-        directory: false,
-        filters: [{ name: "Anki collection", extensions: ["anki2"] }],
-      });
-      if (typeof picked === "string") await collection.open(picked);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  async function createNew() {
-    try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const picked = await save({
-        defaultPath: "memorize-collection.anki2",
-        filters: [{ name: "Anki collection", extensions: ["anki2"] }],
-      });
-      if (typeof picked !== "string") return;
-      await collection.open(picked);
-    } catch (e) {
-      console.error(e);
-    }
-  }
+  const pickAndOpen = () => collection.pickAndOpen();
+  const createNew = () => collection.createNew();
 
   function startStudy() {
     if (selected && totalDue > 0) goto(`/review/${selected.id}/`);

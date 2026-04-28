@@ -68,7 +68,7 @@
   <Sidebar />
   <div class="grid min-w-0 grid-rows-[auto_1fr]">
     <TitleBar />
-    <main class="relative min-w-0 overflow-y-auto bg-(--color-bg-base)">
+    <main class="relative min-w-0 overflow-y-auto scroll-smooth bg-(--color-bg-base)">
       <PageTransition>
         {@render children()}
       </PageTransition>

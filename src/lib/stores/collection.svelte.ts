@@ -79,6 +79,43 @@ class CollectionStore {
     }
   }
 
+  /** Show a file picker for an existing .anki2 and open it. Used from
+   *  the welcome screen and from Settings (after an explicit close). */
+  async pickAndOpen(): Promise<boolean> {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Anki collection", extensions: ["anki2"] }],
+      });
+      if (typeof picked !== "string") return false;
+      await this.open(picked);
+      return this.isOpen;
+    } catch (e) {
+      console.error("pickAndOpen failed", e);
+      return false;
+    }
+  }
+
+  /** Show a save picker for a new .anki2 path; rslib creates the file
+   *  on first build() so we can route through the same `open` flow. */
+  async createNew(): Promise<boolean> {
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const picked = await save({
+        defaultPath: "memorize-collection.anki2",
+        filters: [{ name: "Anki collection", extensions: ["anki2"] }],
+      });
+      if (typeof picked !== "string") return false;
+      await this.open(picked);
+      return this.isOpen;
+    } catch (e) {
+      console.error("createNew failed", e);
+      return false;
+    }
+  }
+
   async close() {
     try {
       await invoke("close_collection");

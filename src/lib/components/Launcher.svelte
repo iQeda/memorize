@@ -83,12 +83,14 @@
       close();
       return;
     }
-    if (e.key === "ArrowDown") {
+    // Arrow keys + Emacs-style Ctrl+N / Ctrl+P (familiar from terminals,
+    // readline, fzf, Alfred, Raycast, etc).
+    if (e.key === "ArrowDown" || (e.ctrlKey && (e.key === "n" || e.key === "N"))) {
       e.preventDefault();
       moveBy(1);
       return;
     }
-    if (e.key === "ArrowUp") {
+    if (e.key === "ArrowUp" || (e.ctrlKey && (e.key === "p" || e.key === "P"))) {
       e.preventDefault();
       moveBy(-1);
       return;
@@ -207,6 +209,7 @@
       >
         <span class="flex items-center gap-2">
           <kbd class="rounded border border-(--color-border-default) bg-(--color-bg-base) px-1 py-0.5 font-mono">↑↓</kbd>
+          <kbd class="rounded border border-(--color-border-default) bg-(--color-bg-base) px-1 py-0.5 font-mono">^P/^N</kbd>
           {t("launcher.hintNavigate")}
           <kbd class="ml-2 rounded border border-(--color-border-default) bg-(--color-bg-base) px-1 py-0.5 font-mono">↵</kbd>
           {t("launcher.hintSelect")}
