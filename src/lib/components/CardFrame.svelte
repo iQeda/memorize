@@ -77,20 +77,30 @@
     word-break: normal;
     line-break: strict;
   }
-  html { height: 100%; }
+  html, body { height: 100%; }
   body {
-    min-height: 100%;
     box-sizing: border-box;
     padding: 28px 36px;
     font-size: 1.125rem;
     line-height: 1.75;
     letter-spacing: 0.003em;
     background: ${baseBg};
-    display: block;
     text-align: center;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-gutter: stable;
+  }
+  /* 上下中央寄せのために二重 wrapper を使う。
+     - outer (.memorize-card-frame) を flex column container にして
+       inner を justify-content で iframe 高さの中央に置く。
+     - inner (.memorize-card-host) は普通の block。flex container の
+       直下にすると inline 子（<b>, <i>, text node, <br>）が flex item
+       として block 化されて縦並びになるので、必ず 1 段挟む。 */
+  .memorize-card-frame {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: safe center;
   }
   /* English vocab card front renders bold by default. A small script below
      wraps any Japanese run in <span lang="ja">…</span>, which we then
@@ -135,10 +145,7 @@
   ${css}
 </style>
 </head>
-<body class="${cardClass}">
-${html}
-${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}
-</body>
+<body class="${cardClass}"><div class="memorize-card-frame"><div class="memorize-card-host">${html}</div></div>${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}</body>
 </html>`;
   });
 </script>
