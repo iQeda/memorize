@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, BookOpen, Pencil, Copy, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, BookOpen, Eye, Pencil, Copy, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -486,65 +486,77 @@
       </div>
 
       <div
-        class="mt-8 flex h-16 w-full shrink-0 items-center justify-center gap-3"
+        class="mt-8 flex w-full shrink-0 flex-col items-center gap-3"
       >
         {#if !showingAnswer}
-          <button
-            type="button"
-            onclick={naniLookup}
-            in:fade={{ duration: 160, easing: cubicOut }}
-            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-            title="Nani Search"
-          >
-            <span class="flex items-center gap-1.5 text-sm font-medium">
-              <BookOpen size={14} strokeWidth={2.25} />
-              Nani
-            </span>
-            <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
-          </button>
-          <button
-            type="button"
-            onclick={flip}
-            in:fade={{ duration: 160, easing: cubicOut }}
-            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-          >
-            <span class="text-sm font-medium">{t("reviewer.showAnswer")}</span>
-            <span class="font-mono text-[10px] opacity-70">Space</span>
-          </button>
-        {:else}
-          <button
-            type="button"
-            onclick={naniLookup}
-            in:fade={{ duration: 200, easing: cubicOut }}
-            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-            title="Nani Search"
-          >
-            <span class="flex items-center gap-1.5 text-sm font-medium">
-              <BookOpen size={14} strokeWidth={2.25} />
-              Nani
-            </span>
-            <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
-          </button>
-          <button
-            type="button"
-            onclick={flip}
-            in:fade={{ duration: 200, easing: cubicOut }}
-            class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-          >
-            <span class="text-sm font-medium">{t("reviewer.showProblem")}</span>
-            <span class="font-mono text-[10px] opacity-70">Space</span>
-          </button>
-          {#each buttons as b, i (b.rating)}
+          <div class="flex items-center justify-center gap-3">
             <button
               type="button"
-              onclick={() => answer(b.rating)}
-              in:fade={{ duration: 200, delay: 40 + i * 30, easing: cubicOut }}
-              class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) px-5 py-2.5 shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97] {toneBg[b.tone]}"
+              onclick={naniLookup}
+              in:fade={{ duration: 160, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title="Nani Search"
             >
-              <span class="text-sm font-medium">{b.label}</span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label(b.rating)}</span>
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                <BookOpen size={14} strokeWidth={2.25} />
+                Nani
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
             </button>
-          {/each}
+            <button
+              type="button"
+              onclick={flip}
+              in:fade={{ duration: 160, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                <Eye size={14} strokeWidth={2.25} />
+                {t("reviewer.showAnswer")}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">Space</span>
+            </button>
+          </div>
+        {:else}
+          <div class="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onclick={naniLookup}
+              in:fade={{ duration: 200, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title="Nani Search"
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                <BookOpen size={14} strokeWidth={2.25} />
+                Nani
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
+            </button>
+            <button
+              type="button"
+              onclick={flip}
+              in:fade={{ duration: 200, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                <RotateCcw size={14} strokeWidth={2.25} />
+                {t("reviewer.showQuestion")}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">Space</span>
+            </button>
+          </div>
+          <div class="flex items-center justify-center gap-3">
+            {#each buttons as b, i (b.rating)}
+              <button
+                type="button"
+                onclick={() => answer(b.rating)}
+                in:fade={{ duration: 200, delay: 40 + i * 30, easing: cubicOut }}
+                class="flex min-w-[88px] flex-col items-center gap-0.5 rounded-(--radius-md) px-5 py-2.5 shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97] {toneBg[b.tone]}"
+              >
+                <span class="text-sm font-medium">{b.label}</span>
+                <span class="font-mono text-[10px] opacity-70">{shortcuts.label(b.rating)}</span>
+              </button>
+            {/each}
+          </div>
         {/if}
       </div>
     {/if}
