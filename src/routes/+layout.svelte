@@ -32,19 +32,23 @@
       void goto("/settings/");
       return;
     }
-    // ⌘F / ⌘K (macOS) / Ctrl+F / Ctrl+K (other) → quick deck launcher.
-    // Override the webview's default in-page find — we don't ship one and
-    // a no-op Cmd+F would surprise users coming from other apps. Cmd+K is
-    // the de-facto command palette shortcut.
-    if (
-      (e.metaKey || e.ctrlKey) &&
-      (e.key === "f" || e.key === "F" || e.key === "k" || e.key === "K")
-    ) {
+    // テキスト入力中（NoteEditor の input/textarea など）は Launcher を
+    // 含むグローバルショートカットを無効化。Cmd+, (Settings) は global
+    // navigation なので編集中でも有効のままにする。
+    if (isTextField(e.target)) return;
+    // Cmd+F / Ctrl+K → quick deck launcher.
+    // - Cmd+F は webview default の in-page find を override（memorize は
+    //   in-page find UI を持たないため、no-op だと混乱するので Launcher へ）
+    // - Ctrl+K は Emacs/terminal 系の command palette ショートカット
+    // 逆組み合わせ (Ctrl+F, Cmd+K) は誤爆防止のため受け付けない。
+    const isLauncherKey =
+      (e.metaKey && !e.ctrlKey && (e.key === "f" || e.key === "F")) ||
+      (e.ctrlKey && !e.metaKey && (e.key === "k" || e.key === "K"));
+    if (isLauncherKey) {
       e.preventDefault();
       launcherOpen = true;
       return;
     }
-    if (isTextField(e.target)) return;
     // Plain shortcuts (only when not in a text field)
     if (e.key === "?" && (e.metaKey || e.shiftKey)) {
       // Cmd+? or Shift+? — could open shortcuts help in the future
