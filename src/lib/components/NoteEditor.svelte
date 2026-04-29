@@ -84,7 +84,16 @@
       });
       if (id !== null) {
         onSaved?.();
-        onClose();
+        // Add は連続登録できるよう閉じず、フィールドだけ初期化して
+        // 最初のフィールドにフォーカスを戻す。デッキ / notetype / タグは
+        // 前回値を保持 (Anki Desktop の Add Cards と同じ慣習)。
+        // 閉じたいときは X / Esc / Cancel が使える。
+        fields = notetype.field_names.map(() => "");
+        await tick();
+        const first = dialogRoot?.querySelector<HTMLElement>(
+          '[contenteditable="true"]',
+        );
+        first?.focus();
       }
     } else if (noteId !== undefined) {
       const ok = await notes.updateNote({ noteId, fields, tags });
