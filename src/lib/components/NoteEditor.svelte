@@ -226,7 +226,16 @@
                 aria-label={fname}
                 aria-multiline="true"
                 bind:innerHTML={fields[i]}
-                class="block min-h-[3rem] w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-2 text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500) [&_*]:max-w-full"
+                onpaste={(e) => {
+                  // ブラウザ標準のリッチテキスト貼り付けはコピー元の
+                  // <span style=...>、<font color=...>、Office 系の
+                  // class や mso-* スタイル等をそのまま Anki DB に
+                  // 残してしまう。常にプレーンテキストとして挿入する。
+                  e.preventDefault();
+                  const text = e.clipboardData?.getData("text/plain") ?? "";
+                  if (text) document.execCommand("insertText", false, text);
+                }}
+                class="block min-h-[7rem] w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-2 text-sm leading-relaxed shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500) [&_*]:max-w-full"
               ></div>
             </div>
           {/each}
