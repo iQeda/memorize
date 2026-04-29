@@ -555,6 +555,31 @@
           {/if}
         </div>
 
+        <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
+          <div class="flex items-center gap-2.5">
+            <RefreshCw size={16} class="text-(--color-accent-500)" />
+            <div class="text-sm">
+              <p class="text-(--color-fg-default)">{t("sync.autoLabel")}</p>
+              <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("sync.autoBody")}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onclick={() => sync.setAutoSyncOnStartStop(!sync.autoSyncOnStartStop)}
+            aria-pressed={sync.autoSyncOnStartStop}
+            aria-label={t("sync.autoLabel")}
+            class="relative h-5 w-9 shrink-0 rounded-full transition-colors {sync.autoSyncOnStartStop
+              ? 'bg-(--color-accent-500)'
+              : 'bg-(--color-bg-overlay)'}"
+          >
+            <span
+              class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {sync.autoSyncOnStartStop
+                ? 'left-[18px]'
+                : 'left-0.5'}"
+            ></span>
+          </button>
+        </div>
+
         {#if !collection.isOpen}
           <p class="mt-3 text-xs text-(--color-fg-subtle)">{t("sync.collectionRequired")}</p>
         {/if}

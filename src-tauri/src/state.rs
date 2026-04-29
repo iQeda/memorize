@@ -3,6 +3,7 @@ use anki::prelude::CardId;
 use anki::progress::ProgressState;
 use anki::scheduler::states::SchedulingStates;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Instant;
 use tokio::sync::Mutex;
@@ -26,6 +27,10 @@ pub struct AppState {
     /// Shared with every Collection we open so a background polling task
     /// can read sync/import/export progress.
     pub progress: Arc<StdMutex<ProgressState>>,
+    /// Latch flipped by `confirm_exit` so that the RunEvent::ExitRequested
+    /// handler stops intercepting once the frontend has finished its
+    /// shutdown sync.
+    pub allow_exit: AtomicBool,
 }
 
 impl Default for AppState {
@@ -45,6 +50,7 @@ impl Default for AppState {
                 .expect("build reqwest client"),
             last_queued: Mutex::new(None),
             progress: Arc::new(StdMutex::new(ProgressState::default())),
+            allow_exit: AtomicBool::new(false),
         }
     }
 }

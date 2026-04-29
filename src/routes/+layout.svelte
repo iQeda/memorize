@@ -6,6 +6,7 @@
   import Launcher from "$lib/components/Launcher.svelte";
   import { theme } from "$lib/stores/theme.svelte";
   import { collection } from "$lib/stores/collection.svelte";
+  import { sync } from "$lib/stores/sync.svelte";
   import { checkForAppUpdates } from "$lib/updater";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
@@ -63,6 +64,35 @@
   onMount(async () => {
     await collection.refresh();
     void checkForAppUpdates();
+
+    // Auto sync on startup. Refresh sync status first so we know whether
+    // the user is signed in to AnkiWeb.
+    await sync.refresh();
+    void sync.tryAutoSync(collection.isOpen);
+
+    // Auto sync on shutdown. Rust intercepts every close path (⌘Q, app
+    // menu Quit, window X button) and emits "memorize://exit-requested".
+    // We run the sync then call `confirm_exit`, which sets the Rust
+    // latch and triggers the actual exit.
+    try {
+      const [{ listen }, { invoke }] = await Promise.all([
+        import("@tauri-apps/api/event"),
+        import("@tauri-apps/api/core"),
+      ]);
+      let exiting = false;
+      await listen("memorize://exit-requested", async () => {
+        if (exiting) return;
+        exiting = true;
+        try {
+          await sync.tryAutoSync(collection.isOpen);
+        } finally {
+          await invoke("confirm_exit");
+        }
+      });
+    } catch (e) {
+      // Not running inside Tauri.
+      console.warn("auto sync on shutdown not registered", e);
+    }
   });
 </script>
 

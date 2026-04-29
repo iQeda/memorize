@@ -1,6 +1,5 @@
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
-use anki::prelude::DeckId;
 use anki::search::SortMode;
 use serde::Serialize;
 use tauri::State;

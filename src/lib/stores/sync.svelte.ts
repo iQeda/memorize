@@ -40,6 +40,7 @@ type ProgressEvent =
   | { kind: "other" };
 
 const AUTO_BACKUP_KEY = "memorize:auto-backup-before-sync";
+const AUTO_SYNC_KEY = "memorize:auto-sync-on-start-stop";
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -78,12 +79,15 @@ class SyncStore {
   lastBackupPath = $state<string | null>(null);
   lastReport = $state<SyncReport | null>(null);
   autoBackupBeforeSync = $state(true);
+  autoSyncOnStartStop = $state(true);
 
   constructor() {
     if (browser) {
-      const stored = localStorage.getItem(AUTO_BACKUP_KEY);
+      const storedBackup = localStorage.getItem(AUTO_BACKUP_KEY);
       // Default: ON. Stored "0" = OFF.
-      if (stored === "0") this.autoBackupBeforeSync = false;
+      if (storedBackup === "0") this.autoBackupBeforeSync = false;
+      const storedAuto = localStorage.getItem(AUTO_SYNC_KEY);
+      if (storedAuto === "0") this.autoSyncOnStartStop = false;
       this.subscribeProgress();
     }
   }
@@ -104,6 +108,26 @@ class SyncStore {
   setAutoBackup(enabled: boolean) {
     this.autoBackupBeforeSync = enabled;
     if (browser) localStorage.setItem(AUTO_BACKUP_KEY, enabled ? "1" : "0");
+  }
+
+  setAutoSyncOnStartStop(enabled: boolean) {
+    this.autoSyncOnStartStop = enabled;
+    if (browser) localStorage.setItem(AUTO_SYNC_KEY, enabled ? "1" : "0");
+  }
+
+  /** Run sync if auto-sync is enabled, the user is logged in, the
+   *  collection is open, and no sync is already in flight. Errors are
+   *  swallowed: auto-sync must never block app startup or shutdown. */
+  async tryAutoSync(collectionOpen: boolean): Promise<void> {
+    if (!this.autoSyncOnStartStop) return;
+    if (!this.loggedIn) return;
+    if (!collectionOpen) return;
+    if (this.busy) return;
+    try {
+      await this.syncNow();
+    } catch (e) {
+      console.error("auto sync failed", e);
+    }
   }
 
   private async runWithAutoBackup<T>(

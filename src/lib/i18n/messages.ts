@@ -239,6 +239,9 @@ export const messages = {
     "sync.uploadRunning": "Local → server overwrite running…",
     "sync.downloadRunning": "Server → local overwrite running…",
     "sync.backupAborted": "Backup failed; {label} aborted: {error}",
+    "sync.autoLabel": "Auto sync on launch and exit",
+    "sync.autoBody":
+      "Run a normal sync automatically when the app starts and before it quits.",
 
     // Import / Export
     "io.title": "Import / Export (.apkg)",
@@ -496,6 +499,9 @@ export const messages = {
     "sync.uploadRunning": "ローカル → サーバーへ上書き中…",
     "sync.downloadRunning": "サーバー → ローカルへ上書き中…",
     "sync.backupAborted": "バックアップ失敗のため {label} を中止: {error}",
+    "sync.autoLabel": "起動時と終了時に自動同期",
+    "sync.autoBody":
+      "アプリ起動時と終了時に通常同期を自動実行します",
 
     // Import / Export
     "io.title": "インポート / エクスポート (.apkg)",

@@ -1,3 +1,4 @@
+pub mod app;
 pub mod backup;
 pub mod cards;
 pub mod collection;
