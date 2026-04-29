@@ -169,6 +169,11 @@
       });
       cursor += 1;
       await loadNext();
+      // サイドバーのデッキバッジは collection.decks を参照している。get_next_card
+      // の remaining はヘッダー用に header の totals だけ更新するが、collection
+      // ストアには反映されないので、答えるたびに list_decks を fire-and-forget で
+      // 投げて全デッキのカウントを塗り直す。次カード描画はブロックしない。
+      void collection.refreshDecks();
     } catch (e) {
       error = String(e);
     }
