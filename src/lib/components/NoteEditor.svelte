@@ -21,7 +21,24 @@
   let tagsText = $state("");
   let deckId = $state<number | null>(null);
   let loading = $state(true);
-  let dialogRoot = $state<HTMLDivElement | undefined>();
+  // 各フィールドの contenteditable 要素を直接捕捉する。dialogRoot.querySelector
+  // 経由だと描画タイミング次第で初回 focus が空振りすることがあるため。
+  let fieldEls = $state<(HTMLElement | undefined)[]>([]);
+
+  function focusFirstField() {
+    const first = fieldEls[0];
+    if (!first) return;
+    first.focus();
+    // 既存テキストがあるとき (Edit) はキャレットを末尾へ。空ノードでも無害。
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(first);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
 
   onMount(async () => {
     deckId = initialDeckId ?? null;
@@ -46,21 +63,10 @@
     }
     loading = false;
 
-    // フィールドが描画されてから最初の contenteditable (= Front) にフォーカス
-    // して、Edit / Add 画面を開いた直後にすぐ入力できるようにする。Edit で
-    // 既存テキストがある場合はキャレットを末尾に置く (空ノードでも無害)。
+    // 描画反映後に Front (最初の field) へフォーカス。Edit / Add 共通で
+    // 開いた直後すぐ入力できるようにする。
     await tick();
-    const first = dialogRoot?.querySelector<HTMLElement>('[contenteditable="true"]');
-    if (!first) return;
-    first.focus();
-    const sel = window.getSelection();
-    if (sel) {
-      const range = document.createRange();
-      range.selectNodeContents(first);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    }
+    focusFirstField();
   });
 
   function selectNotetype(nt: NotetypeSummary) {
@@ -90,10 +96,7 @@
         // 閉じたいときは X / Esc / Cancel が使える。
         fields = notetype.field_names.map(() => "");
         await tick();
-        const first = dialogRoot?.querySelector<HTMLElement>(
-          '[contenteditable="true"]',
-        );
-        first?.focus();
+        focusFirstField();
       }
     } else if (noteId !== undefined) {
       const ok = await notes.updateNote({ noteId, fields, tags });
@@ -135,7 +138,6 @@
 <svelte:window onkeydown={onKey} />
 
 <div
-  bind:this={dialogRoot}
   in:fade={{ duration: 120, easing: cubicOut }}
   out:fade={{ duration: 80, easing: cubicOut }}
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -230,6 +232,7 @@
                 state field in sync with the rendered DOM.
               -->
               <div
+                bind:this={fieldEls[i]}
                 contenteditable="true"
                 role="textbox"
                 aria-label={fname}
