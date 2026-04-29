@@ -2,7 +2,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { notes, type NotetypeSummary } from "$lib/stores/notes.svelte";
   import { X, Save, Trash2, Loader2, AlertCircle } from "lucide-svelte";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { t } from "$lib/i18n/index.svelte";
@@ -21,6 +21,7 @@
   let tagsText = $state("");
   let deckId = $state<number | null>(null);
   let loading = $state(true);
+  let dialogRoot = $state<HTMLDivElement | undefined>();
 
   onMount(async () => {
     deckId = initialDeckId ?? null;
@@ -44,6 +45,22 @@
       }
     }
     loading = false;
+
+    // フィールドが描画されてから最初の contenteditable (= Front) にフォーカス
+    // して、Edit / Add 画面を開いた直後にすぐ入力できるようにする。Edit で
+    // 既存テキストがある場合はキャレットを末尾に置く (空ノードでも無害)。
+    await tick();
+    const first = dialogRoot?.querySelector<HTMLElement>('[contenteditable="true"]');
+    if (!first) return;
+    first.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(first);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   });
 
   function selectNotetype(nt: NotetypeSummary) {
@@ -109,6 +126,7 @@
 <svelte:window onkeydown={onKey} />
 
 <div
+  bind:this={dialogRoot}
   in:fade={{ duration: 120, easing: cubicOut }}
   out:fade={{ duration: 80, easing: cubicOut }}
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
