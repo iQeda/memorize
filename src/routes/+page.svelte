@@ -109,6 +109,12 @@
   $effect(() => {
     const dId = collection.selectedDeckId;
     const days = graphDays;
+    // collection.decks は refreshDecks() で配列ごと差し替えられる。これを
+    // 依存に加えることで、review 中の answer / sync 完了 / 単語追加で
+    // collection.decks が更新されるたびに、選択中デッキの stats と graph
+    // パネルも自動で再フェッチされる (従来は selectedDeckId / graphDays が
+    // 変わらないと固まったままだった)。
+    void collection.decks;
     if (dId === null || !collection.isOpen) {
       stats = null;
       graph = null;
