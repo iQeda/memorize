@@ -5,8 +5,9 @@
     html: string;
     css: string;
     side: "question" | "answer";
+    iframeEl?: HTMLIFrameElement;
   };
-  let { html, css, side }: Props = $props();
+  let { html, css, side, iframeEl = $bindable() }: Props = $props();
 
   // Tags split to keep Svelte's tokenizer from prematurely closing this block.
   const SCRIPT_OPEN = "<" + "script>";
@@ -43,6 +44,33 @@
       if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
       t.parentNode.replaceChild(frag, t);
     }
+  })();`;
+
+  // Copy ボタンは iframe にフォーカスを移すことで本文 selection を AX 的に
+  // active にする（手動の Cmd+J で Nani.app がその選択を読めるように）。
+  // ただしフォーカスが iframe にあると c/1/2/3/4/Space 等のキーは
+  // <svelte:window onkeydown> に届かなくなるので、iframe 内の keydown を
+  // parent window へ再ディスパッチして親側 onKey にイベントを引き渡す。
+  // Cmd+J は親側で何も preventDefault しないため、元イベントが OS に
+  // そのまま伝播し Nani のグローバルホットキーが発火する。
+  const keyBridgeScript = `(function() {
+    window.addEventListener('keydown', function(e) {
+      try {
+        var ev = new KeyboardEvent('keydown', {
+          key: e.key,
+          code: e.code,
+          ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+          metaKey: e.metaKey,
+          repeat: e.repeat,
+          bubbles: true,
+          cancelable: true,
+        });
+        parent.dispatchEvent(ev);
+        if (ev.defaultPrevented) e.preventDefault();
+      } catch (_) {}
+    });
   })();`;
 
   const srcdoc = $derived.by(() => {
@@ -145,12 +173,13 @@
   ${css}
 </style>
 </head>
-<body class="${cardClass}"><div class="memorize-card-frame"><div class="memorize-card-host">${html}</div></div>${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}</body>
+<body class="${cardClass}"><div class="memorize-card-frame"><div class="memorize-card-host">${html}</div></div>${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}${SCRIPT_OPEN}${keyBridgeScript}${SCRIPT_CLOSE}</body>
 </html>`;
   });
 </script>
 
 <iframe
+  bind:this={iframeEl}
   title="Card content"
   sandbox="allow-scripts allow-same-origin"
   style="width: 100%; height: 100%; border: 0; display: block;"

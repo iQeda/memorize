@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, BookOpen, Eye, Pencil, Copy, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -174,20 +174,11 @@
     }
   }
 
-  let naniInput = $state<HTMLInputElement | null>(null);
-  let naniBusy = $state(false);
-  let naniError = $state<string | null>(null);
-  let naniInfo = $state<string | null>(null);
-  let naniInfoTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function frontWord(): string {
-    if (!current) return "";
-    // DOMParser parses without attaching the result to the live document,
-    // so inline event handlers (e.g. <img onerror="…">) inside the card
-    // template never fire — safer than `div.innerHTML = …`.
-    const doc = new DOMParser().parseFromString(current.question_html, "text/html");
-    return (doc.body.textContent ?? "").trim().replace(/\s+/g, " ");
-  }
+  let questionFrame = $state<HTMLIFrameElement | undefined>();
+  let answerFrame = $state<HTMLIFrameElement | undefined>();
+  let copyError = $state<string | null>(null);
+  let copyInfo = $state<string | null>(null);
+  let copyInfoTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Anki テンプレートの answer 側は通常 `{{FrontSide}}<hr id=answer>{{Back}}` 構造で、
   // answer_html に質問部分が含まれる。フリップ後は答えだけ見せたいので hr#answer を
@@ -208,93 +199,93 @@
   });
 
   function flashInfo(msg: string) {
-    naniInfo = msg;
-    if (naniInfoTimer) clearTimeout(naniInfoTimer);
-    naniInfoTimer = setTimeout(() => {
-      naniInfo = null;
-      naniInfoTimer = null;
+    copyInfo = msg;
+    if (copyInfoTimer) clearTimeout(copyInfoTimer);
+    copyInfoTimer = setTimeout(() => {
+      copyInfo = null;
+      copyInfoTimer = null;
     }, 4500);
   }
 
-  async function copyError() {
-    if (!naniError) return;
+  async function copyErrorMessage() {
+    if (!copyError) return;
     try {
-      await navigator.clipboard.writeText(naniError);
+      await navigator.clipboard.writeText(copyError);
       flashInfo("Copied");
     } catch (e) {
       console.error("clipboard copy failed", e);
     }
   }
 
-  async function naniLookup() {
-    if (naniBusy) return;
-    const word = frontWord();
-    if (!word || !naniInput) return;
-    naniBusy = true;
-    // Don't auto-clear naniError on retry — the user often wants to copy
-    // the previous error text. They dismiss it explicitly via the X button.
-    naniInfo = null;
-    // A real <input> is exposed to macOS Accessibility / Services as a
-    // text container with a live selection — that's what Nani reads when
-    // its global Cmd+J fires. Selecting in the iframe / arbitrary spans
-    // does not reliably surface to the OS, so we route through this input.
-    // Do NOT add `aria-hidden` to the input element — that would remove
-    // it from the AX tree and Nani would no longer see the selection.
-    naniInput.value = word;
-    naniInput.focus();
-    naniInput.setSelectionRange(0, word.length);
+  async function copyCardText() {
+    const frame = showingAnswer ? answerFrame : questionFrame;
+    const win = frame?.contentWindow;
+    const doc = frame?.contentDocument;
+    if (!win || !doc) return;
+    const host = doc.querySelector(".memorize-card-host");
+    if (!host) return;
+
+    // iframe 内の本文 div を全範囲選択。removeAllRanges → addRange で
+    // 既存の選択を上書きするだけで、その後の操作で解除はしない。
+    const range = doc.createRange();
+    range.selectNodeContents(host);
+    const sel = win.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+
+    // iframe にフォーカスを移し selection を AX 的に「active」にする。
+    // ユーザーが手動で Cmd+J を押した際に Nani.app が現在選択中のテキストを
+    // 読み取れるのは、フォーカスが当たっている要素の selection だけなので
+    // 必須。後続の c/1/2/3/4/Space などは srcdoc 内の key bridge が
+    // parent window に再ディスパッチするため引き続き反応する。
+    win.focus();
+
+    const text = (host.textContent ?? "").trim().replace(/\s+/g, " ");
+    if (!text) return;
+
+    copyInfo = null;
     try {
-      await invoke("nani_lookup", { word });
-      naniError = null;
+      await navigator.clipboard.writeText(text);
+      copyError = null;
       flashInfo("Copied");
     } catch (e) {
-      console.error("nani_lookup failed", e);
-      naniError = e instanceof Error ? e.message : String(e);
-    } finally {
-      // Nani has already read the selection by now (osascript Cmd+J ran
-      // synchronously inside the await). Blur so subsequent rating keys
-      // (1/2/3/4) don't get swallowed by the input element — onKey skips
-      // events whose target is an <input>.
-      naniInput.blur();
-      naniBusy = false;
+      console.error("clipboard write failed", e);
+      copyError = e instanceof Error ? e.message : String(e);
     }
   }
 
   function onKey(e: KeyboardEvent) {
-    // Auto-repeat would re-fire naniLookup mid-flight, or trigger a
-    // rating right after Nani returns when the user is still holding a key.
+    // Auto-repeat would re-fire copyCardText mid-flight, or apply a rating
+    // while the user is still holding a key from a previous action.
     if (e.repeat) return;
-    // While Nani is in flight (osascript / Cmd+J / Nani app focus switch)
-    // any rating key would race with naniLookup and progress the deck
-    // before the user even sees the lookup result.
-    if (naniBusy) return;
     // The editor mounts its own inputs/textarea; let it handle its own keys.
     if (editing) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    // 修飾子付きのキーは OS / WebView の標準ショートカットに譲る。
+    // 特に Cmd+J は Nani.app のグローバルホットキー — Copy が "j" にバインド
+    // されている状態で preventDefault すると Nani に届かなくなる。同様に
+    // Cmd+A/Cmd+S/Cmd+F なども rating キー (a/s/d/f) と衝突するため、修飾子
+    // 付きは review 操作をすべて見送って素通しする。
+    const hasModifier = e.metaKey || e.ctrlKey || e.altKey;
     // Esc — leave the review session and return to the deck overview.
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && !hasModifier) {
       e.preventDefault();
       void goto("/");
       return;
     }
+    if (hasModifier) return;
     // `e` (no modifiers) — open the note editor for the current card.
     // Available regardless of question/answer side; mirrors Anki's E shortcut.
-    if (
-      (e.key === "e" || e.key === "E") &&
-      !e.metaKey &&
-      !e.ctrlKey &&
-      !e.altKey &&
-      current
-    ) {
+    if ((e.key === "e" || e.key === "E") && current) {
       e.preventDefault();
       openEditor();
       return;
     }
-    // Nani lookup works on either side — sometimes you need a definition
+    // Copy works on either side — sometimes you need to look up a word
     // before flipping to the answer.
-    if (shortcuts.isNani(e.key)) {
+    if (shortcuts.isCopy(e.key)) {
       e.preventDefault();
-      void naniLookup();
+      void copyCardText();
       return;
     }
     if (e.key === " " || e.key === "Enter") {
@@ -463,6 +454,7 @@
                   : 'border-(--color-border-default)'}"
               >
                 <CardFrame
+                  bind:iframeEl={questionFrame}
                   html={current.question_html}
                   css={current.css}
                   side="question"
@@ -475,6 +467,7 @@
                   : 'border-(--color-border-default)'}"
               >
                 <CardFrame
+                  bind:iframeEl={answerFrame}
                   html={answerOnlyHtml}
                   css={current.css}
                   side="answer"
@@ -492,16 +485,16 @@
           <div class="flex items-center justify-center gap-3">
             <button
               type="button"
-              onclick={naniLookup}
+              onclick={copyCardText}
               in:fade={{ duration: 160, easing: cubicOut }}
               class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title="Nani Search"
+              title="Copy"
             >
               <span class="flex items-center gap-1.5 text-sm font-medium">
-                <BookOpen size={14} strokeWidth={2.25} />
-                Nani
+                <Copy size={14} strokeWidth={2.25} />
+                Copy
               </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
             </button>
             <button
               type="button"
@@ -520,16 +513,16 @@
           <div class="flex items-center justify-center gap-3">
             <button
               type="button"
-              onclick={naniLookup}
+              onclick={copyCardText}
               in:fade={{ duration: 200, easing: cubicOut }}
               class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title="Nani Search"
+              title="Copy"
             >
               <span class="flex items-center gap-1.5 text-sm font-medium">
-                <BookOpen size={14} strokeWidth={2.25} />
-                Nani
+                <Copy size={14} strokeWidth={2.25} />
+                Copy
               </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("nani")}</span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
             </button>
             <button
               type="button"
@@ -561,22 +554,19 @@
       </div>
     {/if}
   </div>
-  {#if naniError}
+  {#if copyError}
     <div
       role="alert"
       class="pointer-events-auto fixed bottom-6 left-1/2 z-20 flex max-w-lg -translate-x-1/2 gap-2 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-danger)/10 px-4 py-2.5 text-xs text-(--color-danger) shadow-(--shadow-card) select-text"
     >
       <div class="min-w-0 flex-1">
-        <p class="font-medium">Nani lookup failed</p>
-        <p class="mt-0.5 font-mono text-[11px] break-all opacity-90 select-all">{naniError}</p>
-        <p class="mt-1 text-[10px] opacity-70">
-          macOS &gt; Privacy &amp; Security &gt; Accessibility で Memorize に権限を付与してください。
-        </p>
+        <p class="font-medium">Copy failed</p>
+        <p class="mt-0.5 font-mono text-[11px] break-all opacity-90 select-all">{copyError}</p>
       </div>
       <div class="flex shrink-0 flex-col gap-1">
         <button
           type="button"
-          onclick={copyError}
+          onclick={copyErrorMessage}
           aria-label="Copy error"
           title="Copy error"
           class="grid h-5 w-5 place-items-center rounded text-(--color-danger) transition-colors hover:bg-(--color-danger)/20"
@@ -585,7 +575,7 @@
         </button>
         <button
           type="button"
-          onclick={() => (naniError = null)}
+          onclick={() => (copyError = null)}
           aria-label="Dismiss"
           title="Dismiss"
           class="grid h-5 w-5 place-items-center rounded text-(--color-danger) transition-colors hover:bg-(--color-danger)/20"
@@ -594,22 +584,15 @@
         </button>
       </div>
     </div>
-  {:else if naniInfo}
+  {:else if copyInfo}
     <div
       role="status"
       class="pointer-events-auto fixed bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-elevated) px-3 py-1.5 text-xs text-(--color-fg-default) shadow-(--shadow-card) select-text"
     >
-      {naniInfo}
+      {copyInfo}
     </div>
   {/if}
 
-  <input
-    bind:this={naniInput}
-    type="text"
-    readonly
-    tabindex="-1"
-    class="pointer-events-none fixed top-0 left-[-10000px] h-4 w-px"
-  />
 </div>
 
 <svelte:window onkeydown={onKey} />

@@ -40,7 +40,7 @@
     { action: "hard", label: t("settings.shortcut.hard") },
     { action: "good", label: t("settings.shortcut.good") },
     { action: "easy", label: t("settings.shortcut.easy") },
-    { action: "nani", label: t("settings.shortcut.nani") },
+    { action: "copy", label: t("settings.shortcut.copy") },
   ]);
 
   type TocGroup = {

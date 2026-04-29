@@ -1,16 +1,16 @@
 import { browser } from "$app/environment";
 
 export type Rating = "again" | "hard" | "good" | "easy";
-export type Action = Rating | "nani";
+export type Action = Rating | "copy";
 
 const STORAGE_KEY = "memorize:rating-keys";
 
 const defaults: Record<Action, string> = {
-  again: "1",
-  hard: "2",
-  good: "3",
-  easy: "4",
-  nani: "n",
+  again: "a",
+  hard: "s",
+  good: "d",
+  easy: "f",
+  copy: "j",
 };
 
 function formatKey(k: string): string {
@@ -63,9 +63,9 @@ class ShortcutsStore {
     return null;
   }
 
-  /** True iff `key` is bound to the Nani lookup action. */
-  isNani(key: string): boolean {
-    return this.keys.nani === key;
+  /** True iff `key` is bound to the Copy action. */
+  isCopy(key: string): boolean {
+    return this.keys.copy === key;
   }
 
   label(action: Action): string {
