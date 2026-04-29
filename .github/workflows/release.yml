@@ -82,7 +82,11 @@ jobs:
 
       - name: Build app and publish release
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        # `@v0` is a moving tag and silently rolled to v0.6.x, breaking the
+        # release-create call with `Requires authentication` (see runs
+        # around 2026-04-29 14:57 UTC). Pin to the last known-good v0.5
+        # patch until the v0.6 regression is sorted out.
+        uses: tauri-apps/tauri-action@v0.5.25
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Updater signing — leave secrets unset to skip latest.json/.sig
