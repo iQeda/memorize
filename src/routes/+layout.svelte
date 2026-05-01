@@ -13,6 +13,17 @@
 
   let { children } = $props();
   let launcherOpen = $state(false);
+  let mainEl = $state<HTMLElement | undefined>();
+
+  // デッキを切り替えたら main コンテナの縦スクロールを先頭に戻す。
+  // ホームの stat panel グリッドや review / browse の中身が入れ替わっても
+  // スクロール位置は前デッキのまま残るので、別デッキの異なる長さのコンテンツ
+  // を途中位置で開かないようにする。scroll-smooth クラスで scroll-behavior:
+  // smooth が CSS 経由で効くため、scrollTo の behavior 指定は不要。
+  $effect(() => {
+    void collection.selectedDeckId;
+    mainEl?.scrollTo({ top: 0 });
+  });
 
   function isTextField(target: EventTarget | null): boolean {
     const el = target as HTMLElement | null;
@@ -102,7 +113,7 @@
   <Sidebar />
   <div class="grid min-w-0 grid-rows-[auto_1fr]">
     <TitleBar />
-    <main class="relative min-w-0 overflow-y-auto scroll-smooth bg-(--color-bg-base)">
+    <main bind:this={mainEl} class="relative min-w-0 overflow-y-auto scroll-smooth bg-(--color-bg-base)">
       <PageTransition>
         {@render children()}
       </PageTransition>
