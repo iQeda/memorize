@@ -279,6 +279,16 @@
       return;
     }
     if (hasModifier) return;
+    // セッション終了画面 (current === null = "All cards reviewed") では
+    // フリップやレーティング対象がないので、Enter は "Back to decks" として
+    // ホームへ戻すだけにする (Esc と同等の動線)。それ以外のキーは無視。
+    if (!current) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        void goto("/");
+      }
+      return;
+    }
     // `e` (no modifiers) — open the note editor for the current card.
     // Available regardless of question/answer side; mirrors Anki's E shortcut.
     if ((e.key === "e" || e.key === "E") && current) {
