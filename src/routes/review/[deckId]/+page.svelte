@@ -433,9 +433,10 @@
         <button
           type="button"
           onclick={() => goto("/")}
-          class="mt-6 rounded-(--radius-md) border border-(--color-border-strong) px-4 py-1.5 text-sm transition-colors hover:bg-(--color-bg-overlay)"
+          class="mt-6 inline-flex items-center gap-2 rounded-(--radius-md) border border-(--color-border-strong) px-4 py-1.5 text-sm transition-colors hover:bg-(--color-bg-overlay)"
         >
           {t("reviewer.backToDecks")}
+          <span class="font-mono text-[10px] opacity-70">↵</span>
         </button>
       </div>
     {:else}
