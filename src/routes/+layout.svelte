@@ -44,6 +44,14 @@
       void goto("/settings/");
       return;
     }
+    // ⌘S / Ctrl+S → sync now (TitleBar の Sync ボタンと同等)。memorize には
+    // form 保存動作がないので Cmd+S は WebView 内で衝突せず、Cmd+, と同じく
+    // テキスト入力中でも発火させる global action として扱う。
+    if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+      e.preventDefault();
+      if (collection.isOpen) void sync.syncNow();
+      return;
+    }
     // テキスト入力中（NoteEditor の input/textarea など）は Launcher を
     // 含むグローバルショートカットを無効化。Cmd+, (Settings) は global
     // navigation なので編集中でも有効のままにする。

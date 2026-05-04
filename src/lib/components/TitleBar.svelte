@@ -60,20 +60,21 @@
     onmousedown={(e) => e.preventDefault()}
     onclick={handleSync}
     disabled={sync.busy}
-    class="grid h-7 w-7 place-items-center rounded-md transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.96] disabled:opacity-60
+    class="flex h-7 items-center gap-1.5 rounded-md px-2 transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.96] disabled:opacity-60
       {sync.lastError
       ? 'text-(--color-danger)'
       : sync.loggedIn && collection.isOpen
         ? 'text-(--color-fg-default)'
         : 'text-(--color-fg-subtle)'}"
     aria-label={syncTitle}
-    title={syncTitle}
+    title="{syncTitle} (⌘S)"
   >
     {#if sync.busy}
       <Loader2 size={15} strokeWidth={2} class="animate-spin" />
     {:else}
       <RefreshCw size={14} strokeWidth={2} />
     {/if}
+    <span class="font-mono text-[10px] opacity-70">⌘S</span>
   </button>
 
   <button
