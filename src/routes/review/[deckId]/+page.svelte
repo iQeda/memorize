@@ -278,6 +278,18 @@
       void goto("/");
       return;
     }
+    // ⌘E / Ctrl+E — open the note editor for the current card.
+    // 修飾子付きにして将来の in-card 検索 (素の "e" タイプ) との衝突を回避。
+    if (
+      (e.metaKey || e.ctrlKey) &&
+      !e.altKey &&
+      (e.key === "e" || e.key === "E") &&
+      current
+    ) {
+      e.preventDefault();
+      openEditor();
+      return;
+    }
     if (hasModifier) return;
     // セッション終了画面 (current === null = "All cards reviewed") では
     // フリップやレーティング対象がないので、Enter は "Back to decks" として
@@ -287,13 +299,6 @@
         e.preventDefault();
         void goto("/");
       }
-      return;
-    }
-    // `e` (no modifiers) — open the note editor for the current card.
-    // Available regardless of question/answer side; mirrors Anki's E shortcut.
-    if ((e.key === "e" || e.key === "E") && current) {
-      e.preventDefault();
-      openEditor();
       return;
     }
     // Copy works on either side — sometimes you need to look up a word
@@ -390,21 +395,14 @@
         <button
           type="button"
           onclick={openEditor}
-          class="grid h-7 w-7 place-items-center rounded-(--radius-md) text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
+          class="flex h-7 items-center gap-1.5 rounded-(--radius-md) px-2 text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
           aria-label={t("settings.shortcut.editNote")}
-          title="{t('settings.shortcut.editNote')} (E)"
+          title="{t('settings.shortcut.editNote')} (⌘E)"
         >
           <Pencil size={14} />
+          <span class="font-mono text-[10px] opacity-70">⌘E</span>
         </button>
       {/if}
-      <button
-        type="button"
-        onclick={startSession}
-        class="grid h-7 w-7 place-items-center rounded-(--radius-md) text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
-        aria-label={t("reviewer.reload")}
-      >
-        <RotateCcw size={14} />
-      </button>
     </div>
   </div>
 

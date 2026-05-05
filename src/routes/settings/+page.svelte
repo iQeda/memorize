@@ -82,7 +82,7 @@
     { keys: ["Space"], label: t("settings.shortcut.spaceLabel") },
     { keys: ["⌘", ","], label: t("settings.shortcut.openSettings") },
     { keys: ["⌘", "F / K"], label: t("settings.shortcut.openLauncher") },
-    { keys: ["E"], label: t("settings.shortcut.editNote") },
+    { keys: ["⌘", "E"], label: t("settings.shortcut.editNote") },
   ]);
 
   let recordingFor = $state<Action | null>(null);
