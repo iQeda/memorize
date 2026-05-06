@@ -278,27 +278,22 @@
       void goto("/");
       return;
     }
-    // ⌘E / Ctrl+E — open the note editor for the current card.
-    // 修飾子付きにして将来の in-card 検索 (素の "e" タイプ) との衝突を回避。
-    if (
-      (e.metaKey || e.ctrlKey) &&
-      !e.altKey &&
-      (e.key === "e" || e.key === "E") &&
-      current
-    ) {
-      e.preventDefault();
-      openEditor();
-      return;
-    }
     if (hasModifier) return;
     // セッション終了画面 (current === null = "All cards reviewed") では
-    // フリップやレーティング対象がないので、Enter は "Back to decks" として
-    // ホームへ戻すだけにする (Esc と同等の動線)。それ以外のキーは無視。
+    // フリップやレーティング対象がないので、Enter / Space は "Back to decks"
+    // としてホームへ戻すだけにする (Esc と同等の動線)。それ以外のキーは無視。
     if (!current) {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         void goto("/");
       }
+      return;
+    }
+    // `e` (no modifiers) — open the note editor for the current card.
+    // Anki Desktop と同じ慣習。
+    if (e.key === "e" || e.key === "E") {
+      e.preventDefault();
+      openEditor();
       return;
     }
     // Copy works on either side — sometimes you need to look up a word
@@ -397,10 +392,10 @@
           onclick={openEditor}
           class="flex h-7 items-center gap-1.5 rounded-(--radius-md) px-2 text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
           aria-label={t("settings.shortcut.editNote")}
-          title="{t('settings.shortcut.editNote')} (⌘E)"
+          title="{t('settings.shortcut.editNote')} (E)"
         >
           <Pencil size={14} />
-          <span class="font-mono text-[10px] opacity-70">⌘E</span>
+          <span class="font-mono text-[10px] opacity-70">E</span>
         </button>
       {/if}
     </div>
@@ -434,7 +429,7 @@
           class="mt-6 inline-flex items-center gap-2 rounded-(--radius-md) border border-(--color-border-strong) px-4 py-1.5 text-sm transition-colors hover:bg-(--color-bg-overlay)"
         >
           {t("reviewer.backToDecks")}
-          <span class="font-mono text-[10px] opacity-70">↵</span>
+          <span class="font-mono text-[10px] opacity-70">↵ / Space</span>
         </button>
       </div>
     {:else}

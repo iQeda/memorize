@@ -179,7 +179,7 @@
     ) {
       return;
     }
-    if (e.key === "Enter" && selected && totalDue > 0) {
+    if ((e.key === "Enter" || e.key === " ") && selected && totalDue > 0) {
       e.preventDefault();
       startStudy();
       return;
@@ -321,7 +321,7 @@
             class="transition-transform duration-300 group-hover:rotate-12 group-disabled:rotate-0"
           />
           {t("decks.studyNow")}
-          <span class="ml-1 font-mono text-[10px] opacity-70">↵</span>
+          <span class="ml-1 font-mono text-[10px] opacity-70">↵ / Space</span>
         </button>
         <p class="text-xs text-(--color-fg-subtle) tabular-nums">
           {totalDue > 0
