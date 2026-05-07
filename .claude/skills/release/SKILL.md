@@ -9,11 +9,12 @@ memorize の本番リリースは **`main` への push で完全自動**。`.git
 
 ## 前提運用ルール（毎回これを思い出す）
 
-1. **バージョンは据え置きが慣習**
-   - `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` の `version` は通常 bump しない
-   - tag 名は workflow 内で `v${VERSION}-${DATE}-${SHA}` として組み立てるので、同じ version でも DATE+SHA で一意になる
-   - `git log -- package.json` で過去の bump 履歴を見ると、memorize 自体の package.json はほとんど触られていない（bump コミットが見えるのは vendor/anki 側）
-   - 明示的なメジャー / マイナー区切りを切りたいときだけ手動で bump する。普段の機能追加コミットでは触らない
+1. **毎リリースで patch を必ず bump する**（重要）
+   - `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` の `version` を **3 ファイル同時に** patch +1
+   - 過去履歴例: `9906ced` で 0.4.12 → 0.4.13、`fb338f2` で 0.4.18 → 0.4.19。実際は **commit ごとに patch +1** している
+   - これを忘れると **`tauri-plugin-updater` が反応しない**。updater は `latest.json` の `version` で判定するため、同じ version で release を出しても既存ユーザーの自動 update が起動しない（過去に実害あり）
+   - bump はリリース対象の機能 commit に含めて 1 commit で行う（別 commit に分けない方が履歴を追いやすい）
+   - commit メッセージ末尾に `- version 0.4.X → 0.4.Y` の 1 行を入れる慣習（過去履歴参照）
 
 2. **`vendor/anki` の dirty は絶対に commit しない**
    - `apply-vendor-patches.sh` が `vendor/anki/rslib/...` に local patch を当てるので、submodule は常に dirty 状態（`m vendor/anki`）
