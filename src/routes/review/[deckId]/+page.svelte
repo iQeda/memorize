@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, Volume2, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -12,6 +12,7 @@
   import { shortcuts } from "$lib/stores/shortcuts.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { collection } from "$lib/stores/collection.svelte";
+  import { speech } from "$lib/stores/speech.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -184,6 +185,7 @@
   let copyError = $state<string | null>(null);
   let copyInfo = $state<string | null>(null);
   let copyInfoTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastSpokenCardId = $state<number | null>(null);
 
   // Anki テンプレートの answer 側は通常 `{{FrontSide}}<hr id=answer>{{Back}}` 構造で、
   // answer_html に質問部分が含まれる。フリップ後は答えだけ見せたいので hr#answer を
@@ -259,6 +261,53 @@
     }
   }
 
+  // iframe 内の本文を全選択して macOS の "選択項目を読み上げる" (Option+Esc)
+  // を起動する。設定オン時の自動発火 (新カード Question 表示) と、Speak
+  // ボタンによる手動発火の両方で使う。
+  function speakFrame(frame: HTMLIFrameElement) {
+    const run = () => {
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      if (!win || !doc) return;
+      const host = doc.querySelector(".memorize-card-host");
+      if (!host) return;
+      const range = doc.createRange();
+      range.selectNodeContents(host);
+      const sel = win.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      win.focus();
+      void invoke("start_speak_selection").catch((e) => {
+        console.error("start_speak_selection failed", e);
+      });
+    };
+    if (
+      frame.contentDocument?.readyState === "complete" &&
+      frame.contentDocument.querySelector(".memorize-card-host")
+    ) {
+      run();
+    } else {
+      frame.addEventListener("load", run, { once: true });
+    }
+  }
+
+  function speakCardText() {
+    const frame = showingAnswer ? answerFrame : questionFrame;
+    if (!frame) return;
+    speakFrame(frame);
+  }
+
+  $effect(() => {
+    const id = current?.card_id;
+    if (!id) return;
+    if (!speech.speakQuestionOnShow) return;
+    if (lastSpokenCardId === id) return;
+    const frame = questionFrame;
+    if (!frame) return;
+    lastSpokenCardId = id;
+    speakFrame(frame);
+  });
+
   function onKey(e: KeyboardEvent) {
     // Auto-repeat would re-fire copyCardText mid-flight, or apply a rating
     // while the user is still holding a key from a previous action.
@@ -301,6 +350,13 @@
     if (shortcuts.isCopy(e.key)) {
       e.preventDefault();
       void copyCardText();
+      return;
+    }
+    // Speak works on either side. The same flow as the Speak button: select
+    // the iframe contents and trigger macOS Speak Selection via osascript.
+    if (shortcuts.isSpeak(e.key)) {
+      e.preventDefault();
+      speakCardText();
       return;
     }
     if (e.key === " " || e.key === "Enter") {
@@ -507,6 +563,19 @@
             </button>
             <button
               type="button"
+              onclick={speakCardText}
+              in:fade={{ duration: 160, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={t("reviewer.speak")}
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                <Volume2 size={14} strokeWidth={2.25} />
+                {t("reviewer.speak")}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("speak")}</span>
+            </button>
+            <button
+              type="button"
               onclick={flip}
               in:fade={{ duration: 160, easing: cubicOut }}
               class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
@@ -532,6 +601,19 @@
                 Copy
               </span>
               <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
+            </button>
+            <button
+              type="button"
+              onclick={speakCardText}
+              in:fade={{ duration: 200, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={t("reviewer.speak")}
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                <Volume2 size={14} strokeWidth={2.25} />
+                {t("reviewer.speak")}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("speak")}</span>
             </button>
             <button
               type="button"

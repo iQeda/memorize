@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
 
 export type Rating = "again" | "hard" | "good" | "easy";
-export type Action = Rating | "copy";
+export type Action = Rating | "copy" | "speak";
 
 const STORAGE_KEY = "memorize:rating-keys";
 
@@ -11,6 +11,7 @@ const defaults: Record<Action, string> = {
   good: "d",
   easy: "f",
   copy: "j",
+  speak: "k",
 };
 
 function formatKey(k: string): string {
@@ -66,6 +67,11 @@ class ShortcutsStore {
   /** True iff `key` is bound to the Copy action. */
   isCopy(key: string): boolean {
     return this.keys.copy === key;
+  }
+
+  /** True iff `key` is bound to the Speak action. */
+  isSpeak(key: string): boolean {
+    return this.keys.speak === key;
   }
 
   label(action: Action): string {

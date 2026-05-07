@@ -6,5 +6,6 @@ pub mod decks;
 pub mod notes;
 pub mod package;
 pub mod reviewer;
+pub mod speech;
 pub mod study;
 pub mod sync;

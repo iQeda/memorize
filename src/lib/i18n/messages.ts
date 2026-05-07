@@ -93,6 +93,7 @@ export const messages = {
     "reviewer.hard": "Hard",
     "reviewer.good": "Good",
     "reviewer.easy": "Easy",
+    "reviewer.speak": "Speak",
 
     // Browse
     "browse.filter": "Filter",
@@ -153,6 +154,7 @@ export const messages = {
     "settings.shortcut.good": "Good",
     "settings.shortcut.easy": "Easy",
     "settings.shortcut.copy": "Copy text",
+    "settings.shortcut.speak": "Speak text",
     "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
     "settings.shortcut.openLauncher": "Quick deck switcher",
@@ -161,6 +163,12 @@ export const messages = {
     "settings.startup.autoLabel": "Launch at login",
     "settings.startup.autoBody":
       "Open Memorize automatically when you sign in to your computer.",
+    "settings.speech": "Speech",
+    "settings.speech.autoLabel": "Speak question on show",
+    "settings.speech.autoBody":
+      "When a new card's question appears, select its text and trigger macOS Speak Selection (Option+Esc by default).",
+    "settings.speech.macOnly":
+      "Requires macOS with \"Speak selection\" enabled in System Settings → Accessibility → Spoken Content. Memorize must also be granted Accessibility permission.",
     "updater.askTitle": "Update available",
     "updater.askBody":
       "Memorize {version} is available (you have {current}). Install now and restart?",
@@ -354,6 +362,7 @@ export const messages = {
     "reviewer.hard": "難しい",
     "reviewer.good": "普通",
     "reviewer.easy": "簡単",
+    "reviewer.speak": "読み上げ",
 
     // Browse
     "browse.filter": "フィルタ",
@@ -414,6 +423,7 @@ export const messages = {
     "settings.shortcut.good": "普通",
     "settings.shortcut.easy": "簡単",
     "settings.shortcut.copy": "テキストをコピー",
+    "settings.shortcut.speak": "テキストを読み上げ",
     "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
     "settings.shortcut.openLauncher": "デッキをクイック切替",
@@ -422,6 +432,12 @@ export const messages = {
     "settings.startup.autoLabel": "ログイン時に自動起動",
     "settings.startup.autoBody":
       "サインイン時に Memorize を自動的に起動します。",
+    "settings.speech": "読み上げ",
+    "settings.speech.autoLabel": "問題表示時に読み上げる",
+    "settings.speech.autoBody":
+      "新しいカードの問題が表示されたとき、本文を選択して macOS の「選択項目を読み上げる」を呼び出します（デフォルト Option+Esc）。",
+    "settings.speech.macOnly":
+      "macOS のシステム設定 → アクセシビリティ → 読み上げコンテンツで「選択項目を読み上げる」を有効にし、Memorize にアクセシビリティ権限を付与する必要があります。",
     "updater.askTitle": "アップデートが利用可能",
     "updater.askBody":
       "Memorize {version} が利用可能です（現在 {current}）。今すぐインストールして再起動しますか？",

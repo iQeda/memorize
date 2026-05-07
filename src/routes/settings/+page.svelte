@@ -3,6 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
+  import { speech } from "$lib/stores/speech.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
   import { shortcuts, type Action } from "$lib/stores/shortcuts.svelte";
   import { onMount } from "svelte";
@@ -22,6 +23,7 @@
     FolderOpen,
     Power,
     DownloadCloud,
+    Volume2,
   } from "lucide-svelte";
 
   const localeOptions: { value: Locale; label: string }[] = [
@@ -41,6 +43,7 @@
     { action: "good", label: t("settings.shortcut.good") },
     { action: "easy", label: t("settings.shortcut.easy") },
     { action: "copy", label: t("settings.shortcut.copy") },
+    { action: "speak", label: t("settings.shortcut.speak") },
   ]);
 
   type TocGroup = {
@@ -66,6 +69,7 @@
         { id: "language", label: t("settings.language") },
         { id: "appearance", label: t("settings.appearance") },
         { id: "startup", label: t("settings.startup") },
+        { id: "speech", label: t("settings.speech") },
       ],
     },
     {
@@ -927,6 +931,41 @@
           <span class="break-all">{autostartError}</span>
         </p>
       {/if}
+    </div>
+  </section>
+
+  <section id="speech" class="mt-10 scroll-mt-20 space-y-3">
+    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+      {t("settings.speech")}
+    </h3>
+    <div
+      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
+    >
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <Volume2 size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("settings.speech.autoLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("settings.speech.autoBody")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={() => speech.setSpeakQuestionOnShow(!speech.speakQuestionOnShow)}
+          aria-pressed={speech.speakQuestionOnShow}
+          aria-label={t("settings.speech.autoLabel")}
+          class="relative h-5 w-9 shrink-0 rounded-full transition-colors {speech.speakQuestionOnShow
+            ? 'bg-(--color-accent-500)'
+            : 'bg-(--color-bg-overlay)'}"
+        >
+          <span
+            class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {speech.speakQuestionOnShow
+              ? 'left-[18px]'
+              : 'left-0.5'}"
+          ></span>
+        </button>
+      </div>
+      <p class="mt-3 text-xs text-(--color-fg-subtle)">{t("settings.speech.macOnly")}</p>
     </div>
   </section>
 
