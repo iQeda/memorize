@@ -1,24 +1,42 @@
 use crate::error::AppResult;
+use crate::state::AppState;
+use tauri::State;
 
-/// macOS の "選択項目を読み上げる" を起動する。System Events に Option+Esc
-/// (key code 53 + option) のキーストロークを合成させることで、OS 標準ホット
-/// キーを押下したのと同じ効果を得る。System Settings →アクセシビリティ→
-/// 読み上げコンテンツでこの機能が有効化されており、かつアプリにアクセシビ
-/// リティ権限が付与されていることが前提。他プラットフォームでは no-op。
+/// macOS のシステム音声合成 (`/usr/bin/say`) で `text` を読み上げる。
+/// 直前に起動した `say` プロセスがあれば先に kill して、ボタン連打や
+/// 自動オン時のカード切替で再生が重なるのを防ぐ。
+///
+/// osascript 経由 (`tell System Events to key code 53 using {option down}`)
+/// で macOS の "選択項目を読み上げる" を起動する方式は、本番 DMG の
+/// ad-hoc 署名 + Hardened Runtime 構成だと Apple Events 送信に
+/// `com.apple.security.automation.apple-events` entitlement が必要で
+/// 一切音が出なかった。`say` は子プロセス起動なので entitlement も
+/// アクセシビリティ権限も不要で、システム音声 / 速度設定はそのまま使う。
 #[tauri::command]
-pub async fn start_speak_selection() -> AppResult<()> {
+pub async fn start_speak_text(
+    text: String,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
     #[cfg(target_os = "macos")]
     {
-        let script =
-            r#"tell application "System Events" to key code 53 using {option down}"#;
-        let status = std::process::Command::new("/usr/bin/osascript")
-            .arg("-e")
-            .arg(script)
-            .status()
-            .map_err(|e| anyhow::anyhow!("spawn osascript failed: {e}"))?;
-        if !status.success() {
-            return Err(anyhow::anyhow!("osascript exited with {status}").into());
+        let mut guard = state.speech_proc.lock().await;
+        if let Some(mut prev) = guard.take() {
+            let _ = prev.kill();
+            let _ = prev.wait();
         }
+        let trimmed = text.trim();
+        if trimmed.is_empty() {
+            return Ok(());
+        }
+        let child = std::process::Command::new("/usr/bin/say")
+            .arg(trimmed)
+            .spawn()
+            .map_err(|e| anyhow::anyhow!("spawn say failed: {e}"))?;
+        *guard = Some(child);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (text, state);
     }
     Ok(())
 }

@@ -3,6 +3,7 @@ use anki::prelude::CardId;
 use anki::progress::ProgressState;
 use anki::scheduler::states::SchedulingStates;
 use std::path::PathBuf;
+use std::process::Child;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Instant;
@@ -31,6 +32,12 @@ pub struct AppState {
     /// handler stops intercepting once the frontend has finished its
     /// shutdown sync.
     pub allow_exit: AtomicBool,
+    /// 直近に起動した /usr/bin/say の Child。新しい読み上げを始める前に
+    /// kill して、ボタン連打や card 切替時の重複再生を防ぐ。osascript
+    /// 経由ではなく say を直接呼ぶのは、ad-hoc 署名 + Hardened Runtime の
+    /// 本番ビルドでは Apple Events 送信に entitlement が必要で発火しない
+    /// ため。子プロセス起動だけなら権限プロンプトも entitlement も不要。
+    pub speech_proc: Mutex<Option<Child>>,
 }
 
 impl Default for AppState {
@@ -51,6 +58,7 @@ impl Default for AppState {
             last_queued: Mutex::new(None),
             progress: Arc::new(StdMutex::new(ProgressState::default())),
             allow_exit: AtomicBool::new(false),
+            speech_proc: Mutex::new(None),
         }
     }
 }

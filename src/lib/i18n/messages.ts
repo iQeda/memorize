@@ -166,9 +166,9 @@ export const messages = {
     "settings.speech": "Speech",
     "settings.speech.autoLabel": "Speak question on show",
     "settings.speech.autoBody":
-      "When a new card's question appears, select its text and trigger macOS Speak Selection (Option+Esc by default).",
+      "When a new card's question appears, read its text aloud using the macOS system voice (/usr/bin/say).",
     "settings.speech.macOnly":
-      "Requires macOS with \"Speak selection\" enabled in System Settings → Accessibility → Spoken Content. Memorize must also be granted Accessibility permission.",
+      "Uses the system voice configured in System Settings → Accessibility → Spoken Content → System voice. macOS only; no-op on other platforms.",
     "updater.askTitle": "Update available",
     "updater.askBody":
       "Memorize {version} is available (you have {current}). Install now and restart?",
@@ -435,9 +435,9 @@ export const messages = {
     "settings.speech": "読み上げ",
     "settings.speech.autoLabel": "問題表示時に読み上げる",
     "settings.speech.autoBody":
-      "新しいカードの問題が表示されたとき、本文を選択して macOS の「選択項目を読み上げる」を呼び出します（デフォルト Option+Esc）。",
+      "新しいカードの問題が表示されたとき、本文を macOS のシステム音声 (/usr/bin/say) で読み上げます。",
     "settings.speech.macOnly":
-      "macOS のシステム設定 → アクセシビリティ → 読み上げコンテンツで「選択項目を読み上げる」を有効にし、Memorize にアクセシビリティ権限を付与する必要があります。",
+      "システム設定 → アクセシビリティ → 読み上げコンテンツ → システムの声で選んだ音声で読み上げます。macOS 専用機能です。",
     "updater.askTitle": "アップデートが利用可能",
     "updater.askBody":
       "Memorize {version} が利用可能です（現在 {current}）。今すぐインストールして再起動しますか？",

@@ -261,24 +261,21 @@
     }
   }
 
-  // iframe 内の本文を全選択して macOS の "選択項目を読み上げる" (Option+Esc)
-  // を起動する。設定オン時の自動発火 (新カード Question 表示) と、Speak
-  // ボタンによる手動発火の両方で使う。
+  // iframe 内の本文テキストを抽出して、macOS の `say` に渡して読み上げる。
+  // 設定オン時の自動発火 (新カード Question 表示) と、Speak ボタン /
+  // k キーによる手動発火の両方で使う。osascript + Apple Events 方式は
+  // 本番ビルド (ad-hoc + Hardened Runtime) で entitlement が無く動かない
+  // ため、子プロセス起動だけで完結する `say` 経由に統一している。
   function speakFrame(frame: HTMLIFrameElement) {
     const run = () => {
-      const win = frame.contentWindow;
       const doc = frame.contentDocument;
-      if (!win || !doc) return;
+      if (!doc) return;
       const host = doc.querySelector(".memorize-card-host");
       if (!host) return;
-      const range = doc.createRange();
-      range.selectNodeContents(host);
-      const sel = win.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-      win.focus();
-      void invoke("start_speak_selection").catch((e) => {
-        console.error("start_speak_selection failed", e);
+      const text = (host.textContent ?? "").trim().replace(/\s+/g, " ");
+      if (!text) return;
+      void invoke("start_speak_text", { text }).catch((e) => {
+        console.error("start_speak_text failed", e);
       });
     };
     if (
