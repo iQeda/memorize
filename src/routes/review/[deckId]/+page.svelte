@@ -259,6 +259,14 @@
       console.error("clipboard write failed", e);
       copyError = e instanceof Error ? e.message : String(e);
     }
+    // Nani.app (Cmd+J 起動の辞書ランチャー) を発火する。Rust 側で CGEvent
+    // 経由で keystroke を post するので、本番ビルド (Hardened Runtime +
+    // ad-hoc 署名) でも動く。要アクセシビリティ権限 (初回プロンプトあり)。
+    // Nani が未インストールなら Cmd+J は OS の他処理にフォールバックする
+    // だけで Memorize 側に害はない。
+    void invoke("start_nani_lookup", { word: text }).catch((e) => {
+      console.error("start_nani_lookup failed", e);
+    });
   }
 
   // iframe 内の本文テキストを抽出して、macOS の `say` に渡して読み上げる。

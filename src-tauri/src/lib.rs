@@ -132,6 +132,7 @@ pub fn run() {
             commands::notes::update_note,
             commands::notes::delete_notes,
             commands::speech::start_speak_text,
+            commands::nani::start_nani_lookup,
         ])
         .build(tauri::generate_context!())
         .expect("error while running memorize")

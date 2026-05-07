@@ -5,6 +5,7 @@ pub mod collection;
 pub mod decks;
 pub mod notes;
 pub mod package;
+pub mod nani;
 pub mod reviewer;
 pub mod speech;
 pub mod study;

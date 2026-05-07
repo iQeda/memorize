@@ -1,6 +1,6 @@
 [package]
 name = "memorize"
-version = "0.4.21"
+version = "0.4.22"
 description = "Anki-compatible English vocabulary learning app"
 authors = ["iQeda"]
 edition = "2021"
@@ -37,6 +37,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots"] }
 chrono = "0.4"
 dirs = "6"
+
+# macOS の Quartz Event Services (CGEventCreateKeyboardEvent / CGEventPost) を
+# 使って Cmd+J を合成する。Apple Events 経由 (osascript) と違い、本番ビルド
+# (Hardened Runtime + ad-hoc 署名 + entitlement 空) でも動作する。代わりに
+# アクセシビリティ権限 (System Settings → Privacy & Security → Accessibility)
+# が必要で、初回 keystroke 送信時に OS が許可プロンプトを出す。
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.24"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
