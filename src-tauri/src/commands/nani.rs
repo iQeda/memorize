@@ -1,22 +1,18 @@
 use crate::error::AppResult;
 
-/// Nani.app (Cmd+J 起動の辞書ランチャー) で `word` を引く。
+/// Nani.app (Cmd+J 起動の辞書 / 翻訳ランチャー) で `word` を引く。
 ///
-/// 流れ:
-/// 1. `word` を pbcopy で pasteboard に置く
-/// 2. `/usr/bin/open -a Nani` で Nani.app を起動
+/// `naniapp://translate?source=<URL-encoded word>` deep link を `open`
+/// に渡すだけ。Nani の Info.plist 内 `CFBundleURLSchemes` に "naniapp"
+/// が登録されており、deep link を開くと Nani が起動して `searchParams.get("source")`
+/// を `trimmedText` として翻訳画面に流し込む (Nani app.asar 解析で確認)。
 ///
-/// 当初は CGEvent (CGEventCreateKeyboardEvent + CGEventPost) で Cmd+J を
-/// 合成する方針だったが、Memorize がフォーカスを持ったまま CGEvent を
-/// post すると Nani のグローバルホットキーが拾わず Memorize ウィンドウに
-/// 直接 keystroke が送られて何も起きないケースがあった。さらに CGEvent
-/// post は本来アクセシビリティ権限が必要だが、macOS が prompt を出さず
-/// silent fail することがあり実用的でない。
-///
-/// `open -a` は子プロセス起動だけで完結するので権限プロンプトも entitlement
-/// も不要。Nani.app が「起動時に pasteboard を読み込んで自動検索する」仕様
-/// に乗ることで、Cmd+J 経由と同等の体験を得る。Nani が未インストールなら
-/// open がエラーを返すのでフロントの catch でログる。
+/// この方式の利点:
+/// - CGEvent / Cmd+J 合成は不要 → アクセシビリティ権限プロンプトが出ない
+/// - osascript / Apple Events は不要 → entitlement / Hardened Runtime 制約なし
+/// - pbcopy も不要 → Nani が「現在の selection」を読まない実装でも確実に
+///   検索対象を渡せる (前バージョンで pbcopy + open -a Nani 方式を試した
+///   ところ、Nani は selection だけを読み pasteboard を見ない仕様だった)
 #[tauri::command]
 pub async fn start_nani_lookup(word: String) -> AppResult<()> {
     #[cfg(target_os = "macos")]
@@ -25,15 +21,14 @@ pub async fn start_nani_lookup(word: String) -> AppResult<()> {
         if trimmed.is_empty() {
             return Ok(());
         }
-        copy_to_pasteboard(trimmed)?;
+        let url = format!("naniapp://translate?source={}", url_encode(trimmed));
         let status = std::process::Command::new("/usr/bin/open")
-            .arg("-a")
-            .arg("Nani")
+            .arg(&url)
             .status()
-            .map_err(|e| anyhow::anyhow!("spawn open -a Nani: {e}"))?;
+            .map_err(|e| anyhow::anyhow!("spawn open {url:?}: {e}"))?;
         if !status.success() {
             return Err(anyhow::anyhow!(
-                "open -a Nani exited with {status} (Nani.app installed?)"
+                "open {url:?} exited with {status} (Nani.app installed?)"
             )
             .into());
         }
@@ -45,23 +40,19 @@ pub async fn start_nani_lookup(word: String) -> AppResult<()> {
     Ok(())
 }
 
+/// URL の query 値として安全な percent-encoding。RFC 3986 unreserved 以外を
+/// すべて %HH に変換する。`urlencoding` crate を入れるほどの規模でもない
+/// ので自前実装。
 #[cfg(target_os = "macos")]
-fn copy_to_pasteboard(text: &str) -> AppResult<()> {
-    use std::io::Write;
-    let mut child = std::process::Command::new("/usr/bin/pbcopy")
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| anyhow::anyhow!("spawn pbcopy: {e}"))?;
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(text.as_bytes())
-            .map_err(|e| anyhow::anyhow!("write pbcopy stdin: {e}"))?;
+fn url_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char);
+            }
+            _ => out.push_str(&format!("%{:02X}", b)),
+        }
     }
-    let status = child
-        .wait()
-        .map_err(|e| anyhow::anyhow!("wait pbcopy: {e}"))?;
-    if !status.success() {
-        return Err(anyhow::anyhow!("pbcopy exited with {status}").into());
-    }
-    Ok(())
+    out
 }
