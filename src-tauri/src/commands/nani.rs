@@ -1,20 +1,22 @@
 use crate::error::AppResult;
 
-/// Nani.app (Cmd+J 起動の辞書ランチャー) でカード本文の単語を引く。
+/// Nani.app (Cmd+J 起動の辞書ランチャー) で `word` を引く。
 ///
 /// 流れ:
-/// 1. `word` を pbcopy で pasteboard に置く (Nani が selection ではなく
-///    pasteboard を読みに来るケースの保険)
-/// 2. macOS の Quartz Event Services で Cmd+J を合成して post し、Nani の
-///    グローバルホットキーを発火する
+/// 1. `word` を pbcopy で pasteboard に置く
+/// 2. `/usr/bin/open -a Nani` で Nani.app を起動
 ///
-/// osascript + `tell System Events` 方式は Hardened Runtime + ad-hoc 署名 +
-/// entitlement 空の本番 DMG では Apple Events 送信がブロックされて何も
-/// 起きなかったため、CGEvent で直接キーストロークを post する方式に
-/// 統一する。代わりに Memorize が「コンピュータの制御」(アクセシビリティ
-/// 権限) を要求するプロンプトが初回に出るので、ユーザーは System Settings →
-/// プライバシーとセキュリティ → アクセシビリティ で Memorize を許可する
-/// 必要がある。
+/// 当初は CGEvent (CGEventCreateKeyboardEvent + CGEventPost) で Cmd+J を
+/// 合成する方針だったが、Memorize がフォーカスを持ったまま CGEvent を
+/// post すると Nani のグローバルホットキーが拾わず Memorize ウィンドウに
+/// 直接 keystroke が送られて何も起きないケースがあった。さらに CGEvent
+/// post は本来アクセシビリティ権限が必要だが、macOS が prompt を出さず
+/// silent fail することがあり実用的でない。
+///
+/// `open -a` は子プロセス起動だけで完結するので権限プロンプトも entitlement
+/// も不要。Nani.app が「起動時に pasteboard を読み込んで自動検索する」仕様
+/// に乗ることで、Cmd+J 経由と同等の体験を得る。Nani が未インストールなら
+/// open がエラーを返すのでフロントの catch でログる。
 #[tauri::command]
 pub async fn start_nani_lookup(word: String) -> AppResult<()> {
     #[cfg(target_os = "macos")]
@@ -24,7 +26,17 @@ pub async fn start_nani_lookup(word: String) -> AppResult<()> {
             return Ok(());
         }
         copy_to_pasteboard(trimmed)?;
-        post_cmd_j()?;
+        let status = std::process::Command::new("/usr/bin/open")
+            .arg("-a")
+            .arg("Nani")
+            .status()
+            .map_err(|e| anyhow::anyhow!("spawn open -a Nani: {e}"))?;
+        if !status.success() {
+            return Err(anyhow::anyhow!(
+                "open -a Nani exited with {status} (Nani.app installed?)"
+            )
+            .into());
+        }
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -51,28 +63,5 @@ fn copy_to_pasteboard(text: &str) -> AppResult<()> {
     if !status.success() {
         return Err(anyhow::anyhow!("pbcopy exited with {status}").into());
     }
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-fn post_cmd_j() -> AppResult<()> {
-    use core_graphics::event::{CGEvent, CGEventFlags, CGEventTapLocation};
-    use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
-
-    // virtual keycode 38 = J on US keyboards. The mapping is
-    // layout-independent: 38 means the physical key labeled "J" on a US
-    // layout, which is what Nani's default Cmd+J binding listens for.
-    const KEYCODE_J: core_graphics::event::CGKeyCode = 38;
-
-    let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState)
-        .map_err(|_| anyhow::anyhow!("CGEventSource::new failed"))?;
-    let down = CGEvent::new_keyboard_event(source.clone(), KEYCODE_J, true)
-        .map_err(|_| anyhow::anyhow!("CGEvent down failed"))?;
-    down.set_flags(CGEventFlags::CGEventFlagCommand);
-    down.post(CGEventTapLocation::HID);
-    let up = CGEvent::new_keyboard_event(source, KEYCODE_J, false)
-        .map_err(|_| anyhow::anyhow!("CGEvent up failed"))?;
-    up.set_flags(CGEventFlags::CGEventFlagCommand);
-    up.post(CGEventTapLocation::HID);
     Ok(())
 }
