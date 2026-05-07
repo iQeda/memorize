@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, Volume2, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, BookA, Volume2, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -561,7 +561,7 @@
               title="Nani"
             >
               <span class="flex items-center gap-1.5 text-sm font-medium">
-                <Copy size={14} strokeWidth={2.25} />
+                <BookA size={14} strokeWidth={2.25} />
                 Nani
               </span>
               <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
@@ -602,7 +602,7 @@
               title="Nani"
             >
               <span class="flex items-center gap-1.5 text-sm font-medium">
-                <Copy size={14} strokeWidth={2.25} />
+                <BookA size={14} strokeWidth={2.25} />
                 Nani
               </span>
               <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
