@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__pencil__batch_get",
+      "mcp__pencil__get_screenshot",
+      "mcp__pencil__snapshot_layout",
+      "mcp__pencil__get_editor_state",
+      "mcp__pencil__open_document",
+      "mcp__pencil__export_nodes",
+      "mcp__7cdd5bea-c31d-495c-819e-8834d68fdb6b__slack_search_channels",
+      "mcp__25cac85d-4365-4a92-a3fb-971aaca63181__get_thread",
+      "Bash(npm run build:check)",
+      "Bash(pnpm exec svelte-check*)",
+      "Bash(pnpm build*)",
+      "Bash(npx tsc --noEmit*)"
+    ]
+  }
+}

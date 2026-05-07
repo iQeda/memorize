@@ -10,5 +10,7 @@ src-tauri/target/
 src-tauri/gen/
 *.log
 .vite/
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/skills/
 .clearance-rendered-preview-*/
