@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Brain, Sparkles, Plus, FolderOpen, FilePlus } from "lucide-svelte";
   import { collection } from "$lib/stores/collection.svelte";
+  import { sync } from "$lib/stores/sync.svelte";
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
   import FutureDueChart from "$lib/components/charts/FutureDueChart.svelte";
@@ -105,6 +106,23 @@
   let graph = $state<DeckGraphStats | null>(null);
   let graphDays = $state<number>(31);
   let graphError = $state<string | null>(null);
+
+  // ⌘S で normal_sync を呼ぶと rslib が SQLite を上書きするが、フロント側の
+  // collection.decks は (Svelte runes 的に) その変更を検知できない。home の
+  // stats/graph effect は collection.decks の差し替えを依存にしているので、
+  // sync 完了 (busy: true → false) のタイミングで refreshDecks + refreshInfo
+  // を明示的に呼んで decks 配列を新規参照に差し替える。これで下の effect が
+  // 自然に反応して deck_stats / deck_graph_stats を再フェッチし、別端末で
+  // 学習した結果が home パネルに反映される。reviewer 内の totals 更新は
+  // review/[deckId]/+page.svelte 側で別途行っている。
+  let prevSyncBusy = false;
+  $effect(() => {
+    const isBusy = sync.busy;
+    if (prevSyncBusy && !isBusy && collection.isOpen) {
+      void collection.refresh();
+    }
+    prevSyncBusy = isBusy;
+  });
 
   $effect(() => {
     const dId = collection.selectedDeckId;
