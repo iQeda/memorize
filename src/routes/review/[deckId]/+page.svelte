@@ -589,7 +589,7 @@
                 <Eye size={14} strokeWidth={2.25} />
                 {t("reviewer.showAnswer")}
               </span>
-              <span class="font-mono text-[10px] opacity-70">Space</span>
+              <span class="font-mono text-[10px] opacity-70">Space / ↵</span>
             </button>
           </div>
         {:else}
@@ -630,7 +630,7 @@
                 <RotateCcw size={14} strokeWidth={2.25} />
                 {t("reviewer.showQuestion")}
               </span>
-              <span class="font-mono text-[10px] opacity-70">Space</span>
+              <span class="font-mono text-[10px] opacity-70">Space / ↵</span>
             </button>
           </div>
           <div class="flex items-center justify-center gap-3">

@@ -26,6 +26,10 @@ pnpm tauri build
 pnpm exec svelte-check
 cargo check --manifest-path src-tauri/Cargo.toml
 
+# Unit tests.
+pnpm test:run     # Vitest, jsdom env, $app/environment is stubbed (test/mocks/app-environment.ts).
+pnpm test:rust    # cargo test --manifest-path src-tauri/Cargo.toml (needs PROTOC).
+
 # Frontend production bundle alone (good for catching SSR-only Svelte errors that
 # don't surface during HMR — see "Svelte tokenizer pitfalls" below).
 pnpm build

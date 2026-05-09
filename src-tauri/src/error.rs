@@ -39,3 +39,42 @@ impl Serialize for AppError {
 }
 
 pub type AppResult<T> = Result<T, AppError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn collection_not_open_serializes_to_its_display_message() {
+        let err = AppError::CollectionNotOpen;
+        let json = serde_json::to_string(&err).unwrap();
+        assert_eq!(json, "\"collection is not open\"");
+    }
+
+    #[test]
+    fn anyhow_chain_is_flattened_into_full_message() {
+        // Build a deliberately layered anyhow chain so we can verify each
+        // layer ends up in the serialized string. This is the path Tauri
+        // takes to surface backend errors to the frontend.
+        let inner = anyhow::anyhow!("disk full");
+        let wrapped = inner.context("write credentials").context("save sync state");
+        let err = AppError::Anyhow(wrapped);
+        let msg = serde_json::to_string(&err).unwrap();
+        assert!(msg.contains("save sync state"), "got: {msg}");
+        assert!(msg.contains("write credentials"), "got: {msg}");
+        assert!(msg.contains("disk full"), "got: {msg}");
+    }
+
+    #[test]
+    fn duplicate_segments_are_not_repeated() {
+        // full_message should skip a source whose Display is already a
+        // substring of the accumulated message — otherwise wrapping the same
+        // text twice would produce "X: X" tails.
+        let inner = anyhow::anyhow!("boom");
+        let wrapped = inner.context("boom");
+        let err = AppError::Anyhow(wrapped);
+        let msg = serde_json::to_string(&err).unwrap();
+        // Quoted exactly once.
+        assert_eq!(msg.matches("boom").count(), 1, "got: {msg}");
+    }
+}

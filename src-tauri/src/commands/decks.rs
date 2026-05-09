@@ -397,3 +397,93 @@ fn walk(node: &anki_proto::decks::DeckTreeNode, level: u32, out: &mut Vec<DeckSu
         walk(child, level + 1, out);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn node(deck_id: i64, name: &str, children: Vec<anki_proto::decks::DeckTreeNode>) -> anki_proto::decks::DeckTreeNode {
+        anki_proto::decks::DeckTreeNode {
+            deck_id,
+            name: name.into(),
+            children,
+            new_count: deck_id as u32,
+            learn_count: deck_id as u32 * 2,
+            review_count: deck_id as u32 * 3,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn walk_skips_synthetic_root_and_records_depth() {
+        // list_decks's caller passes the synthetic root (deck_id == 0). It
+        // must not appear in the output, but its children do.
+        //
+        // Note on `level`: walk recurses with `level + 1` regardless of
+        // whether the parent was pushed. So even though the synthetic root
+        // is *skipped*, it still consumes one level — top-level decks land
+        // at level 1, their children at level 2, etc. The frontend's deck
+        // tree indentation depends on this offset.
+        let tree = node(
+            0,
+            "",
+            vec![
+                node(1, "Default", vec![]),
+                node(2, "Lang", vec![node(3, "Lang::FR", vec![])]),
+            ],
+        );
+
+        let mut out = Vec::new();
+        walk(&tree, 0, &mut out);
+
+        let pairs: Vec<(i64, u32)> = out.iter().map(|d| (d.id, d.level)).collect();
+        assert_eq!(pairs, vec![(1, 1), (2, 1), (3, 2)]);
+    }
+
+    #[test]
+    fn walk_copies_per_node_counts() {
+        let tree = node(0, "", vec![node(7, "Vocab", vec![])]);
+        let mut out = Vec::new();
+        walk(&tree, 0, &mut out);
+        assert_eq!(out.len(), 1);
+        let d = &out[0];
+        assert_eq!(d.name, "Vocab");
+        assert_eq!(d.new_count, 7);
+        assert_eq!(d.learn_count, 14);
+        assert_eq!(d.review_count, 21);
+    }
+
+    #[test]
+    fn map_to_buckets_sorts_by_key_ascending() {
+        let mut m: HashMap<i32, u32> = HashMap::new();
+        m.insert(5, 50);
+        m.insert(-1, 10);
+        m.insert(2, 20);
+        let buckets = map_to_buckets(m);
+        let keys: Vec<i32> = buckets.iter().map(|b| b.key).collect();
+        let values: Vec<u32> = buckets.iter().map(|b| b.value).collect();
+        assert_eq!(keys, vec![-1, 2, 5]);
+        assert_eq!(values, vec![10, 20, 50]);
+    }
+
+    #[test]
+    fn map_to_buckets_empty_input() {
+        let buckets = map_to_buckets(HashMap::<u32, u32>::new());
+        assert!(buckets.is_empty());
+    }
+
+    #[test]
+    fn convert_hours_assigns_index_as_hour_label() {
+        let proto = vec![
+            anki_proto::stats::graphs_response::hours::Hour { total: 1, correct: 1 },
+            anki_proto::stats::graphs_response::hours::Hour { total: 5, correct: 3 },
+            anki_proto::stats::graphs_response::hours::Hour { total: 0, correct: 0 },
+        ];
+        let out = convert_hours(proto);
+        assert_eq!(out.len(), 3);
+        assert_eq!((out[0].hour, out[0].total, out[0].correct), (0, 1, 1));
+        assert_eq!((out[1].hour, out[1].total, out[1].correct), (1, 5, 3));
+        assert_eq!((out[2].hour, out[2].total, out[2].correct), (2, 0, 0));
+    }
+}

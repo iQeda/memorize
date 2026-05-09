@@ -43,7 +43,11 @@ pub async fn start_nani_lookup(word: String) -> AppResult<()> {
 /// URL の query 値として安全な percent-encoding。RFC 3986 unreserved 以外を
 /// すべて %HH に変換する。`urlencoding` crate を入れるほどの規模でもない
 /// ので自前実装。
-#[cfg(target_os = "macos")]
+///
+/// テストから到達できるよう `cfg(target_os = "macos")` は外している。
+/// 使用側 (`start_nani_lookup`) のみ macOS gating されているのでビルドへの
+/// 影響はない (#[allow(dead_code)] で他プラットフォームの未使用警告を抑制)。
+#[allow(dead_code)]
 fn url_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
@@ -55,4 +59,35 @@ fn url_encode(s: &str) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::url_encode;
+
+    #[test]
+    fn unreserved_ascii_passes_through_unchanged() {
+        assert_eq!(url_encode("hello"), "hello");
+        assert_eq!(url_encode("Hello-World_1.2~3"), "Hello-World_1.2~3");
+    }
+
+    #[test]
+    fn space_and_punctuation_are_percent_encoded() {
+        assert_eq!(url_encode("a b"), "a%20b");
+        assert_eq!(url_encode("a&b=c"), "a%26b%3Dc");
+        assert_eq!(url_encode("a/b?c#d"), "a%2Fb%3Fc%23d");
+    }
+
+    #[test]
+    fn non_ascii_is_encoded_per_utf8_byte() {
+        // "日" is U+65E5 → UTF-8 0xE6 0x97 0xA5
+        assert_eq!(url_encode("日"), "%E6%97%A5");
+        // surrogate pair / multi-byte mix
+        assert_eq!(url_encode("a日b"), "a%E6%97%A5b");
+    }
+
+    #[test]
+    fn empty_string_round_trips() {
+        assert_eq!(url_encode(""), "");
+    }
 }
