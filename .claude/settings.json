@@ -13,7 +13,13 @@
       "Bash(pnpm exec svelte-check*)",
       "Bash(pnpm build*)",
       "Bash(npx tsc --noEmit*)",
-      "Bash(git push origin main)"
+      "Bash(git push origin main)",
+      "Bash(cargo check --manifest-path*)",
+      "Bash(pnpm test:run*)",
+      "Bash(pnpm lint*)",
+      "Bash(npm view *)",
+      "Bash(gh run watch *)",
+      "mcp__25cac85d-4365-4a92-a3fb-971aaca63181__search_threads"
     ]
   }
 }
