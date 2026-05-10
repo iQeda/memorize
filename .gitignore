@@ -14,3 +14,4 @@ src-tauri/gen/
 !.claude/settings.json
 !.claude/skills/
 .clearance-rendered-preview-*/
+.memorize-dev/

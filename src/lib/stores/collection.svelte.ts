@@ -51,10 +51,25 @@ class CollectionStore {
       const lastPath = browser ? localStorage.getItem(LAST_PATH_KEY) : null;
       if (lastPath) {
         await this.open(lastPath, /* skipPersist */ true);
+      } else if (import.meta.env.DEV) {
+        // Dev builds bootstrap a sandbox collection at <repo>/.memorize-dev
+        // so `pnpm tauri dev` always lands in a usable state. Production
+        // builds skip this entirely (the command is cfg(debug_assertions)).
+        await this.bootstrapDevCollection();
       }
       await this.refreshInfo();
     } catch (e) {
       console.error("collection.refresh", e);
+    }
+  }
+
+  private async bootstrapDevCollection() {
+    try {
+      await invoke("bootstrap_dev_collection");
+      this.isOpen = true;
+      await this.refreshDecks();
+    } catch (e) {
+      console.error("collection.bootstrapDevCollection", e);
     }
   }
 
