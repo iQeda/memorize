@@ -1,0 +1,52 @@
+From: iQeda <noreply@iqeda.dev>
+Subject: [PATCH 4/4] Wrap DeckIdsWithoutChildren SQL emission in an outer
+ paren so a `did:X "foo"` search actually filters by both deck AND fields.
+
+Modification by iQeda for the memorize project (https://github.com/iQeda/memorize),
+on top of upstream ankitects/anki @ 35b727a. Originally created 2026-05-10.
+
+The `did:` search node emits two OR'd terms (`c.did in (X)` and
+`(c.odid != 0 and c.odid in (X))`) without an outer paren. SQL's `AND`
+binds tighter than `OR`, so combining `did:X` with another term (e.g. a
+quoted unqualified text search from the Browse search box) yields:
+
+  c.did in (X) OR (c.odid != 0 ... AND fields LIKE %foo%)
+
+The first half of the OR matches every card in the deck on its own,
+making the field search a no-op. Result: typing in Browse never narrows
+the list. Reproduced with memorize's seeded dev deck where `vil` failed
+to filter down to `civil`.
+
+The fix is to add an outer paren so the OR self-contains, matching the
+convention documented in the NOTE on `write_search_node_to_sql` ("if
+they wrap multiple terms in parentheses"). This was introduced upstream
+by ankitects/anki commit 159681d9f (#3441, "Reschedule doesn't work on
+cards in filtered deck") which added the second OR term but forgot the
+outer paren.
+
+Per AGPL-3.0-or-later §5(a): this file is a modification of Anki's rslib,
+which is Copyright (C) Ankitects Pty Ltd, licensed under AGPL-3.0-or-later.
+
+---
+diff --git a/rslib/src/search/sqlwriter.rs b/rslib/src/search/sqlwriter.rs
+index 2479b87ae..b25798fed 100644
+--- a/rslib/src/search/sqlwriter.rs
++++ b/rslib/src/search/sqlwriter.rs
+@@ -171,9 +171,16 @@ impl SqlWriter<'_> {
+                 write!(self.sql, "n.mid = {ntid}").unwrap();
+             }
+             SearchNode::DeckIdsWithoutChildren(dids) => {
++                // Wrap in an outer paren: SQL `AND` binds tighter than `OR`,
++                // so without these parens a search like `did:X "foo"` becomes
++                // `c.did in (X) OR (c.odid != 0 ... AND fields like %foo%)` —
++                // the deck filter on its own short-circuits the `OR` and every
++                // card in the deck is returned regardless of the field search.
++                // The convention noted in `write_search_node_to_sql`'s NOTE is
++                // exactly this: multi-term nodes must self-paren.
+                 write!(
+                     self.sql,
+-                    "c.did in ({dids}) or (c.odid != 0 and c.odid in ({dids}))"
++                    "(c.did in ({dids}) or (c.odid != 0 and c.odid in ({dids})))"
+                 )
+                 .unwrap();
+             }

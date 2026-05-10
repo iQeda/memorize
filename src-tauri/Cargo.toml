@@ -1,6 +1,6 @@
 [package]
 name = "memorize"
-version = "0.4.28"
+version = "0.4.29"
 description = "Anki-compatible English vocabulary learning app"
 authors = ["iQeda"]
 edition = "2021"
@@ -37,6 +37,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots"] }
 chrono = "0.4"
 dirs = "6"
+# Match the version anki uses so we share the same rusqlite::Connection type
+# when pulling `col.storage.db()` into our own queries.
+rusqlite = { version = "0.36.0", features = ["bundled"] }
+
+[dev-dependencies]
+tempfile = "3"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
