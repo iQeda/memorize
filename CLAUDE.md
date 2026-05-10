@@ -45,11 +45,12 @@ pnpm build
 
 ### `vendor/anki` carries local patches that must be applied
 
-Three patches in `patches/` make otherwise-private rslib internals public so Tauri commands can call them:
+The patches in `patches/` make otherwise-private rslib internals public so Tauri commands can call them, plus one upstream-bug fix:
 
 - `0001-expose-progress-module.patch` — `pub mod progress;`
 - `0002-tolerate-missing-original-size-header.patch` — fixes AnkiWeb `/upload` which returns plain `OK` without zstd headers
 - `0003-expose-graph-data-for-search.patch` — `pub fn graph_data_for_search` for the deck stats panels
+- `0004-paren-wrap-did-search-or-clause.patch` — wraps `DeckIdsWithoutChildren` SQL emission in an outer paren so `did:X "foo"` AND-intersects with the field search instead of OR-leaking every card in the deck (regression in upstream commit `159681d9f`)
 
 After every `git submodule update`, run `./scripts/apply-vendor-patches.sh` (idempotent — skips already-applied patches). Do not modify `vendor/anki` files directly; add a new patch.
 
@@ -114,6 +115,37 @@ Uses `Action = Rating | "nani"`. Adding a new bindable shortcut: extend the `Act
 - Don't write literal `<script>` / `</script>` inside JS template literals in `.svelte` files.
 - Use index-based keys in chart `{#each}` loops.
 - After modifying files in `vendor/anki`: capture as a patch in `patches/`, not a direct submodule commit (we don't fork upstream).
+
+## Testing & push discipline
+
+### Unit tests are required for every non-trivial change
+
+Any new logic, behavior change, or bug fix must ship with a corresponding unit test in the same commit.
+
+- **Rust**: add a `#[cfg(test)] mod tests` block in the same file. Existing patterns:
+  - Pure helpers — see `commands/nani.rs` (`url_encode`) and `error.rs` (serde output).
+  - DB-backed integration — see `commands/cards.rs` (`tempfile::TempDir` + `CollectionBuilder` to spin up a real `Collection`, then exercise the `*_inner` helper). Run with `pnpm test:rust` (needs `PROTOC`).
+- **Frontend**: add a `*.test.ts` next to the module. Vitest is configured with jsdom and a `$app/environment` stub (`test/mocks/app-environment.ts`). Run with `pnpm test:run`.
+- For bug fixes, write the reproduction test first so it goes red, then make it green with the fix. The vendor/anki SQL precedence regression caught by `cards::tests::deck_filter_combined_with_field_search_correctly_intersects` is an example.
+- If the production code is awkward to test, refactor it into a testable shape first (extract a pure helper, take `&mut Collection` instead of `State<AppState>`, etc.) and test the shape.
+
+### Pre-push checklist (all three must pass before `git push`)
+
+1. **Tests for the pushed diff exist.** Inspect `git log --stat origin/<branch>..HEAD` and confirm new/changed logic has a matching test. Pure refactors with no behavior change are exempt but should say so in the commit message.
+2. **All tests green.** Run both:
+   ```sh
+   pnpm test:run
+   PROTOC=/opt/homebrew/bin/protoc cargo test --manifest-path src-tauri/Cargo.toml
+   ```
+   `pnpm test:rust` is the same Rust invocation if `PROTOC` is already on PATH. Don't push with any failures or skips.
+3. **Lint / type-check clean.** Run both:
+   ```sh
+   pnpm exec svelte-check --tsconfig ./tsconfig.json
+   cargo check --manifest-path src-tauri/Cargo.toml
+   ```
+   Zero errors. Warnings are OK only if they're `#[cfg]`-gated dead-code false positives (e.g. `commands/dev.rs`).
+
+When the user says "push", "release", "main に上げて" etc., **don't push immediately** — run the three checks first, report each result on a separate line, then proceed.
 
 ## Persistent memory location
 
