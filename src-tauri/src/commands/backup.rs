@@ -1,7 +1,7 @@
+use crate::commands::collection::build_app_collection;
 use crate::error::{AppError, AppResult};
 use crate::progress::ProgressEmitter;
 use crate::state::AppState;
-use anki::collection::CollectionBuilder;
 use anki::import_export::package::import_colpkg as rslib_import_colpkg;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -28,9 +28,7 @@ async fn export_to(state: &State<'_, AppState>, out_path: &Path, include_media: 
     let result = col.export_colpkg(out_path, include_media, /* legacy */ false);
 
     // Re-open regardless of export success so the app stays usable.
-    let reopened = CollectionBuilder::new(&path)
-        .set_shared_progress_state(state.progress.clone())
-        .build()?;
+    let reopened = build_app_collection(&path, state.progress.clone())?;
     *state.col.lock().await = Some(reopened);
 
     result?;
@@ -122,7 +120,7 @@ pub async fn import_colpkg(
 
     // Re-open at the same path regardless of import success so the app
     // doesn't end up in a "collection closed" state with no recovery path.
-    let reopened = CollectionBuilder::new(&col_path).build()?;
+    let reopened = build_app_collection(&col_path, state.progress.clone())?;
     *state.col.lock().await = Some(reopened);
 
     import_result?;

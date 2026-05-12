@@ -1,8 +1,26 @@
 use crate::error::AppResult;
 use crate::state::AppState;
-use anki::collection::CollectionBuilder;
-use std::path::PathBuf;
+use anki::collection::{Collection, CollectionBuilder};
+use anki::progress::ProgressState;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex as StdMutex};
 use tauri::State;
+
+/// Shared builder for all `.anki2` paths the app opens.
+///
+/// `with_desktop_media_paths()` is the load-bearing call: it sets
+/// `{col}.media` + `{col}.mdb` so that any import/export/sync that needs
+/// to touch media doesn't blow up with "attempted media operation without
+/// media folder set" inside `MediaManager::new`.
+pub(crate) fn build_app_collection(
+    path: &Path,
+    progress: Arc<StdMutex<ProgressState>>,
+) -> AppResult<Collection> {
+    Ok(CollectionBuilder::new(path)
+        .with_desktop_media_paths()
+        .set_shared_progress_state(progress)
+        .build()?)
+}
 
 #[tauri::command]
 pub async fn open_collection(
@@ -18,9 +36,7 @@ pub async fn open_collection(
     // build is for a different path so the SQLite open will succeed
     // independently. Same-path re-open is also fine because rusqlite uses
     // shared cache + WAL.
-    let col = CollectionBuilder::new(&path_buf)
-        .set_shared_progress_state(state.progress.clone())
-        .build()?;
+    let col = build_app_collection(&path_buf, state.progress.clone())?;
 
     let mut guard = state.col.lock().await;
     if let Some(prev) = guard.take() {
@@ -84,4 +100,28 @@ pub async fn collection_info(state: State<'_, AppState>) -> AppResult<Collection
         current_path,
         anki_desktop_path,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn build_app_collection_sets_media_paths_so_media_manager_can_open() {
+        let tmp = TempDir::new().expect("tmpdir");
+        let col_path = tmp.path().join("test.anki2");
+        let progress = Arc::new(StdMutex::new(ProgressState::default()));
+
+        let col = build_app_collection(&col_path, progress).expect("build");
+
+        // Regression guard: before `.with_desktop_media_paths()` was added,
+        // `Collection::media()` returned `InvalidInput("attempted media
+        // operation without media folder set")`, which made `import_apkg`
+        // fail as soon as it touched media.
+        col.media().expect("media manager must be constructible");
+
+        // Sanity: the sibling media folder really exists on disk now.
+        assert!(col_path.with_extension("media").is_dir());
+    }
 }

@@ -15,9 +15,12 @@
 // registers and calls them.
 #![allow(dead_code)]
 
+use crate::commands::collection::build_app_collection;
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
-use anki::collection::{Collection, CollectionBuilder};
+use anki::collection::Collection;
+#[cfg(test)]
+use anki::collection::CollectionBuilder;
 use anki::notes::Note;
 use anki::prelude::DeckId;
 use serde::Serialize;
@@ -121,9 +124,7 @@ pub async fn bootstrap_dev_collection(
             .map_err(|e| AppError::Anyhow(anyhow::Error::new(e).context("create .memorize-dev dir")))?;
     }
 
-    let col = CollectionBuilder::new(&path)
-        .set_shared_progress_state(state.progress.clone())
-        .build()?;
+    let col = build_app_collection(&path, state.progress.clone())?;
 
     let mut guard = state.col.lock().await;
     if let Some(prev) = guard.take() {

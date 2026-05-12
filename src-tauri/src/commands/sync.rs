@@ -1,7 +1,7 @@
+use crate::commands::collection::build_app_collection;
 use crate::error::{AppError, AppResult};
 use crate::progress::ProgressEmitter;
 use crate::state::AppState;
-use anki::collection::CollectionBuilder;
 use anki::sync::collection::normal::SyncActionRequired;
 use anki::sync::login::{sync_login, SyncAuth};
 use serde::{Deserialize, Serialize};
@@ -297,10 +297,7 @@ async fn full_sync(
 
     // Always try to re-open before returning, even if full_upload errored,
     // so the app doesn't end up in a "collection not open" state.
-    match CollectionBuilder::new(&path)
-        .set_shared_progress_state(state.progress.clone())
-        .build()
-    {
+    match build_app_collection(&path, state.progress.clone()) {
         Ok(reopened) => *state.col.lock().await = Some(reopened),
         Err(e) => tracing::error!(?e, "failed to re-open after full sync"),
     }
