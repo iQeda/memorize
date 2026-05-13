@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, BookA, Volume2, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, BookA, Volume2, Repeat, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
+  import { listen } from "@tauri-apps/api/event";
   import CardFrame from "$lib/components/CardFrame.svelte";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { t } from "$lib/i18n/index.svelte";
   import { shortcuts } from "$lib/stores/shortcuts.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { collection } from "$lib/stores/collection.svelte";
-  import { speech } from "$lib/stores/speech.svelte";
+  import { speech, MAX_REPEAT } from "$lib/stores/speech.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -57,7 +58,43 @@
   );
 
   onMount(async () => {
+    // バックエンドの say が自然終了するたびに飛んでくる。リピート ON のあいだ、
+    // 1 秒待ってから同じ frame のテキストを再抽出して再再生する。
+    // 上書き再生 (新カード自動再生 / 手動 speak / カード切替) のときはバックエンドが
+    // 旧プロセスを kill + 旧 cancel_rx に () を投げているため、このイベントは飛ばない。
+    unlistenSpeech = await listen<void>("memorize://speech-finished", () => {
+      if (!speech.repeat) return;
+      if (speech.repeatCount >= MAX_REPEAT) {
+        // 最大回数到達 → チェックを自動で外す
+        speech.repeat = false;
+        speech.repeatCount = 0;
+        return;
+      }
+      const frame = lastSpokenFrame;
+      if (!frame) return;
+      if (repeatTimer) clearTimeout(repeatTimer);
+      repeatTimer = setTimeout(() => {
+        repeatTimer = null;
+        speech.repeatCount += 1;
+        speakFrame(frame);
+      }, 1000);
+    });
     await startSession();
+  });
+
+  onDestroy(() => {
+    if (unlistenSpeech) {
+      unlistenSpeech();
+      unlistenSpeech = null;
+    }
+    if (repeatTimer) {
+      clearTimeout(repeatTimer);
+      repeatTimer = null;
+    }
+    // Reviewer を離れたら repeat 状態自体もリセット。これは「セッション内の
+    // 一時設定」というユーザー要件 (チェックは最大回数到達で外れる) と一貫する。
+    speech.repeat = false;
+    speech.repeatCount = 0;
   });
 
   // `totals` は `get_next_card` の `remaining` でしか更新されないため、
@@ -187,6 +224,14 @@
   let copyInfoTimer: ReturnType<typeof setTimeout> | null = null;
   let lastSpokenCardId = $state<number | null>(null);
 
+  // リピート再生サイクル管理。`lastSpokenFrame` は finished イベント受信時に
+  // 「どの iframe からテキストを再抽出するか」を解決するため保持する。
+  // setTimeout は cleanup 用にハンドルを覚えておく必要があるが、speech store
+  // ではなく Reviewer ローカルに置く: Reviewer を離れたら確実に止めたいから。
+  let lastSpokenFrame: HTMLIFrameElement | null = null;
+  let repeatTimer: ReturnType<typeof setTimeout> | null = null;
+  let unlistenSpeech: (() => void) | null = null;
+
   // Anki テンプレートの answer 側は通常 `{{FrontSide}}<hr id=answer>{{Back}}` 構造で、
   // answer_html に質問部分が含まれる。フリップ後は答えだけ見せたいので hr#answer を
   // 境に前半 (質問) を削除した HTML を返す。hr#answer が無いカスタムテンプレートは
@@ -296,10 +341,21 @@
     }
   }
 
+  /** リピートサイクルを開始する: 進行中の setTimeout を捨て、count=1 から数え直す。 */
+  function startSpeakCycle(frame: HTMLIFrameElement) {
+    if (repeatTimer) {
+      clearTimeout(repeatTimer);
+      repeatTimer = null;
+    }
+    speech.repeatCount = 1;
+    lastSpokenFrame = frame;
+    speakFrame(frame);
+  }
+
   function speakCardText() {
     const frame = showingAnswer ? answerFrame : questionFrame;
     if (!frame) return;
-    speakFrame(frame);
+    startSpeakCycle(frame);
   }
 
   $effect(() => {
@@ -310,7 +366,22 @@
     const frame = questionFrame;
     if (!frame) return;
     lastSpokenCardId = id;
-    speakFrame(frame);
+    startSpeakCycle(frame);
+  });
+
+  // カード切替で「前のカードのリピート」を確実に止める。current?.card_id の
+  // 変化を検知して進行中の setTimeout をキャンセル。新カードの自動再生 or
+  // 手動 speak は startSpeakCycle 側で repeatCount=1 にリセットされる。
+  let prevCardIdForRepeat: number | null = null;
+  $effect(() => {
+    const id = current?.card_id ?? null;
+    if (id !== prevCardIdForRepeat) {
+      if (repeatTimer) {
+        clearTimeout(repeatTimer);
+        repeatTimer = null;
+      }
+      prevCardIdForRepeat = id;
+    }
   });
 
   function onKey(e: KeyboardEvent) {
@@ -362,6 +433,16 @@
     if (shortcuts.isSpeak(e.key)) {
       e.preventDefault();
       speakCardText();
+      return;
+    }
+    // Toggle repeat. OFF にした瞬間に進行中のポーズタイマーも捨てて、すぐ止める。
+    if (shortcuts.isRepeat(e.key)) {
+      e.preventDefault();
+      speech.toggleRepeat();
+      if (!speech.repeat && repeatTimer) {
+        clearTimeout(repeatTimer);
+        repeatTimer = null;
+      }
       return;
     }
     if (e.key === " " || e.key === "Enter") {
@@ -448,6 +529,27 @@
     </p>
     <div class="flex items-center gap-1">
       {#if current}
+        <label
+          class="flex h-7 cursor-pointer items-center gap-1.5 rounded-(--radius-md) px-2 text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
+          title="{t('reviewer.repeat')} ({shortcuts.label('repeat')})"
+        >
+          <input
+            type="checkbox"
+            checked={speech.repeat}
+            onchange={(e) => {
+              const next = (e.currentTarget as HTMLInputElement).checked;
+              if (next !== speech.repeat) speech.toggleRepeat();
+              if (!speech.repeat && repeatTimer) {
+                clearTimeout(repeatTimer);
+                repeatTimer = null;
+              }
+            }}
+            class="h-3 w-3 cursor-pointer accent-(--color-accent-500)"
+            aria-label={t("reviewer.repeat")}
+          />
+          <Repeat size={14} />
+          <span class="font-mono text-[10px] opacity-70">{shortcuts.label("repeat")}</span>
+        </label>
         <button
           type="button"
           onclick={openEditor}

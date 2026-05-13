@@ -3,11 +3,10 @@ use anki::prelude::CardId;
 use anki::progress::ProgressState;
 use anki::scheduler::states::SchedulingStates;
 use std::path::PathBuf;
-use std::process::Child;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Instant;
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
 
 #[derive(Clone)]
 pub struct CachedQueueEntry {
@@ -32,12 +31,15 @@ pub struct AppState {
     /// handler stops intercepting once the frontend has finished its
     /// shutdown sync.
     pub allow_exit: AtomicBool,
-    /// 直近に起動した /usr/bin/say の Child。新しい読み上げを始める前に
-    /// kill して、ボタン連打や card 切替時の重複再生を防ぐ。osascript
-    /// 経由ではなく say を直接呼ぶのは、ad-hoc 署名 + Hardened Runtime の
-    /// 本番ビルドでは Apple Events 送信に entitlement が必要で発火しない
-    /// ため。子プロセス起動だけなら権限プロンプトも entitlement も不要。
-    pub speech_proc: Mutex<Option<Child>>,
+    /// 進行中の `say` プロセスを kill するためのキャンセル送信元。
+    /// Child 本体は spawn したタスク内で所有・wait されるため、外部から
+    /// 止めたいときは Sender::send(()) を投げて select! 側の cancel 分岐に
+    /// 処理を移譲する。新規再生開始のたびに旧 Sender を上書きするので、
+    /// 自動的に前回再生はキャンセル扱いになる。osascript ではなく `say` を
+    /// 直接 spawn する理由 (ad-hoc 署名 + Hardened Runtime 下で
+    /// `com.apple.security.automation.apple-events` entitlement が不要)
+    /// は従来と同じ。
+    pub speech_cancel: Mutex<Option<oneshot::Sender<()>>>,
 }
 
 impl Default for AppState {
@@ -58,7 +60,7 @@ impl Default for AppState {
             last_queued: Mutex::new(None),
             progress: Arc::new(StdMutex::new(ProgressState::default())),
             allow_exit: AtomicBool::new(false),
-            speech_proc: Mutex::new(None),
+            speech_cancel: Mutex::new(None),
         }
     }
 }

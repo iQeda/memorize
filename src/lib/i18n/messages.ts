@@ -94,6 +94,7 @@ export const messages = {
     "reviewer.good": "Good",
     "reviewer.easy": "Easy",
     "reviewer.speak": "Speak",
+    "reviewer.repeat": "Repeat playback",
 
     // Browse
     "browse.filter": "Filter",
@@ -363,6 +364,7 @@ export const messages = {
     "reviewer.good": "普通",
     "reviewer.easy": "簡単",
     "reviewer.speak": "読み上げ",
+    "reviewer.repeat": "リピート再生",
 
     // Browse
     "browse.filter": "フィルタ",
