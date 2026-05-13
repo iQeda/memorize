@@ -58,18 +58,23 @@
   );
 
   onMount(async () => {
+    // 永続設定「問題開始時にリピートを有効にする」が ON なら、Reviewer に
+    // 入った時点でチェックを入れた状態にする。onDestroy で repeat は false に
+    // 戻されるので、毎回ここで永続設定から復元する。
+    if (speech.repeatOnQuestionStart) {
+      speech.repeat = true;
+      speech.repeatCount = 0;
+    }
     // バックエンドの say が自然終了するたびに飛んでくる。リピート ON のあいだ、
     // 1 秒待ってから同じ frame のテキストを再抽出して再再生する。
     // 上書き再生 (新カード自動再生 / 手動 speak / カード切替) のときはバックエンドが
     // 旧プロセスを kill + 旧 cancel_rx に () を投げているため、このイベントは飛ばない。
     unlistenSpeech = await listen<void>("memorize://speech-finished", () => {
       if (!speech.repeat) return;
-      if (speech.repeatCount >= MAX_REPEAT) {
-        // 最大回数到達 → チェックを自動で外す
-        speech.repeat = false;
-        speech.repeatCount = 0;
-        return;
-      }
+      // 最大回数到達: このカードではこれ以上ループしないが、チェックは維持。
+      // 次カードに進んだら startSpeakCycle が repeatCount を 1 に戻すので、
+      // 自動再生 (speakQuestionOnShow) ON 時は新カードでも 5 回ループが続く。
+      if (speech.repeatCount >= MAX_REPEAT) return;
       const frame = lastSpokenFrame;
       if (!frame) return;
       if (repeatTimer) clearTimeout(repeatTimer);

@@ -168,6 +168,9 @@ export const messages = {
     "settings.speech.autoLabel": "Speak question on show",
     "settings.speech.autoBody":
       "When a new card's question appears, read its text aloud using the macOS system voice (/usr/bin/say).",
+    "settings.speech.repeatOnStartLabel": "Enable repeat on question start",
+    "settings.speech.repeatOnStartBody":
+      "When entering the reviewer, turn the Repeat checkbox on by default so each card automatically replays up to 5 times.",
     "settings.speech.macOnly":
       "Uses the system voice configured in System Settings → Accessibility → Spoken Content → System voice. macOS only; no-op on other platforms.",
     "updater.askTitle": "Update available",
@@ -438,6 +441,9 @@ export const messages = {
     "settings.speech.autoLabel": "問題表示時に読み上げる",
     "settings.speech.autoBody":
       "新しいカードの問題が表示されたとき、本文を macOS のシステム音声 (/usr/bin/say) で読み上げます。",
+    "settings.speech.repeatOnStartLabel": "問題開始時にリピートを有効にする",
+    "settings.speech.repeatOnStartBody":
+      "学習画面に入った時点で Repeat チェックを ON にし、各カードを最大 5 回まで自動でリピート再生します。",
     "settings.speech.macOnly":
       "システム設定 → アクセシビリティ → 読み上げコンテンツ → システムの声で選んだ音声で読み上げます。macOS 専用機能です。",
     "updater.askTitle": "アップデートが利用可能",

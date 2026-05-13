@@ -5,6 +5,7 @@ describe("speech store — repeat", () => {
   beforeEach(() => {
     speech.repeat = false;
     speech.repeatCount = 0;
+    speech.repeatOnQuestionStart = false;
   });
 
   it("MAX_REPEAT is 5 (matches the user-facing spec)", () => {
@@ -36,5 +37,15 @@ describe("speech store — repeat", () => {
     speech.resetRepeatCount();
     expect(speech.repeat).toBe(true);
     expect(speech.repeatCount).toBe(0);
+  });
+
+  it("setRepeatOnQuestionStart updates the in-memory flag", () => {
+    // ストアの constructor / setter は `if (browser)` で localStorage アクセスを
+    // ガードしている。テスト時は `$app/environment` のモックが `browser=false` を
+    // 返すので、ここでは in-memory の値だけが書き換わることを検証する。
+    speech.setRepeatOnQuestionStart(true);
+    expect(speech.repeatOnQuestionStart).toBe(true);
+    speech.setRepeatOnQuestionStart(false);
+    expect(speech.repeatOnQuestionStart).toBe(false);
   });
 });

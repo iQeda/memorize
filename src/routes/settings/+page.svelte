@@ -965,6 +965,30 @@
           ></span>
         </button>
       </div>
+      <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
+        <div class="flex items-center gap-2.5">
+          <Volume2 size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("settings.speech.repeatOnStartLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("settings.speech.repeatOnStartBody")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={() => speech.setRepeatOnQuestionStart(!speech.repeatOnQuestionStart)}
+          aria-pressed={speech.repeatOnQuestionStart}
+          aria-label={t("settings.speech.repeatOnStartLabel")}
+          class="relative h-5 w-9 shrink-0 rounded-full transition-colors {speech.repeatOnQuestionStart
+            ? 'bg-(--color-accent-500)'
+            : 'bg-(--color-bg-overlay)'}"
+        >
+          <span
+            class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {speech.repeatOnQuestionStart
+              ? 'left-[18px]'
+              : 'left-0.5'}"
+          ></span>
+        </button>
+      </div>
       <p class="mt-3 text-xs text-(--color-fg-subtle)">{t("settings.speech.macOnly")}</p>
     </div>
   </section>
