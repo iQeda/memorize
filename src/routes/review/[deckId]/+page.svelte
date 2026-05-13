@@ -13,7 +13,7 @@
   import { shortcuts } from "$lib/stores/shortcuts.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { collection } from "$lib/stores/collection.svelte";
-  import { speech, MAX_REPEAT } from "$lib/stores/speech.svelte";
+  import { speech } from "$lib/stores/speech.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -74,7 +74,7 @@
       // 最大回数到達: このカードではこれ以上ループしないが、チェックは維持。
       // 次カードに進んだら startSpeakCycle が repeatCount を 1 に戻すので、
       // 自動再生 (speakQuestionOnShow) ON 時は新カードでも 5 回ループが続く。
-      if (speech.repeatCount >= MAX_REPEAT) return;
+      if (speech.repeatCount >= speech.maxRepeat) return;
       const frame = lastSpokenFrame;
       if (!frame) return;
       if (repeatTimer) clearTimeout(repeatTimer);
@@ -366,7 +366,13 @@
   $effect(() => {
     const id = current?.card_id;
     if (!id) return;
-    if (!speech.speakQuestionOnShow) return;
+    // 新カード表示時に自動再生をかける条件:
+    //   - 自動読み上げ ON (speakQuestionOnShow) — 既存挙動
+    //   - もしくはリピート ON (speech.repeat) — 「問題開始時にリピートを有効にする」
+    //     設定が ON で onMount が speech.repeat=true にしたケースを含む。
+    //     1 回目の再生がないと finished イベントも飛ばず、リピートサイクルが
+    //     永遠に始まらない。リピート希望時は 1 回目も自動でかける。
+    if (!speech.speakQuestionOnShow && !speech.repeat) return;
     if (lastSpokenCardId === id) return;
     const frame = questionFrame;
     if (!frame) return;

@@ -1,17 +1,22 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { speech, MAX_REPEAT } from "./speech.svelte";
+import {
+  speech,
+  DEFAULT_MAX_REPEAT,
+  MAX_REPEAT_MIN,
+  MAX_REPEAT_MAX,
+} from "./speech.svelte";
 
 describe("speech store — repeat", () => {
   beforeEach(() => {
     speech.repeat = false;
     speech.repeatCount = 0;
     speech.repeatOnQuestionStart = false;
+    speech.maxRepeat = DEFAULT_MAX_REPEAT;
   });
 
-  it("MAX_REPEAT is 5 (matches the user-facing spec)", () => {
-    // ハードコード値ではなく定数を介して読むことを Reviewer 側に強制したいので、
-    // 定数の値そのものをテストで固定しておく。
-    expect(MAX_REPEAT).toBe(5);
+  it("DEFAULT_MAX_REPEAT is 5 (matches the user-facing spec)", () => {
+    expect(DEFAULT_MAX_REPEAT).toBe(5);
+    expect(speech.maxRepeat).toBe(5);
   });
 
   it("starts with repeat off and count zero", () => {
@@ -47,5 +52,26 @@ describe("speech store — repeat", () => {
     expect(speech.repeatOnQuestionStart).toBe(true);
     speech.setRepeatOnQuestionStart(false);
     expect(speech.repeatOnQuestionStart).toBe(false);
+  });
+
+  it("setMaxRepeat clamps values to the documented range", () => {
+    speech.setMaxRepeat(3);
+    expect(speech.maxRepeat).toBe(3);
+
+    // 上限超過 → MAX_REPEAT_MAX で頭打ち
+    speech.setMaxRepeat(MAX_REPEAT_MAX + 10);
+    expect(speech.maxRepeat).toBe(MAX_REPEAT_MAX);
+
+    // 下限未満 / 不正値 → MAX_REPEAT_MIN
+    speech.setMaxRepeat(0);
+    expect(speech.maxRepeat).toBe(MAX_REPEAT_MIN);
+    speech.setMaxRepeat(-7);
+    expect(speech.maxRepeat).toBe(MAX_REPEAT_MIN);
+
+    // 非整数 → round
+    speech.setMaxRepeat(4.4);
+    expect(speech.maxRepeat).toBe(4);
+    speech.setMaxRepeat(4.6);
+    expect(speech.maxRepeat).toBe(5);
   });
 });

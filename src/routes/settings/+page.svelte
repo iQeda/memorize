@@ -3,7 +3,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
-  import { speech } from "$lib/stores/speech.svelte";
+  import { speech, MAX_REPEAT_MIN, MAX_REPEAT_MAX } from "$lib/stores/speech.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
   import { shortcuts, type Action } from "$lib/stores/shortcuts.svelte";
   import { onMount } from "svelte";
@@ -24,6 +24,7 @@
     Power,
     DownloadCloud,
     Volume2,
+    Repeat,
   } from "lucide-svelte";
 
   const localeOptions: { value: Locale; label: string }[] = [
@@ -988,6 +989,28 @@
               : 'left-0.5'}"
           ></span>
         </button>
+      </div>
+      <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
+        <div class="flex items-center gap-2.5">
+          <Repeat size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("settings.speech.maxRepeatLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("settings.speech.maxRepeatBody")}</p>
+          </div>
+        </div>
+        <input
+          type="number"
+          min={MAX_REPEAT_MIN}
+          max={MAX_REPEAT_MAX}
+          step="1"
+          value={speech.maxRepeat}
+          oninput={(e) => {
+            const next = Number.parseInt((e.currentTarget as HTMLInputElement).value, 10);
+            if (Number.isFinite(next)) speech.setMaxRepeat(next);
+          }}
+          aria-label={t("settings.speech.maxRepeatLabel")}
+          class="number-tabular w-16 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
+        />
       </div>
       <p class="mt-3 text-xs text-(--color-fg-subtle)">{t("settings.speech.macOnly")}</p>
     </div>
