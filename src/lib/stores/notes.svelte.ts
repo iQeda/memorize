@@ -13,6 +13,7 @@ export type NoteDetail = {
   field_names: string[];
   fields: string[];
   tags: string[];
+  deck_id: number;
 };
 
 class NotesStore {
@@ -77,6 +78,25 @@ class NotesStore {
           fields: input.fields,
           tags: input.tags,
         },
+      });
+      return true;
+    } catch (e) {
+      this.lastError = String(e);
+      return false;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async setNoteDeck(input: {
+    noteId: number;
+    deckId: number;
+  }): Promise<boolean> {
+    this.busy = true;
+    this.lastError = null;
+    try {
+      await invoke("set_note_deck", {
+        input: { note_id: input.noteId, deck_id: input.deckId },
       });
       return true;
     } catch (e) {

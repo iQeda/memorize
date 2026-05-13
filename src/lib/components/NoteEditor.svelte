@@ -20,7 +20,13 @@
   let fields = $state<string[]>([]);
   let tagsText = $state("");
   let deckId = $state<number | null>(null);
+  let deckPickerOpen = $state(false);
+  let deckSelectEl = $state<HTMLSelectElement | undefined>();
   let loading = $state(true);
+
+  const currentDeckName = $derived(
+    collection.decks.find((d) => d.id === deckId)?.name ?? "—",
+  );
   // 各フィールドの contenteditable 要素を直接捕捉する。dialogRoot.querySelector
   // 経由だと描画タイミング次第で初回 focus が空振りすることがあるため。
   let fieldEls = $state<(HTMLElement | undefined)[]>([]);
@@ -53,6 +59,7 @@
         };
         fields = [...detail.fields];
         tagsText = detail.tags.join(" ");
+        deckId = detail.deck_id;
       }
     } else {
       notetype = notes.notetypes[0] ?? null;
@@ -72,6 +79,33 @@
   function selectNotetype(nt: NotetypeSummary) {
     notetype = nt;
     fields = nt.field_names.map(() => "");
+  }
+
+  async function openDeckPicker() {
+    deckPickerOpen = true;
+    // バッジ → select に切り替わった直後にドロップダウンを開けるよう
+    // フォーカスを移す。マウントとフォーカスの順序を tick で確実に。
+    await tick();
+    deckSelectEl?.focus();
+  }
+
+  async function onDeckChange(e: Event) {
+    if (mode !== "edit" || noteId === undefined) return;
+    const next = Number((e.currentTarget as HTMLSelectElement).value);
+    if (!Number.isFinite(next) || next === deckId) {
+      deckPickerOpen = false;
+      return;
+    }
+    const prev = deckId;
+    deckId = next;
+    const ok = await notes.setNoteDeck({ noteId, deckId: next });
+    if (ok) {
+      deckPickerOpen = false;
+      onSaved?.();
+    } else {
+      // ロールバック: 失敗した場合は select の表示と state を戻す。
+      deckId = prev;
+    }
   }
 
   async function save() {
@@ -213,9 +247,34 @@
               </label>
             </div>
           {:else}
-            <p class="text-xs text-(--color-fg-subtle)">
-              {t("note.notetype")}: <span class="text-(--color-fg-default)">{notetype.name}</span>
-            </p>
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-xs text-(--color-fg-subtle)">
+                {t("note.notetype")}: <span class="text-(--color-fg-default)">{notetype.name}</span>
+              </p>
+              {#if !deckPickerOpen}
+                <button
+                  type="button"
+                  onclick={openDeckPicker}
+                  disabled={notes.busy || collection.decks.length === 0}
+                  class="rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-overlay) px-2 py-1 text-[11px] text-(--color-fg-default) hover:bg-(--color-bg-base) disabled:opacity-50"
+                >
+                  {t("browse.deck")}: <span class="font-medium">{currentDeckName}</span>
+                </button>
+              {:else}
+                <select
+                  bind:this={deckSelectEl}
+                  value={deckId}
+                  onchange={onDeckChange}
+                  onblur={() => (deckPickerOpen = false)}
+                  disabled={notes.busy}
+                  class="rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-xs shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
+                >
+                  {#each collection.decks as d (d.id)}
+                    <option value={d.id}>{d.name}</option>
+                  {/each}
+                </select>
+              {/if}
+            </div>
           {/if}
 
           {#each notetype.field_names as fname, i (i)}

@@ -131,6 +131,7 @@ pub fn run() {
             commands::notes::add_note,
             commands::notes::update_note,
             commands::notes::delete_notes,
+            commands::notes::set_note_deck,
             commands::speech::start_speak_text,
             commands::nani::start_nani_lookup,
             #[cfg(debug_assertions)]
