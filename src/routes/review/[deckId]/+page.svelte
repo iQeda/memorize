@@ -59,8 +59,9 @@
 
   onMount(async () => {
     // 永続設定「問題開始時にリピートを有効にする」が ON なら、Reviewer に
-    // 入った時点でチェックを入れた状態にする。onDestroy で repeat は false に
-    // 戻されるので、毎回ここで永続設定から復元する。
+    // 入った時点でチェックを入れた状態にする。onDestroy では repeat を
+    // 触らないので、ユーザーが手動で OFF にした状態も次の Reviewer 入りまで
+    // 維持される。
     if (speech.repeatOnQuestionStart) {
       speech.repeat = true;
       speech.repeatCount = 0;
@@ -96,10 +97,11 @@
       clearTimeout(repeatTimer);
       repeatTimer = null;
     }
-    // Reviewer を離れたら repeat 状態自体もリセット。これは「セッション内の
-    // 一時設定」というユーザー要件 (チェックは最大回数到達で外れる) と一貫する。
-    speech.repeat = false;
-    speech.repeatCount = 0;
+    // speech.repeat / speech.repeatCount は意図的に触らない:
+    // ・HMR や route 遷移で「新 mount の onMount が true → 旧 mount の
+    //   onDestroy が false を上書き」というレースを防ぐ
+    // ・「次の単語のレビューでもチェック状態は維持」というユーザー要件と一致
+    // ・設定が ON なら次回 Reviewer 入りで onMount が改めて true をセットする
   });
 
   // `totals` は `get_next_card` の `remaining` でしか更新されないため、
@@ -546,10 +548,12 @@
         >
           <input
             type="checkbox"
-            checked={speech.repeat}
-            onchange={(e) => {
-              const next = (e.currentTarget as HTMLInputElement).checked;
-              if (next !== speech.repeat) speech.toggleRepeat();
+            bind:checked={speech.repeat}
+            onchange={() => {
+              // bind:checked が `speech.repeat` を既に更新しているので、ここでは
+              // 副次的な後始末だけ: 切替時はカウンタを 0 に戻し、OFF にした瞬間に
+              // 進行中のポーズタイマーも捨ててリピートをすぐ止める。
+              speech.repeatCount = 0;
               if (!speech.repeat && repeatTimer) {
                 clearTimeout(repeatTimer);
                 repeatTimer = null;
