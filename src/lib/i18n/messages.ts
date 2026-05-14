@@ -174,6 +174,9 @@ export const messages = {
     "settings.speech.maxRepeatLabel": "Maximum repeat count",
     "settings.speech.maxRepeatBody":
       "How many times each card plays during a repeat cycle.",
+    "settings.speech.repeatIntervalLabel": "Repeat interval (seconds)",
+    "settings.speech.repeatIntervalBody":
+      "Pause between repeat playbacks. 0 replays immediately.",
     "settings.speech.macOnly":
       "Uses the system voice configured in System Settings → Accessibility → Spoken Content → System voice. macOS only; no-op on other platforms.",
     "updater.askTitle": "Update available",
@@ -450,6 +453,9 @@ export const messages = {
     "settings.speech.maxRepeatLabel": "最大リピート回数",
     "settings.speech.maxRepeatBody":
       "リピートサイクル中に各カードを再生する回数。",
+    "settings.speech.repeatIntervalLabel": "リピート間隔 (秒)",
+    "settings.speech.repeatIntervalBody":
+      "リピート再生の間のポーズ。0 で即座にリピート。",
     "settings.speech.macOnly":
       "システム設定 → アクセシビリティ → 読み上げコンテンツ → システムの声で選んだ音声で読み上げます。macOS 専用機能です。",
     "updater.askTitle": "アップデートが利用可能",

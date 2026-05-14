@@ -3,6 +3,7 @@ import { browser } from "$app/environment";
 const SPEAK_QUESTION_KEY = "memorize:speak-question-on-show";
 const REPEAT_ON_START_KEY = "memorize:repeat-on-question-start";
 const MAX_REPEAT_KEY = "memorize:max-repeat";
+const REPEAT_INTERVAL_KEY = "memorize:repeat-interval-sec";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;
@@ -10,9 +11,22 @@ export const DEFAULT_MAX_REPEAT = 3;
 export const MAX_REPEAT_MIN = 1;
 export const MAX_REPEAT_MAX = 10;
 
+/** リピート再生間のポーズ秒数のデフォルト。設定画面の数値入力で上書き可能。 */
+export const DEFAULT_REPEAT_INTERVAL_SEC = 1;
+/** 設定 UI で受け付ける範囲。0 = ポーズなしで即リピート。 */
+export const REPEAT_INTERVAL_MIN = 0;
+export const REPEAT_INTERVAL_MAX = 10;
+
 function clampMaxRepeat(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_MAX_REPEAT;
   return Math.min(MAX_REPEAT_MAX, Math.max(MAX_REPEAT_MIN, Math.round(n)));
+}
+
+function clampRepeatInterval(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_REPEAT_INTERVAL_SEC;
+  // 0.01 秒刻みを許容。浮動小数の桁あふれを避けるため小数第 2 位で丸める。
+  const rounded = Math.round(n * 100) / 100;
+  return Math.min(REPEAT_INTERVAL_MAX, Math.max(REPEAT_INTERVAL_MIN, rounded));
 }
 
 class SpeechStore {
@@ -22,8 +36,10 @@ class SpeechStore {
    *  始まり、新カードの自動再生 (`speakQuestionOnShow`) と組み合わさって
    *  毎カード 5 回ループが自動的に走る。 */
   repeatOnQuestionStart = $state(false);
-  /** 1 サイクルあたりの最大再生回数 (1 回目を含む)。永続化、デフォルト 5。 */
+  /** 1 サイクルあたりの最大再生回数 (1 回目を含む)。永続化、デフォルト 3。 */
   maxRepeat = $state(DEFAULT_MAX_REPEAT);
+  /** リピート再生間のポーズ秒数。永続化、デフォルト 1 秒。 */
+  repeatIntervalSec = $state(DEFAULT_REPEAT_INTERVAL_SEC);
   /** Reviewer 表示中のみ意味を持つセッションフラグ。永続化しない。
    *  ON のあいだ、`memorize://speech-finished` 受信時に 1 秒ポーズして
    *  同じテキストを再生し直す。 */
@@ -42,6 +58,12 @@ class SpeechStore {
       const storedMax = localStorage.getItem(MAX_REPEAT_KEY);
       if (storedMax !== null) {
         this.maxRepeat = clampMaxRepeat(Number.parseInt(storedMax, 10));
+      }
+      const storedInterval = localStorage.getItem(REPEAT_INTERVAL_KEY);
+      if (storedInterval !== null) {
+        this.repeatIntervalSec = clampRepeatInterval(
+          Number.parseFloat(storedInterval),
+        );
       }
     }
   }
@@ -65,6 +87,14 @@ class SpeechStore {
     this.maxRepeat = clamped;
     if (browser) {
       localStorage.setItem(MAX_REPEAT_KEY, String(clamped));
+    }
+  }
+
+  setRepeatIntervalSec(value: number) {
+    const clamped = clampRepeatInterval(value);
+    this.repeatIntervalSec = clamped;
+    if (browser) {
+      localStorage.setItem(REPEAT_INTERVAL_KEY, String(clamped));
     }
   }
 

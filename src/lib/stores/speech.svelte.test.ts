@@ -4,6 +4,9 @@ import {
   DEFAULT_MAX_REPEAT,
   MAX_REPEAT_MIN,
   MAX_REPEAT_MAX,
+  DEFAULT_REPEAT_INTERVAL_SEC,
+  REPEAT_INTERVAL_MIN,
+  REPEAT_INTERVAL_MAX,
 } from "./speech.svelte";
 
 describe("speech store — repeat", () => {
@@ -12,6 +15,7 @@ describe("speech store — repeat", () => {
     speech.repeatCount = 0;
     speech.repeatOnQuestionStart = false;
     speech.maxRepeat = DEFAULT_MAX_REPEAT;
+    speech.repeatIntervalSec = DEFAULT_REPEAT_INTERVAL_SEC;
   });
 
   it("DEFAULT_MAX_REPEAT is 3 (matches the user-facing spec)", () => {
@@ -73,5 +77,39 @@ describe("speech store — repeat", () => {
     expect(speech.maxRepeat).toBe(4);
     speech.setMaxRepeat(4.6);
     expect(speech.maxRepeat).toBe(5);
+  });
+
+  it("DEFAULT_REPEAT_INTERVAL_SEC is 1", () => {
+    expect(DEFAULT_REPEAT_INTERVAL_SEC).toBe(1);
+    expect(speech.repeatIntervalSec).toBe(1);
+  });
+
+  it("setRepeatIntervalSec clamps to range and allows 0 (immediate replay)", () => {
+    speech.setRepeatIntervalSec(2);
+    expect(speech.repeatIntervalSec).toBe(2);
+
+    // 小数 (0.01 刻み) を許容
+    speech.setRepeatIntervalSec(0.5);
+    expect(speech.repeatIntervalSec).toBe(0.5);
+    speech.setRepeatIntervalSec(0.25);
+    expect(speech.repeatIntervalSec).toBe(0.25);
+
+    // 0 はポーズなしで有効
+    speech.setRepeatIntervalSec(0);
+    expect(speech.repeatIntervalSec).toBe(REPEAT_INTERVAL_MIN);
+
+    // 上限超過 → REPEAT_INTERVAL_MAX
+    speech.setRepeatIntervalSec(REPEAT_INTERVAL_MAX + 5);
+    expect(speech.repeatIntervalSec).toBe(REPEAT_INTERVAL_MAX);
+
+    // 負値 → 下限
+    speech.setRepeatIntervalSec(-3);
+    expect(speech.repeatIntervalSec).toBe(REPEAT_INTERVAL_MIN);
+
+    // 0.01 刻みより細かい値は小数第 2 位で丸める
+    speech.setRepeatIntervalSec(1.234);
+    expect(speech.repeatIntervalSec).toBe(1.23);
+    speech.setRepeatIntervalSec(1.236);
+    expect(speech.repeatIntervalSec).toBe(1.24);
   });
 });

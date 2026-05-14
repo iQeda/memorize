@@ -83,7 +83,7 @@
         repeatTimer = null;
         speech.repeatCount += 1;
         speakFrame(frame);
-      }, 1000);
+      }, speech.repeatIntervalSec * 1000);
     });
     await startSession();
   });
