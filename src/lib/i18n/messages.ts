@@ -173,7 +173,7 @@ export const messages = {
       "When entering the reviewer, turn the Repeat checkbox on by default so each card automatically replays.",
     "settings.speech.maxRepeatLabel": "Maximum repeat count",
     "settings.speech.maxRepeatBody":
-      "How many times each card plays during a repeat cycle (including the first play). Default 5.",
+      "How many times each card plays during a repeat cycle.",
     "settings.speech.macOnly":
       "Uses the system voice configured in System Settings → Accessibility → Spoken Content → System voice. macOS only; no-op on other platforms.",
     "updater.askTitle": "Update available",
@@ -449,7 +449,7 @@ export const messages = {
       "学習画面に入った時点で Repeat チェックを ON にし、各カードを自動でリピート再生します。",
     "settings.speech.maxRepeatLabel": "最大リピート回数",
     "settings.speech.maxRepeatBody":
-      "リピートサイクル中に各カードを再生する回数 (1 回目を含む)。デフォルトは 5 回。",
+      "リピートサイクル中に各カードを再生する回数。",
     "settings.speech.macOnly":
       "システム設定 → アクセシビリティ → 読み上げコンテンツ → システムの声で選んだ音声で読み上げます。macOS 専用機能です。",
     "updater.askTitle": "アップデートが利用可能",

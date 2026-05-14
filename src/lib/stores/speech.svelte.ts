@@ -5,7 +5,7 @@ const REPEAT_ON_START_KEY = "memorize:repeat-on-question-start";
 const MAX_REPEAT_KEY = "memorize:max-repeat";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
-export const DEFAULT_MAX_REPEAT = 5;
+export const DEFAULT_MAX_REPEAT = 3;
 /** 設定 UI で受け付ける範囲。極端値は再生体験を壊すので 1..10 に clamp。 */
 export const MAX_REPEAT_MIN = 1;
 export const MAX_REPEAT_MAX = 10;

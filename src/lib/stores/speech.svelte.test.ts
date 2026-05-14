@@ -14,9 +14,9 @@ describe("speech store — repeat", () => {
     speech.maxRepeat = DEFAULT_MAX_REPEAT;
   });
 
-  it("DEFAULT_MAX_REPEAT is 5 (matches the user-facing spec)", () => {
-    expect(DEFAULT_MAX_REPEAT).toBe(5);
-    expect(speech.maxRepeat).toBe(5);
+  it("DEFAULT_MAX_REPEAT is 3 (matches the user-facing spec)", () => {
+    expect(DEFAULT_MAX_REPEAT).toBe(3);
+    expect(speech.maxRepeat).toBe(3);
   });
 
   it("starts with repeat off and count zero", () => {
