@@ -220,7 +220,18 @@
       // 投げて全デッキのカウントを塗り直す。次カード描画はブロックしない。
       void collection.refreshDecks();
     } catch (e) {
-      error = String(e);
+      const msg = String(e);
+      // rslib は楽観ロックで「フロントが提示された card state」と DB の最新値が
+      // ずれていると `InvalidInput: card was modified` を返す。長時間 Reviewer を
+      // 開きっぱなしで日付が跨ぎ elapsed_days が動いた、などで発生する。生の
+      // エラー文言は出さず、ユーザー向けの一言を出してカードを reload する
+      // (= loadNext で `last_queued` も最新 state で再構築される)。
+      if (msg.includes("card was modified")) {
+        flashInfo(t("reviewer.cardStateChanged"));
+        await loadNext();
+        return;
+      }
+      error = msg;
     }
   }
 

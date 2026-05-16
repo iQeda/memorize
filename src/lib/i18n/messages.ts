@@ -95,6 +95,8 @@ export const messages = {
     "reviewer.easy": "Easy",
     "reviewer.speak": "Speak",
     "reviewer.repeat": "Repeat playback",
+    "reviewer.cardStateChanged":
+      "Card state changed (date rolled over). Please rate it again.",
 
     // Browse
     "browse.filter": "Filter",
@@ -374,6 +376,8 @@ export const messages = {
     "reviewer.easy": "簡単",
     "reviewer.speak": "読み上げ",
     "reviewer.repeat": "リピート再生",
+    "reviewer.cardStateChanged":
+      "カード状態が更新されました (日付が切り替わったため)。もう一度評価してください。",
 
     // Browse
     "browse.filter": "フィルタ",
