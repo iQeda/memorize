@@ -566,8 +566,10 @@
       return;
     }
     // `l` (no shift): カード内 hide toggle。次カードで hideDefault に戻る。
+    // back 表示中は無効 — hide は front 専用なので、画面 UI (disabled ボタン) と挙動を揃える。
     if (!e.shiftKey && shortcuts.isHide(e.key)) {
       e.preventDefault();
+      if (showingAnswer) return;
       toggleHide();
       return;
     }
@@ -781,116 +783,40 @@
       <div
         class="mt-8 flex w-full shrink-0 flex-col items-center gap-3"
       >
-        {#if !showingAnswer}
-          <div class="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onclick={copyCardText}
-              in:fade={{ duration: 160, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title="Nani"
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                <BookA size={14} strokeWidth={2.25} />
-                Nani
-              </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
-            </button>
-            <button
-              type="button"
-              onclick={speakCardText}
-              in:fade={{ duration: 160, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title={t("reviewer.speak")}
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                <Volume2 size={14} strokeWidth={2.25} />
-                {t("reviewer.speak")}
-              </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("speak")}</span>
-            </button>
-            <button
-              type="button"
-              onclick={toggleHide}
-              in:fade={{ duration: 160, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title={hideActive ? t("reviewer.reveal") : t("reviewer.hide")}
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                {#if hideActive}
-                  <Eye size={14} strokeWidth={2.25} />
-                  {t("reviewer.reveal")}
-                {:else}
-                  <EyeOff size={14} strokeWidth={2.25} />
-                  {t("reviewer.hide")}
-                {/if}
-              </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("hide")}</span>
-            </button>
+        <!-- 1段目: Nani / Speak / (front: Hide-Reveal, back: Show Question)。
+             3 つ目の枠を front/back で使い分けることで位置を固定し、Show Answer 押下後に
+             Rating が同じ「2段目位置」に出てきて手の移動なしで採点できる。 -->
+        <div class="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onclick={copyCardText}
+            class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            title="Nani"
+          >
+            <span class="flex items-center gap-1.5 text-sm font-medium">
+              <BookA size={14} strokeWidth={2.25} />
+              Nani
+            </span>
+            <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
+          </button>
+          <button
+            type="button"
+            onclick={speakCardText}
+            class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+            title={t("reviewer.speak")}
+          >
+            <span class="flex items-center gap-1.5 text-sm font-medium">
+              <Volume2 size={14} strokeWidth={2.25} />
+              {t("reviewer.speak")}
+            </span>
+            <span class="font-mono text-[10px] opacity-70">{shortcuts.label("speak")}</span>
+          </button>
+          {#if showingAnswer}
             <button
               type="button"
               onclick={flip}
-              in:fade={{ duration: 160, easing: cubicOut }}
               class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                <Eye size={14} strokeWidth={2.25} />
-                {t("reviewer.showAnswer")}
-              </span>
-              <span class="font-mono text-[10px] opacity-70">Space / ↵</span>
-            </button>
-          </div>
-        {:else}
-          <div class="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onclick={copyCardText}
-              in:fade={{ duration: 200, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title="Nani"
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                <BookA size={14} strokeWidth={2.25} />
-                Nani
-              </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("copy")}</span>
-            </button>
-            <button
-              type="button"
-              onclick={speakCardText}
-              in:fade={{ duration: 200, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title={t("reviewer.speak")}
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                <Volume2 size={14} strokeWidth={2.25} />
-                {t("reviewer.speak")}
-              </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("speak")}</span>
-            </button>
-            <button
-              type="button"
-              onclick={toggleHide}
-              in:fade={{ duration: 200, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
-              title={hideActive ? t("reviewer.reveal") : t("reviewer.hide")}
-            >
-              <span class="flex items-center gap-1.5 text-sm font-medium">
-                {#if hideActive}
-                  <Eye size={14} strokeWidth={2.25} />
-                  {t("reviewer.reveal")}
-                {:else}
-                  <EyeOff size={14} strokeWidth={2.25} />
-                  {t("reviewer.hide")}
-                {/if}
-              </span>
-              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("hide")}</span>
-            </button>
-            <button
-              type="button"
-              onclick={flip}
-              in:fade={{ duration: 200, easing: cubicOut }}
-              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={t("reviewer.showQuestion")}
             >
               <span class="flex items-center gap-1.5 text-sm font-medium">
                 <RotateCcw size={14} strokeWidth={2.25} />
@@ -898,7 +824,29 @@
               </span>
               <span class="font-mono text-[10px] opacity-70">Space / ↵</span>
             </button>
-          </div>
+          {:else}
+            <button
+              type="button"
+              onclick={toggleHide}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={hideActive ? t("reviewer.reveal") : t("reviewer.hide")}
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                {#if hideActive}
+                  <Eye size={14} strokeWidth={2.25} />
+                  {t("reviewer.reveal")}
+                {:else}
+                  <EyeOff size={14} strokeWidth={2.25} />
+                  {t("reviewer.hide")}
+                {/if}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("hide")}</span>
+            </button>
+          {/if}
+        </div>
+        <!-- 2段目: front は Show Answer (横長)、back は Rating x 4。
+             同じ位置に置くことで Show Answer → Rating の手の移動がゼロ。 -->
+        {#if showingAnswer}
           <div class="flex items-center justify-center gap-3">
             {#each buttons as b, i (b.rating)}
               <button
@@ -911,6 +859,21 @@
                 <span class="font-mono text-[10px] opacity-70">{shortcuts.label(b.rating)}</span>
               </button>
             {/each}
+          </div>
+        {:else}
+          <div class="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onclick={flip}
+              class="flex h-16 w-[420px] flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={t("reviewer.showAnswer")}
+            >
+              <span class="flex items-center gap-1.5 text-base font-medium">
+                <Eye size={16} strokeWidth={2.25} />
+                {t("reviewer.showAnswer")}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">Space / ↵</span>
+            </button>
           </div>
         {/if}
       </div>
