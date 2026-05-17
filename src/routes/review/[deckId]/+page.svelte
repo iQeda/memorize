@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, Eye, Pencil, Copy, BookA, Volume2, Repeat, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Eye, EyeOff, Pencil, Copy, BookA, Volume2, Repeat, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -51,6 +51,10 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let shownAt = $state<number>(0);
+  // セッション内の hide 状態。`l` で toggle、カード切替で `speech.hideDefault` にリセット。
+  // 設定 (hideDefault) と分離しておくことで「設定 OFF でもこのカードだけ手で隠す」
+  // 「設定 ON でも今だけ見たい」両方を許す。
+  let hideActive = $state(false);
 
   const totalDue = $derived(totals.new + totals.learning + totals.review);
   const progress = $derived(
@@ -66,6 +70,7 @@
       speech.repeat = true;
       speech.repeatCount = 0;
     }
+    hideActive = speech.hideDefault;
     // バックエンドの say が自然終了するたびに飛んでくる。リピート ON のあいだ、
     // 1 秒待ってから同じ frame のテキストを再抽出して再再生する。
     // 上書き再生 (新カード自動再生 / 手動 speak / カード切替) のときはバックエンドが
@@ -153,6 +158,7 @@
 
   async function loadNext(isFirst = false) {
     showingAnswer = false;
+    hideActive = speech.hideDefault;
     try {
       const r = await invoke<NextCard>("get_next_card");
       if (r.kind === "card") {
@@ -376,6 +382,57 @@
     startSpeakCycle(frame);
   }
 
+  // 非表示モード: 親から questionFrame の body class を直接付け外しする。
+  // CardFrame の srcdoc は theme/html/css の derived で、新 prop を入れると
+  // iframe がフルリロードされ speech が中断するため、prop は介さず
+  // contentDocument を直接操作する。answer 側は常に通常表示。
+  // ラベル「[hidden mode]」は CSS ::after に頼ると iframe srcdoc が
+  // HMR や user CSS で古いまま/上書きされる懸念があるので、inline-style 付き
+  // の <div> を直接 body に挿入/撤去する。
+  const HIDDEN_LABEL_ID = "memorize-hidden-label";
+  const HIDDEN_LABEL_STYLE =
+    "position:fixed; inset:0; display:flex; align-items:center; justify-content:center; " +
+    "color:rgba(140,140,140,0.85); font-size:0.95rem; " +
+    "letter-spacing:0.05em; pointer-events:none; z-index:2147483647; visibility:visible;";
+  function applyHidden() {
+    const doc = questionFrame?.contentDocument;
+    if (!doc?.body) return;
+    doc.body.classList.toggle("memorize-hidden", hideActive);
+    const existing = doc.getElementById(HIDDEN_LABEL_ID);
+    if (hideActive) {
+      if (!existing) {
+        const el = doc.createElement("div");
+        el.id = HIDDEN_LABEL_ID;
+        el.textContent = "[hidden mode]";
+        el.setAttribute("style", HIDDEN_LABEL_STYLE);
+        doc.body.appendChild(el);
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+  }
+
+  function toggleHide() {
+    hideActive = !hideActive;
+    applyHidden();
+  }
+
+  // questionFrame は {#key current.card_id} で新カードごとに再生成されるため、
+  // bind 変化のたびに load を待って hideActive を反映する。speakFrame と同じパターン。
+  $effect(() => {
+    const f = questionFrame;
+    if (!f) return;
+    const run = () => applyHidden();
+    if (
+      f.contentDocument?.readyState === "complete" &&
+      f.contentDocument.querySelector(".memorize-card-host")
+    ) {
+      run();
+    } else {
+      f.addEventListener("load", run, { once: true });
+    }
+  });
+
   $effect(() => {
     const id = current?.card_id;
     if (!id) return;
@@ -467,6 +524,21 @@
         clearTimeout(repeatTimer);
         repeatTimer = null;
       }
+      return;
+    }
+    // shift+L: 永続「デフォルト非表示」設定を反転（設定画面トグルと等価）。
+    // hasModifier に shift は含めていないのでここまで到達する。固定キーとして扱う。
+    if (e.shiftKey && (e.key === "L" || e.key === "l")) {
+      e.preventDefault();
+      speech.setHideDefault(!speech.hideDefault);
+      hideActive = speech.hideDefault;
+      applyHidden();
+      return;
+    }
+    // `l` (no shift): カード内 hide toggle。次カードで hideDefault に戻る。
+    if (!e.shiftKey && shortcuts.isHide(e.key)) {
+      e.preventDefault();
+      toggleHide();
       return;
     }
     if (e.key === " " || e.key === "Enter") {
@@ -709,6 +781,24 @@
             </button>
             <button
               type="button"
+              onclick={toggleHide}
+              in:fade={{ duration: 160, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={hideActive ? t("reviewer.reveal") : t("reviewer.hide")}
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                {#if hideActive}
+                  <Eye size={14} strokeWidth={2.25} />
+                  {t("reviewer.reveal")}
+                {:else}
+                  <EyeOff size={14} strokeWidth={2.25} />
+                  {t("reviewer.hide")}
+                {/if}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("hide")}</span>
+            </button>
+            <button
+              type="button"
               onclick={flip}
               in:fade={{ duration: 160, easing: cubicOut }}
               class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
@@ -747,6 +837,24 @@
                 {t("reviewer.speak")}
               </span>
               <span class="font-mono text-[10px] opacity-70">{shortcuts.label("speak")}</span>
+            </button>
+            <button
+              type="button"
+              onclick={toggleHide}
+              in:fade={{ duration: 200, easing: cubicOut }}
+              class="flex h-16 w-32 flex-col items-center justify-center gap-0.5 rounded-(--radius-md) border border-(--color-border-strong) bg-(--color-bg-elevated) px-5 py-2.5 text-(--color-fg-default) shadow-(--shadow-card) transition-all hover:-translate-y-0.5 hover:bg-(--color-bg-overlay) hover:shadow-(--shadow-glow) active:translate-y-0 active:scale-[0.97]"
+              title={hideActive ? t("reviewer.reveal") : t("reviewer.hide")}
+            >
+              <span class="flex items-center gap-1.5 text-sm font-medium">
+                {#if hideActive}
+                  <Eye size={14} strokeWidth={2.25} />
+                  {t("reviewer.reveal")}
+                {:else}
+                  <EyeOff size={14} strokeWidth={2.25} />
+                  {t("reviewer.hide")}
+                {/if}
+              </span>
+              <span class="font-mono text-[10px] opacity-70">{shortcuts.label("hide")}</span>
             </button>
             <button
               type="button"

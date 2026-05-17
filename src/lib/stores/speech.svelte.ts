@@ -4,6 +4,7 @@ const SPEAK_QUESTION_KEY = "memorize:speak-question-on-show";
 const REPEAT_ON_START_KEY = "memorize:repeat-on-question-start";
 const MAX_REPEAT_KEY = "memorize:max-repeat";
 const REPEAT_INTERVAL_KEY = "memorize:repeat-interval-sec";
+const HIDE_DEFAULT_KEY = "memorize:hide-default";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;
@@ -46,6 +47,9 @@ class SpeechStore {
   repeat = $state(false);
   /** 現在のリピートサイクル内で何回再生したか (1 回目で 1)。`maxRepeat` 到達でループ停止。 */
   repeatCount = $state(0);
+  /** 新しいカードを表示するたびに front 側を非表示状態で開始するか。永続化、デフォルト OFF。
+   *  ON のとき Reviewer は `l` キーで都度 reveal する運用になる。 */
+  hideDefault = $state(false);
 
   constructor() {
     if (browser) {
@@ -65,6 +69,8 @@ class SpeechStore {
           Number.parseFloat(storedInterval),
         );
       }
+      const storedHide = localStorage.getItem(HIDE_DEFAULT_KEY);
+      if (storedHide === "1") this.hideDefault = true;
     }
   }
 
@@ -95,6 +101,13 @@ class SpeechStore {
     this.repeatIntervalSec = clamped;
     if (browser) {
       localStorage.setItem(REPEAT_INTERVAL_KEY, String(clamped));
+    }
+  }
+
+  setHideDefault(enabled: boolean) {
+    this.hideDefault = enabled;
+    if (browser) {
+      localStorage.setItem(HIDE_DEFAULT_KEY, enabled ? "1" : "0");
     }
   }
 

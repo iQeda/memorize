@@ -94,6 +94,8 @@ export const messages = {
     "reviewer.good": "Good",
     "reviewer.easy": "Easy",
     "reviewer.speak": "Speak",
+    "reviewer.reveal": "Reveal",
+    "reviewer.hide": "Hide",
     "reviewer.repeat": "Repeat playback",
     "reviewer.cardStateChanged":
       "Card state changed (date rolled over). Please rate it again.",
@@ -158,10 +160,12 @@ export const messages = {
     "settings.shortcut.easy": "Easy",
     "settings.shortcut.copy": "Nani lookup",
     "settings.shortcut.speak": "Speak text",
+    "settings.shortcut.hide": "Reveal word",
     "settings.shortcut.spaceLabel": "Show answer",
     "settings.shortcut.openSettings": "Open Settings",
     "settings.shortcut.openLauncher": "Quick deck switcher",
     "settings.shortcut.editNote": "Edit current note",
+    "settings.shortcut.toggleHideDefault": "Toggle hide-by-default",
     "settings.startup": "Startup",
     "settings.startup.autoLabel": "Launch at login",
     "settings.startup.autoBody":
@@ -179,6 +183,9 @@ export const messages = {
     "settings.speech.repeatIntervalLabel": "Repeat interval (seconds)",
     "settings.speech.repeatIntervalBody":
       "Pause between repeat playbacks. 0 replays immediately.",
+    "settings.speech.hideDefaultLabel": "Hidden by default",
+    "settings.speech.hideDefaultBody":
+      "When enabled, each new card starts with the front hidden — press L to reveal. Combine with Speech and Repeat for listening practice.",
     "settings.speech.macOnly":
       "Uses the system voice configured in System Settings → Accessibility → Spoken Content → System voice. macOS only; no-op on other platforms.",
     "updater.askTitle": "Update available",
@@ -375,6 +382,8 @@ export const messages = {
     "reviewer.good": "普通",
     "reviewer.easy": "簡単",
     "reviewer.speak": "読み上げ",
+    "reviewer.reveal": "表示",
+    "reviewer.hide": "非表示",
     "reviewer.repeat": "リピート再生",
     "reviewer.cardStateChanged":
       "カード状態が更新されました (日付が切り替わったため)。もう一度評価してください。",
@@ -439,10 +448,12 @@ export const messages = {
     "settings.shortcut.easy": "簡単",
     "settings.shortcut.copy": "Nani で引く",
     "settings.shortcut.speak": "テキストを読み上げ",
+    "settings.shortcut.hide": "単語を表示",
     "settings.shortcut.spaceLabel": "解答を表示",
     "settings.shortcut.openSettings": "設定を開く",
     "settings.shortcut.openLauncher": "デッキをクイック切替",
     "settings.shortcut.editNote": "現在のノートを編集",
+    "settings.shortcut.toggleHideDefault": "デフォルト非表示を切替",
     "settings.startup": "起動",
     "settings.startup.autoLabel": "ログイン時に自動起動",
     "settings.startup.autoBody":
@@ -460,6 +471,9 @@ export const messages = {
     "settings.speech.repeatIntervalLabel": "リピート間隔 (秒)",
     "settings.speech.repeatIntervalBody":
       "リピート再生の間のポーズ。0 で即座にリピート。",
+    "settings.speech.hideDefaultLabel": "デフォルト非表示",
+    "settings.speech.hideDefaultBody":
+      "有効にすると、新しいカードを表示するたびに front 側を非表示の状態で開始します（L キーで表示）。読み上げ・リピートと組み合わせてリスニング学習に使えます。",
     "settings.speech.macOnly":
       "システム設定 → アクセシビリティ → 読み上げコンテンツ → システムの声で選んだ音声で読み上げます。macOS 専用機能です。",
     "updater.askTitle": "アップデートが利用可能",

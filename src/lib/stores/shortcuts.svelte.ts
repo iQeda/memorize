@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
 
 export type Rating = "again" | "hard" | "good" | "easy";
-export type Action = Rating | "copy" | "speak" | "repeat";
+export type Action = Rating | "copy" | "speak" | "repeat" | "hide";
 
 const STORAGE_KEY = "memorize:rating-keys";
 
@@ -13,6 +13,7 @@ const defaults: Record<Action, string> = {
   copy: "j",
   speak: "k",
   repeat: "r",
+  hide: "l",
 };
 
 function formatKey(k: string): string {
@@ -78,6 +79,11 @@ class ShortcutsStore {
   /** True iff `key` is bound to the Repeat toggle. */
   isRepeat(key: string): boolean {
     return this.keys.repeat === key;
+  }
+
+  /** True iff `key` is bound to the Hide toggle (front 非表示の表示/非表示)。 */
+  isHide(key: string): boolean {
+    return this.keys.hide === key;
   }
 
   label(action: Action): string {

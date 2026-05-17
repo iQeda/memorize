@@ -14,6 +14,7 @@ describe("shortcuts store", () => {
     expect(shortcuts.keys.copy).toBe("j");
     expect(shortcuts.keys.speak).toBe("k");
     expect(shortcuts.keys.repeat).toBe("r");
+    expect(shortcuts.keys.hide).toBe("l");
   });
 
   it("ratingFor maps each default key to the corresponding rating", () => {
@@ -43,6 +44,16 @@ describe("shortcuts store", () => {
     shortcuts.set("repeat", "p");
     expect(shortcuts.isRepeat("p")).toBe(true);
     expect(shortcuts.isRepeat("r")).toBe(false);
+  });
+
+  it("isHide follows the bound key and does not collide with ratings", () => {
+    expect(shortcuts.isHide("l")).toBe(true);
+    expect(shortcuts.isHide("L")).toBe(false);
+    expect(shortcuts.ratingFor("l")).toBeNull();
+    shortcuts.set("hide", "g");
+    expect(shortcuts.isHide("g")).toBe(true);
+    expect(shortcuts.isHide("l")).toBe(false);
+    expect(shortcuts.label("hide")).toBe("G");
   });
 
   it("set() rebinds an action and ratingFor reflects it", () => {

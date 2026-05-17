@@ -169,6 +169,10 @@
     height: 0;
     width: 60%;
   }
+  /* リスニング学習用の非表示モード: host を visibility:hidden で消し layout を保つ。
+     「[hidden mode]」ラベルは Reviewer 側が JS で <div> を body に挿入する
+     (iframe srcdoc が HMR や user CSS で古いまま/上書きされないため)。 */
+  body.memorize-hidden .memorize-card-host { visibility: hidden; }
   /* Anki user CSS follows; allowed to override the above. */
   ${css}
 </style>

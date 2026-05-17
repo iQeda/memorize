@@ -31,6 +31,7 @@
     DownloadCloud,
     Volume2,
     Repeat,
+    EyeOff,
   } from "lucide-svelte";
 
   const localeOptions: { value: Locale; label: string }[] = [
@@ -51,6 +52,7 @@
     { action: "easy", label: t("settings.shortcut.easy") },
     { action: "copy", label: t("settings.shortcut.copy") },
     { action: "speak", label: t("settings.shortcut.speak") },
+    { action: "hide", label: t("settings.shortcut.hide") },
   ]);
 
   type TocGroup = {
@@ -94,6 +96,7 @@
     { keys: ["⌘", ","], label: t("settings.shortcut.openSettings") },
     { keys: ["⌘", "F / K"], label: t("settings.shortcut.openLauncher") },
     { keys: ["E"], label: t("settings.shortcut.editNote") },
+    { keys: ["⇧", "L"], label: t("settings.shortcut.toggleHideDefault") },
   ]);
 
   let recordingFor = $state<Action | null>(null);
@@ -1039,6 +1042,30 @@
           aria-label={t("settings.speech.repeatIntervalLabel")}
           class="number-tabular w-16 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
         />
+      </div>
+      <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
+        <div class="flex items-center gap-2.5">
+          <EyeOff size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("settings.speech.hideDefaultLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("settings.speech.hideDefaultBody")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={() => speech.setHideDefault(!speech.hideDefault)}
+          aria-pressed={speech.hideDefault}
+          aria-label={t("settings.speech.hideDefaultLabel")}
+          class="relative h-5 w-9 shrink-0 rounded-full transition-colors {speech.hideDefault
+            ? 'bg-(--color-accent-500)'
+            : 'bg-(--color-bg-overlay)'}"
+        >
+          <span
+            class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-(--shadow-subtle) transition-all {speech.hideDefault
+              ? 'left-[18px]'
+              : 'left-0.5'}"
+          ></span>
+        </button>
       </div>
       <p class="mt-3 text-xs text-(--color-fg-subtle)">{t("settings.speech.macOnly")}</p>
     </div>

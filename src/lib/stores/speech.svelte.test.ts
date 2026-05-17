@@ -16,6 +16,7 @@ describe("speech store — repeat", () => {
     speech.repeatOnQuestionStart = false;
     speech.maxRepeat = DEFAULT_MAX_REPEAT;
     speech.repeatIntervalSec = DEFAULT_REPEAT_INTERVAL_SEC;
+    speech.hideDefault = false;
   });
 
   it("DEFAULT_MAX_REPEAT is 3 (matches the user-facing spec)", () => {
@@ -111,5 +112,31 @@ describe("speech store — repeat", () => {
     expect(speech.repeatIntervalSec).toBe(1.23);
     speech.setRepeatIntervalSec(1.236);
     expect(speech.repeatIntervalSec).toBe(1.24);
+  });
+});
+
+describe("speech store — hide default", () => {
+  beforeEach(() => {
+    speech.hideDefault = false;
+  });
+
+  it("starts with hideDefault off", () => {
+    expect(speech.hideDefault).toBe(false);
+  });
+
+  it("setHideDefault updates the in-memory flag", () => {
+    speech.setHideDefault(true);
+    expect(speech.hideDefault).toBe(true);
+    speech.setHideDefault(false);
+    expect(speech.hideDefault).toBe(false);
+  });
+
+  it("setHideDefault roundtrips boolean values", () => {
+    speech.setHideDefault(true);
+    speech.setHideDefault(true);
+    expect(speech.hideDefault).toBe(true);
+    speech.setHideDefault(false);
+    speech.setHideDefault(false);
+    expect(speech.hideDefault).toBe(false);
   });
 });
