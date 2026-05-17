@@ -10,6 +10,9 @@ import {
   DEFAULT_SPEECH_RATE_WPM,
   SPEECH_RATE_MIN,
   SPEECH_RATE_MAX,
+  DEFAULT_SENTENCE_PAUSE_MS,
+  SENTENCE_PAUSE_MIN,
+  SENTENCE_PAUSE_MAX,
 } from "./speech.svelte";
 
 describe("speech store — repeat", () => {
@@ -123,9 +126,8 @@ describe("speech store — speech rate", () => {
     speech.speechRate = DEFAULT_SPEECH_RATE_WPM;
   });
 
-  it("DEFAULT_SPEECH_RATE_WPM defaults to ~180 (matches macOS voice default)", () => {
-    expect(DEFAULT_SPEECH_RATE_WPM).toBeGreaterThanOrEqual(100);
-    expect(DEFAULT_SPEECH_RATE_WPM).toBeLessThanOrEqual(300);
+  it("DEFAULT_SPEECH_RATE_WPM defaults to 150 (slow-ish for listening practice)", () => {
+    expect(DEFAULT_SPEECH_RATE_WPM).toBe(150);
     expect(speech.speechRate).toBe(DEFAULT_SPEECH_RATE_WPM);
   });
 
@@ -141,6 +143,31 @@ describe("speech store — speech rate", () => {
 
     speech.setSpeechRate(220.7);
     expect(speech.speechRate).toBe(221);
+  });
+});
+
+describe("speech store — sentence pause", () => {
+  beforeEach(() => {
+    speech.sentencePauseMs = DEFAULT_SENTENCE_PAUSE_MS;
+  });
+
+  it("defaults to 500 ms (sentence-level pause for listening practice)", () => {
+    expect(DEFAULT_SENTENCE_PAUSE_MS).toBe(500);
+    expect(speech.sentencePauseMs).toBe(500);
+  });
+
+  it("setSentencePauseMs clamps to range and rounds to int", () => {
+    speech.setSentencePauseMs(500);
+    expect(speech.sentencePauseMs).toBe(500);
+
+    speech.setSentencePauseMs(SENTENCE_PAUSE_MAX + 5000);
+    expect(speech.sentencePauseMs).toBe(SENTENCE_PAUSE_MAX);
+
+    speech.setSentencePauseMs(SENTENCE_PAUSE_MIN - 100);
+    expect(speech.sentencePauseMs).toBe(SENTENCE_PAUSE_MIN);
+
+    speech.setSentencePauseMs(123.6);
+    expect(speech.sentencePauseMs).toBe(124);
   });
 });
 

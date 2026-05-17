@@ -25,6 +25,7 @@ pub const SPEECH_FINISHED_EVENT: &str = "memorize://speech-finished";
 pub async fn start_speak_text(
     text: String,
     rate: Option<u32>,
+    sentence_pause_ms: Option<u32>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
@@ -34,6 +35,8 @@ pub async fn start_speak_text(
         if trimmed.is_empty() {
             return Ok(());
         }
+        let pause = sentence_pause_ms.unwrap_or(0).min(5000);
+        let processed = add_sentence_pauses(&trimmed, pause);
 
         // 旧再生があればキャンセル通知。Sender::send(()) は失敗しても問題ない
         // (Receiver が既に drop 済み = タスクは終了済みのケース)。
@@ -48,7 +51,7 @@ pub async fn start_speak_text(
 
         // 読み上げ速度 (wpm)。フロントが渡さなければ say の voice 既定値を使う。
         let mut cmd = tokio::process::Command::new("/usr/bin/say");
-        for a in say_args(rate, &trimmed) {
+        for a in say_args(rate, &processed) {
             cmd.arg(a);
         }
         let mut child = cmd
@@ -72,12 +75,30 @@ pub async fn start_speak_text(
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (text, rate, state, app);
+        let _ = (text, rate, sentence_pause_ms, state, app);
     }
     Ok(())
 }
 
-/// `say` の引数配列を構築するピュア関数。`-r <wpm>` は 80-400 で clamp し、
+/// テキスト中の文末記号 (`.` `!` `?` `。` `！` `？`) の後に
+/// `[[slnc <ms>]]` の埋め込み無音コマンドを差し込む。`pause_ms == 0` は
+/// 何もせず原文を返す (say の既定挙動)。`say` は `[[slnc N]]` を理解する。
+fn add_sentence_pauses(text: &str, pause_ms: u32) -> String {
+    if pause_ms == 0 {
+        return text.to_string();
+    }
+    let marker = format!("[[slnc {pause_ms}]] ");
+    let mut out = String::with_capacity(text.len() + 16);
+    for ch in text.chars() {
+        out.push(ch);
+        if matches!(ch, '.' | '!' | '?' | '。' | '！' | '？') {
+            out.push_str(&marker);
+        }
+    }
+    out
+}
+
+/// `say` の引数配列を構築するピュア関数。`-r <wpm>` は 100-400 で clamp し、
 /// rate が None なら省略 (voice の組み込み既定値が使われる)。
 fn say_args(rate: Option<u32>, text: &str) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
@@ -113,5 +134,34 @@ mod tests {
         assert_eq!(say_args(Some(9999), "x"), vec!["-r", "400", "x"]);
         assert_eq!(say_args(Some(100), "x"), vec!["-r", "100", "x"]);
         assert_eq!(say_args(Some(400), "x"), vec!["-r", "400", "x"]);
+    }
+
+    #[test]
+    fn add_sentence_pauses_returns_input_unchanged_when_zero() {
+        assert_eq!(
+            add_sentence_pauses("Hello world. How are you?", 0),
+            "Hello world. How are you?",
+        );
+    }
+
+    #[test]
+    fn add_sentence_pauses_inserts_slnc_after_english_terminators() {
+        // Each of . ! ? should be followed by an embedded silence command.
+        let out = add_sentence_pauses("One. Two! Three?", 500);
+        assert_eq!(out, "One.[[slnc 500]]  Two![[slnc 500]]  Three?[[slnc 500]] ");
+    }
+
+    #[test]
+    fn add_sentence_pauses_inserts_slnc_after_japanese_terminators() {
+        let out = add_sentence_pauses("一。二！三？", 300);
+        assert_eq!(out, "一。[[slnc 300]] 二！[[slnc 300]] 三？[[slnc 300]] ");
+    }
+
+    #[test]
+    fn add_sentence_pauses_leaves_non_terminator_chars_alone() {
+        assert_eq!(
+            add_sentence_pauses("apple, banana, cherry", 200),
+            "apple, banana, cherry",
+        );
     }
 }

@@ -189,7 +189,10 @@ export const messages = {
       "Words per minute passed to `say -r` (range 100–400). macOS Accessibility's Speaking Rate cannot be read by `say`, so set it here.",
     "settings.speech.ratePreview": "Sample",
     "settings.speech.ratePreviewText":
-      "Hello, this is a sample of the current speech rate.",
+      "Hello, this is a sample of the current speech rate. Notice the pause between sentences. Does it feel right?",
+    "settings.speech.sentencePauseLabel": "Sentence pause (0–5000 ms)",
+    "settings.speech.sentencePauseBody":
+      "Extra silence inserted after each `.` `!` `?` (and Japanese counterparts). 0 disables. Uses `say`'s embedded `[[slnc N]]` command.",
     "settings.speech.hideDefaultLabel": "Hidden by default",
     "settings.speech.hideDefaultBody":
       "When enabled, each new card starts with the front hidden — press L to reveal. Combine with Speech and Repeat for listening practice.",
@@ -484,7 +487,10 @@ export const messages = {
       "say -r に渡す words per minute（100〜400）。macOS のアクセシビリティ「読み上げ速度」は say から参照できないため、ここで設定します。",
     "settings.speech.ratePreview": "サンプル再生",
     "settings.speech.ratePreviewText":
-      "Hello, this is a sample of the current speech rate.",
+      "Hello, this is a sample of the current speech rate. Notice the pause between sentences. Does it feel right?",
+    "settings.speech.sentencePauseLabel": "文末ポーズ (0〜5000 ms)",
+    "settings.speech.sentencePauseBody":
+      "`.` `!` `?` および `。` `！` `？` の後に挿入する無音時間。0 で無効。say の埋め込み `[[slnc N]]` で実装。",
     "settings.speech.hideDefaultLabel": "デフォルト非表示",
     "settings.speech.hideDefaultBody":
       "有効にすると、新しいカードを表示するたびに front 側を非表示の状態で開始します（L キーで表示）。読み上げ・リピートと組み合わせてリスニング学習に使えます。",

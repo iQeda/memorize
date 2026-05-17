@@ -11,6 +11,8 @@
     REPEAT_INTERVAL_MAX,
     SPEECH_RATE_MIN,
     SPEECH_RATE_MAX,
+    SENTENCE_PAUSE_MIN,
+    SENTENCE_PAUSE_MAX,
   } from "$lib/stores/speech.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
   import { shortcuts, type Action } from "$lib/stores/shortcuts.svelte";
@@ -1074,6 +1076,7 @@
               void invoke("start_speak_text", {
                 text: t("settings.speech.ratePreviewText"),
                 rate: speech.speechRate,
+                sentencePauseMs: speech.sentencePauseMs,
               }).catch((e) => console.error("sample play failed", e));
             }}
             aria-label={t("settings.speech.ratePreview")}
@@ -1083,6 +1086,28 @@
             {t("settings.speech.ratePreview")}
           </button>
         </div>
+      </div>
+      <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
+        <div class="flex items-center gap-2.5">
+          <Volume2 size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("settings.speech.sentencePauseLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("settings.speech.sentencePauseBody")}</p>
+          </div>
+        </div>
+        <input
+          type="number"
+          min={SENTENCE_PAUSE_MIN}
+          max={SENTENCE_PAUSE_MAX}
+          step="100"
+          value={speech.sentencePauseMs}
+          oninput={(e) => {
+            const next = Number.parseInt((e.currentTarget as HTMLInputElement).value, 10);
+            if (Number.isFinite(next)) speech.setSentencePauseMs(next);
+          }}
+          aria-label={t("settings.speech.sentencePauseLabel")}
+          class="number-tabular w-24 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
+        />
       </div>
       <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
         <div class="flex items-center gap-2.5">

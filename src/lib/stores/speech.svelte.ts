@@ -6,6 +6,7 @@ const MAX_REPEAT_KEY = "memorize:max-repeat";
 const REPEAT_INTERVAL_KEY = "memorize:repeat-interval-sec";
 const HIDE_DEFAULT_KEY = "memorize:hide-default";
 const SPEECH_RATE_KEY = "memorize:speech-rate-wpm";
+const SENTENCE_PAUSE_KEY = "memorize:sentence-pause-ms";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;
@@ -20,13 +21,19 @@ export const REPEAT_INTERVAL_MIN = 0;
 export const REPEAT_INTERVAL_MAX = 10;
 
 /** デフォルト読み上げ速度 (words per minute)。
- *  `say` の各音声の組み込み既定は ~175-200 wpm。180 を採用。
+ *  リスニング学習用にやや遅め (150) を採用。`say` voice の組み込み既定は ~175-200。
  *  macOS Accessibility の Speaking Rate スライダーは `say` から参照できないため
  *  アプリ側で独自に持つ。 */
-export const DEFAULT_SPEECH_RATE_WPM = 180;
+export const DEFAULT_SPEECH_RATE_WPM = 150;
 /** 設定 UI で受け付ける wpm 範囲。極端値は実用性ゼロなので clamp。 */
 export const SPEECH_RATE_MIN = 100;
 export const SPEECH_RATE_MAX = 400;
+
+/** 文末の追加ポーズ (ms)。0 = 追加なし。リスニング学習で文間に考える間を入れる
+ *  目的でデフォルト 500 ms。0 にするには設定 UI から手動で 0 を入力する。 */
+export const DEFAULT_SENTENCE_PAUSE_MS = 500;
+export const SENTENCE_PAUSE_MIN = 0;
+export const SENTENCE_PAUSE_MAX = 5000;
 
 function clampMaxRepeat(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_MAX_REPEAT;
@@ -43,6 +50,11 @@ function clampRepeatInterval(n: number): number {
 function clampSpeechRate(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_SPEECH_RATE_WPM;
   return Math.min(SPEECH_RATE_MAX, Math.max(SPEECH_RATE_MIN, Math.round(n)));
+}
+
+function clampSentencePause(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_SENTENCE_PAUSE_MS;
+  return Math.min(SENTENCE_PAUSE_MAX, Math.max(SENTENCE_PAUSE_MIN, Math.round(n)));
 }
 
 class SpeechStore {
@@ -67,6 +79,9 @@ class SpeechStore {
   hideDefault = $state(false);
   /** `say -r` に渡す読み上げ速度 (wpm)。永続化、デフォルト 180。 */
   speechRate = $state(DEFAULT_SPEECH_RATE_WPM);
+  /** 文末 (`.`/`!`/`?`/`。`/`！`/`？`) の後に挿入するポーズ (ms)。
+   *  0 で追加なし。Rust 側で `[[slnc N]]` を埋め込む。 */
+  sentencePauseMs = $state(DEFAULT_SENTENCE_PAUSE_MS);
 
   constructor() {
     if (browser) {
@@ -91,6 +106,10 @@ class SpeechStore {
       const storedRate = localStorage.getItem(SPEECH_RATE_KEY);
       if (storedRate !== null) {
         this.speechRate = clampSpeechRate(Number.parseInt(storedRate, 10));
+      }
+      const storedPause = localStorage.getItem(SENTENCE_PAUSE_KEY);
+      if (storedPause !== null) {
+        this.sentencePauseMs = clampSentencePause(Number.parseInt(storedPause, 10));
       }
     }
   }
@@ -137,6 +156,14 @@ class SpeechStore {
     this.speechRate = clamped;
     if (browser) {
       localStorage.setItem(SPEECH_RATE_KEY, String(clamped));
+    }
+  }
+
+  setSentencePauseMs(value: number) {
+    const clamped = clampSentencePause(value);
+    this.sentencePauseMs = clamped;
+    if (browser) {
+      localStorage.setItem(SENTENCE_PAUSE_KEY, String(clamped));
     }
   }
 

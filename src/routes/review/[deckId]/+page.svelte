@@ -351,7 +351,11 @@
       if (!host) return;
       const text = (host.textContent ?? "").trim().replace(/\s+/g, " ");
       if (!text) return;
-      void invoke("start_speak_text", { text, rate: speech.speechRate }).catch((e) => {
+      void invoke("start_speak_text", {
+        text,
+        rate: speech.speechRate,
+        sentencePauseMs: speech.sentencePauseMs,
+      }).catch((e) => {
         console.error("start_speak_text failed", e);
       });
     };
