@@ -391,9 +391,8 @@
   // の <div> を直接 body に挿入/撤去する。
   const HIDDEN_LABEL_ID = "memorize-hidden-label";
   const HIDDEN_LABEL_STYLE =
-    "position:fixed; inset:0; display:flex; align-items:center; justify-content:center; " +
-    "color:rgba(140,140,140,0.85); font-size:0.95rem; " +
-    "letter-spacing:0.05em; pointer-events:none; z-index:2147483647; visibility:visible;";
+    "position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; " +
+    "color:rgba(140,140,140,0.85); pointer-events:none; z-index:2147483647; visibility:visible;";
   function applyHidden() {
     const doc = questionFrame?.contentDocument;
     if (!doc?.body) return;
@@ -403,8 +402,15 @@
       if (!existing) {
         const el = doc.createElement("div");
         el.id = HIDDEN_LABEL_ID;
-        el.textContent = "[hidden mode]";
         el.setAttribute("style", HIDDEN_LABEL_STYLE);
+        const main = doc.createElement("div");
+        main.textContent = "[hidden mode]";
+        main.setAttribute("style", "font-size:0.95rem; letter-spacing:0.05em;");
+        const hint = doc.createElement("div");
+        hint.textContent = t("reviewer.hideHint", { key: shortcuts.label("hide") });
+        hint.setAttribute("style", "font-size:0.75rem; opacity:0.7;");
+        el.appendChild(main);
+        el.appendChild(hint);
         doc.body.appendChild(el);
       }
     } else if (existing) {
@@ -419,10 +425,14 @@
 
   // questionFrame は {#key current.card_id} で新カードごとに再生成されるため、
   // bind 変化のたびに load を待って hideActive を反映する。speakFrame と同じパターン。
+  // ロード後に iframe 内 body クリックで toggle するハンドラも attach。
   $effect(() => {
     const f = questionFrame;
     if (!f) return;
-    const run = () => applyHidden();
+    const run = () => {
+      applyHidden();
+      attachClickToggle();
+    };
     if (
       f.contentDocument?.readyState === "complete" &&
       f.contentDocument.querySelector(".memorize-card-host")
@@ -432,6 +442,22 @@
       f.addEventListener("load", run, { once: true });
     }
   });
+
+  // iframe 内 body にクリックハンドラを 1 回だけ attach。
+  // テキスト選択時 (sel.length > 0) や複数クリック (detail > 1) は toggle 抑止
+  // — Nani 用の単語ダブルクリック選択や、コピー操作を壊さないため。
+  function attachClickToggle() {
+    const doc = questionFrame?.contentDocument;
+    if (!doc?.body) return;
+    if (doc.body.dataset.memorizeClickToggle === "1") return;
+    doc.body.dataset.memorizeClickToggle = "1";
+    doc.body.addEventListener("click", (e) => {
+      if (e.detail > 1) return;
+      const sel = doc.getSelection()?.toString() ?? "";
+      if (sel.length > 0) return;
+      toggleHide();
+    });
+  }
 
   $effect(() => {
     const id = current?.card_id;
