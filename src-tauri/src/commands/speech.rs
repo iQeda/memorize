@@ -24,6 +24,7 @@ pub const SPEECH_FINISHED_EVENT: &str = "memorize://speech-finished";
 #[tauri::command]
 pub async fn start_speak_text(
     text: String,
+    rate: Option<u32>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
@@ -45,8 +46,12 @@ pub async fn start_speak_text(
             *guard = Some(cancel_tx);
         }
 
-        let mut child = tokio::process::Command::new("/usr/bin/say")
-            .arg(&trimmed)
+        // 読み上げ速度 (wpm)。フロントが渡さなければ say の voice 既定値を使う。
+        let mut cmd = tokio::process::Command::new("/usr/bin/say");
+        for a in say_args(rate, &trimmed) {
+            cmd.arg(a);
+        }
+        let mut child = cmd
             .spawn()
             .map_err(|e| anyhow::anyhow!("spawn say failed: {e}"))?;
 
@@ -67,7 +72,46 @@ pub async fn start_speak_text(
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (text, state, app);
+        let _ = (text, rate, state, app);
     }
     Ok(())
+}
+
+/// `say` の引数配列を構築するピュア関数。`-r <wpm>` は 80-400 で clamp し、
+/// rate が None なら省略 (voice の組み込み既定値が使われる)。
+fn say_args(rate: Option<u32>, text: &str) -> Vec<String> {
+    let mut args: Vec<String> = Vec::new();
+    if let Some(r) = rate {
+        let clamped = r.clamp(100, 400);
+        args.push("-r".to_string());
+        args.push(clamped.to_string());
+    }
+    args.push(text.to_string());
+    args
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn say_args_without_rate_only_passes_text() {
+        assert_eq!(say_args(None, "hello"), vec!["hello"]);
+    }
+
+    #[test]
+    fn say_args_with_rate_inserts_r_flag_before_text() {
+        assert_eq!(
+            say_args(Some(200), "hello"),
+            vec!["-r", "200", "hello"],
+        );
+    }
+
+    #[test]
+    fn say_args_clamps_rate_to_supported_range() {
+        assert_eq!(say_args(Some(50), "x"), vec!["-r", "100", "x"]);
+        assert_eq!(say_args(Some(9999), "x"), vec!["-r", "400", "x"]);
+        assert_eq!(say_args(Some(100), "x"), vec!["-r", "100", "x"]);
+        assert_eq!(say_args(Some(400), "x"), vec!["-r", "400", "x"]);
+    }
 }

@@ -5,6 +5,7 @@ const REPEAT_ON_START_KEY = "memorize:repeat-on-question-start";
 const MAX_REPEAT_KEY = "memorize:max-repeat";
 const REPEAT_INTERVAL_KEY = "memorize:repeat-interval-sec";
 const HIDE_DEFAULT_KEY = "memorize:hide-default";
+const SPEECH_RATE_KEY = "memorize:speech-rate-wpm";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;
@@ -18,6 +19,15 @@ export const DEFAULT_REPEAT_INTERVAL_SEC = 1;
 export const REPEAT_INTERVAL_MIN = 0;
 export const REPEAT_INTERVAL_MAX = 10;
 
+/** デフォルト読み上げ速度 (words per minute)。
+ *  `say` の各音声の組み込み既定は ~175-200 wpm。180 を採用。
+ *  macOS Accessibility の Speaking Rate スライダーは `say` から参照できないため
+ *  アプリ側で独自に持つ。 */
+export const DEFAULT_SPEECH_RATE_WPM = 180;
+/** 設定 UI で受け付ける wpm 範囲。極端値は実用性ゼロなので clamp。 */
+export const SPEECH_RATE_MIN = 100;
+export const SPEECH_RATE_MAX = 400;
+
 function clampMaxRepeat(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_MAX_REPEAT;
   return Math.min(MAX_REPEAT_MAX, Math.max(MAX_REPEAT_MIN, Math.round(n)));
@@ -28,6 +38,11 @@ function clampRepeatInterval(n: number): number {
   // 0.01 秒刻みを許容。浮動小数の桁あふれを避けるため小数第 2 位で丸める。
   const rounded = Math.round(n * 100) / 100;
   return Math.min(REPEAT_INTERVAL_MAX, Math.max(REPEAT_INTERVAL_MIN, rounded));
+}
+
+function clampSpeechRate(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_SPEECH_RATE_WPM;
+  return Math.min(SPEECH_RATE_MAX, Math.max(SPEECH_RATE_MIN, Math.round(n)));
 }
 
 class SpeechStore {
@@ -50,6 +65,8 @@ class SpeechStore {
   /** 新しいカードを表示するたびに front 側を非表示状態で開始するか。永続化、デフォルト OFF。
    *  ON のとき Reviewer は `l` キーで都度 reveal する運用になる。 */
   hideDefault = $state(false);
+  /** `say -r` に渡す読み上げ速度 (wpm)。永続化、デフォルト 180。 */
+  speechRate = $state(DEFAULT_SPEECH_RATE_WPM);
 
   constructor() {
     if (browser) {
@@ -71,6 +88,10 @@ class SpeechStore {
       }
       const storedHide = localStorage.getItem(HIDE_DEFAULT_KEY);
       if (storedHide === "1") this.hideDefault = true;
+      const storedRate = localStorage.getItem(SPEECH_RATE_KEY);
+      if (storedRate !== null) {
+        this.speechRate = clampSpeechRate(Number.parseInt(storedRate, 10));
+      }
     }
   }
 
@@ -108,6 +129,14 @@ class SpeechStore {
     this.hideDefault = enabled;
     if (browser) {
       localStorage.setItem(HIDE_DEFAULT_KEY, enabled ? "1" : "0");
+    }
+  }
+
+  setSpeechRate(value: number) {
+    const clamped = clampSpeechRate(value);
+    this.speechRate = clamped;
+    if (browser) {
+      localStorage.setItem(SPEECH_RATE_KEY, String(clamped));
     }
   }
 

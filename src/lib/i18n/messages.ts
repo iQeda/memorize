@@ -184,6 +184,12 @@ export const messages = {
     "settings.speech.repeatIntervalLabel": "Repeat interval (seconds)",
     "settings.speech.repeatIntervalBody":
       "Pause between repeat playbacks. 0 replays immediately.",
+    "settings.speech.rateLabel": "Speech rate (100–400 wpm)",
+    "settings.speech.rateBody":
+      "Words per minute passed to `say -r` (range 100–400). macOS Accessibility's Speaking Rate cannot be read by `say`, so set it here.",
+    "settings.speech.ratePreview": "Sample",
+    "settings.speech.ratePreviewText":
+      "Hello, this is a sample of the current speech rate.",
     "settings.speech.hideDefaultLabel": "Hidden by default",
     "settings.speech.hideDefaultBody":
       "When enabled, each new card starts with the front hidden — press L to reveal. Combine with Speech and Repeat for listening practice.",
@@ -473,6 +479,12 @@ export const messages = {
     "settings.speech.repeatIntervalLabel": "リピート間隔 (秒)",
     "settings.speech.repeatIntervalBody":
       "リピート再生の間のポーズ。0 で即座にリピート。",
+    "settings.speech.rateLabel": "読み上げ速度 (100〜400 wpm)",
+    "settings.speech.rateBody":
+      "say -r に渡す words per minute（100〜400）。macOS のアクセシビリティ「読み上げ速度」は say から参照できないため、ここで設定します。",
+    "settings.speech.ratePreview": "サンプル再生",
+    "settings.speech.ratePreviewText":
+      "Hello, this is a sample of the current speech rate.",
     "settings.speech.hideDefaultLabel": "デフォルト非表示",
     "settings.speech.hideDefaultBody":
       "有効にすると、新しいカードを表示するたびに front 側を非表示の状態で開始します（L キーで表示）。読み上げ・リピートと組み合わせてリスニング学習に使えます。",

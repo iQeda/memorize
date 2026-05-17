@@ -7,6 +7,9 @@ import {
   DEFAULT_REPEAT_INTERVAL_SEC,
   REPEAT_INTERVAL_MIN,
   REPEAT_INTERVAL_MAX,
+  DEFAULT_SPEECH_RATE_WPM,
+  SPEECH_RATE_MIN,
+  SPEECH_RATE_MAX,
 } from "./speech.svelte";
 
 describe("speech store — repeat", () => {
@@ -112,6 +115,32 @@ describe("speech store — repeat", () => {
     expect(speech.repeatIntervalSec).toBe(1.23);
     speech.setRepeatIntervalSec(1.236);
     expect(speech.repeatIntervalSec).toBe(1.24);
+  });
+});
+
+describe("speech store — speech rate", () => {
+  beforeEach(() => {
+    speech.speechRate = DEFAULT_SPEECH_RATE_WPM;
+  });
+
+  it("DEFAULT_SPEECH_RATE_WPM defaults to ~180 (matches macOS voice default)", () => {
+    expect(DEFAULT_SPEECH_RATE_WPM).toBeGreaterThanOrEqual(100);
+    expect(DEFAULT_SPEECH_RATE_WPM).toBeLessThanOrEqual(300);
+    expect(speech.speechRate).toBe(DEFAULT_SPEECH_RATE_WPM);
+  });
+
+  it("setSpeechRate clamps to range", () => {
+    speech.setSpeechRate(200);
+    expect(speech.speechRate).toBe(200);
+
+    speech.setSpeechRate(SPEECH_RATE_MAX + 100);
+    expect(speech.speechRate).toBe(SPEECH_RATE_MAX);
+
+    speech.setSpeechRate(SPEECH_RATE_MIN - 100);
+    expect(speech.speechRate).toBe(SPEECH_RATE_MIN);
+
+    speech.setSpeechRate(220.7);
+    expect(speech.speechRate).toBe(221);
   });
 });
 

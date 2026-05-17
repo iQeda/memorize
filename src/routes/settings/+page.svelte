@@ -9,9 +9,12 @@
     MAX_REPEAT_MAX,
     REPEAT_INTERVAL_MIN,
     REPEAT_INTERVAL_MAX,
+    SPEECH_RATE_MIN,
+    SPEECH_RATE_MAX,
   } from "$lib/stores/speech.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
   import { shortcuts, type Action } from "$lib/stores/shortcuts.svelte";
+  import { invoke } from "$lib/ipc";
   import { onMount } from "svelte";
   import {
     CheckCircle2,
@@ -1042,6 +1045,44 @@
           aria-label={t("settings.speech.repeatIntervalLabel")}
           class="number-tabular w-16 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
         />
+      </div>
+      <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
+        <div class="flex items-center gap-2.5">
+          <Volume2 size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("settings.speech.rateLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("settings.speech.rateBody")}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            type="number"
+            min={SPEECH_RATE_MIN}
+            max={SPEECH_RATE_MAX}
+            step="10"
+            value={speech.speechRate}
+            oninput={(e) => {
+              const next = Number.parseInt((e.currentTarget as HTMLInputElement).value, 10);
+              if (Number.isFinite(next)) speech.setSpeechRate(next);
+            }}
+            aria-label={t("settings.speech.rateLabel")}
+            class="number-tabular w-24 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
+          />
+          <button
+            type="button"
+            onclick={() => {
+              void invoke("start_speak_text", {
+                text: t("settings.speech.ratePreviewText"),
+                rate: speech.speechRate,
+              }).catch((e) => console.error("sample play failed", e));
+            }}
+            aria-label={t("settings.speech.ratePreview")}
+            class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-1 text-xs shadow-(--shadow-subtle) hover:bg-(--color-bg-overlay) active:scale-[0.97]"
+          >
+            <Volume2 size={12} strokeWidth={2.25} />
+            {t("settings.speech.ratePreview")}
+          </button>
+        </div>
       </div>
       <div class="mt-4 flex items-center justify-between gap-4 border-t border-(--color-border-default) pt-4">
         <div class="flex items-center gap-2.5">
