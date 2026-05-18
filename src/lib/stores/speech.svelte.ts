@@ -7,6 +7,7 @@ const REPEAT_INTERVAL_KEY = "memorize:repeat-interval-sec";
 const HIDE_DEFAULT_KEY = "memorize:hide-default";
 const SPEECH_RATE_KEY = "memorize:speech-rate-wpm";
 const SENTENCE_PAUSE_KEY = "memorize:sentence-pause-ms";
+const AUTO_REVEAL_KEY = "memorize:auto-reveal-after-repeat";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;
@@ -82,6 +83,9 @@ class SpeechStore {
   /** 文末 (`.`/`!`/`?`/`。`/`！`/`？`) の後に挿入するポーズ (ms)。
    *  0 で追加なし。Rust 側で `[[slnc N]]` を埋め込む。 */
   sentencePauseMs = $state(DEFAULT_SENTENCE_PAUSE_MS);
+  /** リピート再生がサイクル完了 (`repeatCount >= maxRepeat`) を満たした時、
+   *  Reviewer 側で hidden 状態を自動的に解除するか。永続化。デフォルト false。 */
+  autoRevealAfterRepeat = $state(false);
 
   constructor() {
     if (browser) {
@@ -111,6 +115,8 @@ class SpeechStore {
       if (storedPause !== null) {
         this.sentencePauseMs = clampSentencePause(Number.parseInt(storedPause, 10));
       }
+      const storedAutoReveal = localStorage.getItem(AUTO_REVEAL_KEY);
+      if (storedAutoReveal === "1") this.autoRevealAfterRepeat = true;
     }
   }
 
@@ -164,6 +170,13 @@ class SpeechStore {
     this.sentencePauseMs = clamped;
     if (browser) {
       localStorage.setItem(SENTENCE_PAUSE_KEY, String(clamped));
+    }
+  }
+
+  setAutoRevealAfterRepeat(enabled: boolean) {
+    this.autoRevealAfterRepeat = enabled;
+    if (browser) {
+      localStorage.setItem(AUTO_REVEAL_KEY, enabled ? "1" : "0");
     }
   }
 

@@ -80,7 +80,15 @@
       // 最大回数到達: このカードではこれ以上ループしないが、チェックは維持。
       // 次カードに進んだら startSpeakCycle が repeatCount を 1 に戻すので、
       // 自動再生 (speakQuestionOnShow) ON 時は新カードでも 5 回ループが続く。
-      if (speech.repeatCount >= speech.maxRepeat) return;
+      if (speech.repeatCount >= speech.maxRepeat) {
+        // ユーザーが「リピート完了で自動表示」を ON にしていれば、
+        // hidden 状態を解除して答え合わせに進ませる。
+        if (speech.autoRevealAfterRepeat && hideActive) {
+          hideActive = false;
+          applyHidden();
+        }
+        return;
+      }
       const frame = lastSpokenFrame;
       if (!frame) return;
       if (repeatTimer) clearTimeout(repeatTimer);
@@ -783,6 +791,18 @@
       <div
         class="mt-8 flex w-full shrink-0 flex-col items-center gap-3"
       >
+        <!-- セッション内トグル: リピート完了時に hidden を自動解除するか。
+             永続化されるが、Reviewer 中にすぐ切り替えたい設定なのでここに置く。 -->
+        <label class="flex cursor-pointer items-center gap-2 text-xs text-(--color-fg-subtle) select-none">
+          <input
+            type="checkbox"
+            checked={speech.autoRevealAfterRepeat}
+            onchange={(e) =>
+              speech.setAutoRevealAfterRepeat((e.currentTarget as HTMLInputElement).checked)}
+            class="h-3.5 w-3.5 accent-(--color-accent-500)"
+          />
+          {t("reviewer.autoRevealAfterRepeat")}
+        </label>
         <!-- 1段目: Nani / Speak / (front: Hide-Reveal, back: Show Question)。
              3 つ目の枠を front/back で使い分けることで位置を固定し、Show Answer 押下後に
              Rating が同じ「2段目位置」に出てきて手の移動なしで採点できる。 -->

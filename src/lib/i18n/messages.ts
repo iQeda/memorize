@@ -97,6 +97,7 @@ export const messages = {
     "reviewer.reveal": "Reveal",
     "reviewer.hide": "Hide",
     "reviewer.hideHint": "Click or {key} to reveal",
+    "reviewer.autoRevealAfterRepeat": "Auto-reveal when repeat finishes",
     "reviewer.repeat": "Repeat playback",
     "reviewer.cardStateChanged":
       "Card state changed (date rolled over). Please rate it again.",
@@ -395,6 +396,7 @@ export const messages = {
     "reviewer.reveal": "表示",
     "reviewer.hide": "非表示",
     "reviewer.hideHint": "クリック または {key} で表示",
+    "reviewer.autoRevealAfterRepeat": "リピート完了で自動表示",
     "reviewer.repeat": "リピート再生",
     "reviewer.cardStateChanged":
       "カード状態が更新されました (日付が切り替わったため)。もう一度評価してください。",

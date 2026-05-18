@@ -171,6 +171,23 @@ describe("speech store — sentence pause", () => {
   });
 });
 
+describe("speech store — auto reveal after repeat", () => {
+  beforeEach(() => {
+    speech.autoRevealAfterRepeat = false;
+  });
+
+  it("defaults to false", () => {
+    expect(speech.autoRevealAfterRepeat).toBe(false);
+  });
+
+  it("setAutoRevealAfterRepeat updates the flag", () => {
+    speech.setAutoRevealAfterRepeat(true);
+    expect(speech.autoRevealAfterRepeat).toBe(true);
+    speech.setAutoRevealAfterRepeat(false);
+    expect(speech.autoRevealAfterRepeat).toBe(false);
+  });
+});
+
 describe("speech store — hide default", () => {
   beforeEach(() => {
     speech.hideDefault = false;
