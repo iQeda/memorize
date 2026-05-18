@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, RotateCcw, Eye, EyeOff, Pencil, Copy, BookA, Volume2, Repeat, X } from "lucide-svelte";
+  import { ArrowLeft, RotateCcw, Eye, EyeOff, Pencil, Copy, BookA, Volume2, Repeat, SlidersHorizontal, X } from "lucide-svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { invoke } from "$lib/ipc";
@@ -13,7 +13,17 @@
   import { shortcuts } from "$lib/stores/shortcuts.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { collection } from "$lib/stores/collection.svelte";
-  import { speech } from "$lib/stores/speech.svelte";
+  import {
+    speech,
+    SPEECH_RATE_MIN,
+    SPEECH_RATE_MAX,
+    SENTENCE_PAUSE_MIN,
+    SENTENCE_PAUSE_MAX,
+    MAX_REPEAT_MIN,
+    MAX_REPEAT_MAX,
+    REPEAT_INTERVAL_MIN,
+    REPEAT_INTERVAL_MAX,
+  } from "$lib/stores/speech.svelte";
 
   type Counts = { new: number; learning: number; review: number };
   type StudyCard = {
@@ -191,6 +201,21 @@
   }
 
   let editing = $state(false);
+  // Audio settings popover の開閉状態。
+  let audioMenuOpen = $state(false);
+
+  // popover 外クリックで閉じる action。Svelte 5 でも `use:` action は同じ。
+  function clickOutside(node: HTMLElement, callback: () => void) {
+    const handler = (e: MouseEvent) => {
+      if (!node.contains(e.target as Node)) callback();
+    };
+    document.addEventListener("mousedown", handler);
+    return {
+      destroy() {
+        document.removeEventListener("mousedown", handler);
+      },
+    };
+  }
 
   function openEditor() {
     if (!current) return;
@@ -554,16 +579,6 @@
       speakCardText();
       return;
     }
-    // Toggle repeat. OFF にした瞬間に進行中のポーズタイマーも捨てて、すぐ止める。
-    if (shortcuts.isRepeat(e.key)) {
-      e.preventDefault();
-      speech.toggleRepeat();
-      if (!speech.repeat && repeatTimer) {
-        clearTimeout(repeatTimer);
-        repeatTimer = null;
-      }
-      return;
-    }
     // shift+L: 永続「デフォルト非表示」設定を反転（設定画面トグルと等価）。
     // hasModifier に shift は含めていないのでここまで到達する。固定キーとして扱う。
     if (e.shiftKey && (e.key === "L" || e.key === "l")) {
@@ -665,29 +680,197 @@
     </p>
     <div class="flex items-center gap-1">
       {#if current}
-        <label
-          class="flex h-7 cursor-pointer items-center gap-1.5 rounded-(--radius-md) px-2 text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)"
-          title="{t('reviewer.repeat')} ({shortcuts.label('repeat')})"
-        >
-          <input
-            type="checkbox"
-            bind:checked={speech.repeat}
-            onchange={() => {
-              // bind:checked が `speech.repeat` を既に更新しているので、ここでは
-              // 副次的な後始末だけ: 切替時はカウンタを 0 に戻し、OFF にした瞬間に
-              // 進行中のポーズタイマーも捨ててリピートをすぐ止める。
-              speech.repeatCount = 0;
-              if (!speech.repeat && repeatTimer) {
-                clearTimeout(repeatTimer);
-                repeatTimer = null;
-              }
-            }}
-            class="h-3 w-3 cursor-pointer accent-(--color-accent-500)"
-            aria-label={t("reviewer.repeat")}
-          />
-          <Repeat size={14} />
-          <span class="font-mono text-[10px] opacity-70">{shortcuts.label("repeat")}</span>
-        </label>
+        <div class="relative">
+          <button
+            type="button"
+            onclick={() => (audioMenuOpen = !audioMenuOpen)}
+            aria-haspopup="dialog"
+            aria-expanded={audioMenuOpen}
+            class="flex h-7 items-center gap-1.5 rounded-(--radius-md) px-2 text-(--color-fg-muted) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default) {audioMenuOpen
+              ? 'bg-(--color-bg-overlay) text-(--color-fg-default)'
+              : ''}"
+            aria-label={t("reviewer.audioSettings")}
+            title={t("reviewer.audioSettings")}
+          >
+            <SlidersHorizontal size={14} />
+          </button>
+          {#if audioMenuOpen}
+            <div
+              use:clickOutside={() => (audioMenuOpen = false)}
+              class="absolute right-0 top-9 z-50 max-h-[80vh] w-80 overflow-y-auto rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-4 shadow-(--shadow-card)"
+              role="dialog"
+              aria-label={t("reviewer.audioSettings")}
+            >
+              <p class="mb-3 text-[10px] font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+                {t("reviewer.audioSettings")}
+              </p>
+              <!-- Speak question on show -->
+              <label class="mb-2 flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+                <span>{t("settings.speech.autoLabel")}</span>
+                <input
+                  type="checkbox"
+                  checked={speech.speakQuestionOnShow}
+                  onchange={(e) =>
+                    speech.setSpeakQuestionOnShow(
+                      (e.currentTarget as HTMLInputElement).checked,
+                    )}
+                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                />
+              </label>
+              <!-- Enable repeat on question start -->
+              <label class="mb-2 flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+                <span>{t("settings.speech.repeatOnStartLabel")}</span>
+                <input
+                  type="checkbox"
+                  checked={speech.repeatOnQuestionStart}
+                  onchange={(e) =>
+                    speech.setRepeatOnQuestionStart(
+                      (e.currentTarget as HTMLInputElement).checked,
+                    )}
+                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                />
+              </label>
+              <!-- Maximum repeat count -->
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <label for="audio-max-repeat" class="text-xs text-(--color-fg-default)">
+                  {t("settings.speech.maxRepeatLabel")}
+                </label>
+                <input
+                  id="audio-max-repeat"
+                  type="number"
+                  min={MAX_REPEAT_MIN}
+                  max={MAX_REPEAT_MAX}
+                  step="1"
+                  value={speech.maxRepeat}
+                  oninput={(e) => {
+                    const next = Number.parseInt(
+                      (e.currentTarget as HTMLInputElement).value,
+                      10,
+                    );
+                    if (Number.isFinite(next)) speech.setMaxRepeat(next);
+                  }}
+                  class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
+                />
+              </div>
+              <!-- Repeat interval (seconds) -->
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <label for="audio-interval" class="text-xs text-(--color-fg-default)">
+                  {t("settings.speech.repeatIntervalLabel")}
+                </label>
+                <input
+                  id="audio-interval"
+                  type="number"
+                  min={REPEAT_INTERVAL_MIN}
+                  max={REPEAT_INTERVAL_MAX}
+                  step="0.01"
+                  value={speech.repeatIntervalSec}
+                  oninput={(e) => {
+                    const next = Number.parseFloat(
+                      (e.currentTarget as HTMLInputElement).value,
+                    );
+                    if (Number.isFinite(next)) speech.setRepeatIntervalSec(next);
+                  }}
+                  class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
+                />
+              </div>
+              <!-- Speech rate -->
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <label for="audio-rate" class="text-xs text-(--color-fg-default)">
+                  {t("settings.speech.rateLabel")}
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <input
+                    id="audio-rate"
+                    type="number"
+                    min={SPEECH_RATE_MIN}
+                    max={SPEECH_RATE_MAX}
+                    step="10"
+                    value={speech.speechRate}
+                    oninput={(e) => {
+                      const next = Number.parseInt(
+                        (e.currentTarget as HTMLInputElement).value,
+                        10,
+                      );
+                      if (Number.isFinite(next)) speech.setSpeechRate(next);
+                    }}
+                    class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
+                  />
+                  <button
+                    type="button"
+                    onclick={() => {
+                      void invoke("start_speak_text", {
+                        text: t("settings.speech.ratePreviewText"),
+                        rate: speech.speechRate,
+                        sentencePauseMs: speech.sentencePauseMs,
+                      }).catch((e) => console.error("sample play failed", e));
+                    }}
+                    class="flex items-center gap-1 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-[10px] hover:bg-(--color-bg-overlay) active:scale-[0.97]"
+                    title={t("settings.speech.ratePreview")}
+                    aria-label={t("settings.speech.ratePreview")}
+                  >
+                    <Volume2 size={10} strokeWidth={2.25} />
+                  </button>
+                </div>
+              </div>
+              <!-- Sentence pause -->
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <label for="audio-pause" class="text-xs text-(--color-fg-default)">
+                  {t("settings.speech.sentencePauseLabel")}
+                </label>
+                <input
+                  id="audio-pause"
+                  type="number"
+                  min={SENTENCE_PAUSE_MIN}
+                  max={SENTENCE_PAUSE_MAX}
+                  step="100"
+                  value={speech.sentencePauseMs}
+                  oninput={(e) => {
+                    const next = Number.parseInt(
+                      (e.currentTarget as HTMLInputElement).value,
+                      10,
+                    );
+                    if (Number.isFinite(next)) speech.setSentencePauseMs(next);
+                  }}
+                  class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
+                />
+              </div>
+              <div class="my-3 border-t border-(--color-border-default)"></div>
+              <!-- Repeat session toggle -->
+              <label class="mb-2 flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+                <span class="flex items-center gap-1.5">
+                  <Repeat size={12} />
+                  {t("reviewer.repeat")}
+                </span>
+                <input
+                  type="checkbox"
+                  bind:checked={speech.repeat}
+                  onchange={() => {
+                    speech.repeatCount = 0;
+                    if (!speech.repeat && repeatTimer) {
+                      clearTimeout(repeatTimer);
+                      repeatTimer = null;
+                    }
+                  }}
+                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                  aria-label={t("reviewer.repeat")}
+                />
+              </label>
+              <!-- Auto-reveal after repeat -->
+              <label class="flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+                <span>{t("reviewer.autoRevealAfterRepeat")}</span>
+                <input
+                  type="checkbox"
+                  checked={speech.autoRevealAfterRepeat}
+                  onchange={(e) =>
+                    speech.setAutoRevealAfterRepeat(
+                      (e.currentTarget as HTMLInputElement).checked,
+                    )}
+                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                />
+              </label>
+            </div>
+          {/if}
+        </div>
         <button
           type="button"
           onclick={openEditor}
@@ -791,18 +974,6 @@
       <div
         class="mt-8 flex w-full shrink-0 flex-col items-center gap-3"
       >
-        <!-- セッション内トグル: リピート完了時に hidden を自動解除するか。
-             永続化されるが、Reviewer 中にすぐ切り替えたい設定なのでここに置く。 -->
-        <label class="flex cursor-pointer items-center gap-2 text-xs text-(--color-fg-subtle) select-none">
-          <input
-            type="checkbox"
-            checked={speech.autoRevealAfterRepeat}
-            onchange={(e) =>
-              speech.setAutoRevealAfterRepeat((e.currentTarget as HTMLInputElement).checked)}
-            class="h-3.5 w-3.5 accent-(--color-accent-500)"
-          />
-          {t("reviewer.autoRevealAfterRepeat")}
-        </label>
         <!-- 1段目: Nani / Speak / (front: Hide-Reveal, back: Show Question)。
              3 つ目の枠を front/back で使い分けることで位置を固定し、Show Answer 押下後に
              Rating が同じ「2段目位置」に出てきて手の移動なしで採点できる。 -->

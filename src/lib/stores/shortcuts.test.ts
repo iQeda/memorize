@@ -13,7 +13,6 @@ describe("shortcuts store", () => {
     expect(shortcuts.keys.easy).toBe("f");
     expect(shortcuts.keys.copy).toBe("j");
     expect(shortcuts.keys.speak).toBe("k");
-    expect(shortcuts.keys.repeat).toBe("r");
     expect(shortcuts.keys.hide).toBe("l");
   });
 
@@ -36,14 +35,6 @@ describe("shortcuts store", () => {
     expect(shortcuts.isCopy("k")).toBe(false);
     expect(shortcuts.isSpeak("k")).toBe(true);
     expect(shortcuts.isSpeak("j")).toBe(false);
-  });
-
-  it("isRepeat follows the bound key", () => {
-    expect(shortcuts.isRepeat("r")).toBe(true);
-    expect(shortcuts.isRepeat("R")).toBe(false);
-    shortcuts.set("repeat", "p");
-    expect(shortcuts.isRepeat("p")).toBe(true);
-    expect(shortcuts.isRepeat("r")).toBe(false);
   });
 
   it("isHide follows the bound key and does not collide with ratings", () => {
