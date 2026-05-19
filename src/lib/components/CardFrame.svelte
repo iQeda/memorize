@@ -175,6 +175,11 @@
   body.memorize-hidden .memorize-card-host { visibility: hidden; }
   /* Anki user CSS follows; allowed to override the above. */
   ${css}
+  /* user CSS の後に再宣言して中央寄せをすべての note type で強制する。
+     Anki Desktop は default で text-align: center を持つが、Basic 以外の
+     カスタム note type では持たないことがあり、memorize 上で左寄せに見えてしまう。
+     ユーザーがカード固有の要素を左寄せにしたい場合は要素レベルで上書き可。 */
+  .memorize-card-frame { text-align: center; }
 </style>
 </head>
 <body class="${cardClass}"><div class="memorize-card-frame"><div class="memorize-card-host">${html}</div></div>${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}${SCRIPT_OPEN}${keyBridgeScript}${SCRIPT_CLOSE}</body>
