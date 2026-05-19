@@ -90,7 +90,6 @@
       id: "app",
       title: t("settings.group.app"),
       items: [
-        { id: "updates", label: t("updater.title") },
         { id: "shortcuts", label: t("settings.shortcuts") },
       ],
     },
@@ -429,6 +428,89 @@
         {t("settings.subtitle")}
       </p>
     </header>
+
+    <!-- アップデート: 設定画面の最上部に置く目立つカード。
+         状態によってアクセントカラーで強調 (available 時) して気付きやすくする。 -->
+    <section
+      id="updates"
+      class="mt-6 scroll-mt-20 rounded-(--radius-lg) border p-5 shadow-(--shadow-subtle) {updateStatus === 'available'
+        ? 'border-(--color-accent-500)/40 bg-(--color-accent-50)'
+        : 'border-(--color-border-default) bg-(--color-bg-elevated)'}"
+    >
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <DownloadCloud size={18} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="font-medium text-(--color-fg-default)">
+              {updateStatus === "available"
+                ? t("updater.askTitle")
+                : t("updater.title")}
+            </p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
+              {appVersion ? t("updater.currentVersion", { version: appVersion }) : ""}
+            </p>
+          </div>
+        </div>
+        {#if updateStatus === "available"}
+          <button
+            type="button"
+            onclick={handleInstallUpdate}
+            class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) transition-all hover:bg-(--color-accent-600) hover:shadow-(--shadow-card) active:scale-[0.97]"
+          >
+            <DownloadCloud size={12} />
+            {t("updater.installNow")}
+          </button>
+        {:else if updateStatus === "downloading" || updateStatus === "installing"}
+          <button
+            type="button"
+            disabled
+            class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-bg-overlay) px-3 py-1.5 text-xs text-(--color-fg-subtle)"
+          >
+            <Loader2 size={12} class="animate-spin" />
+            {updateStatus === "installing"
+              ? t("updater.installing")
+              : t("updater.downloading", { percent: downloadProgress ?? 0 })}
+          </button>
+        {:else}
+          <button
+            type="button"
+            onclick={handleCheckUpdates}
+            disabled={updateStatus === "checking"}
+            class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
+          >
+            {#if updateStatus === "checking"}
+              <Loader2 size={12} class="animate-spin" />
+              {t("updater.checking")}
+            {:else}
+              <RefreshCw size={12} />
+              {t("updater.check")}
+            {/if}
+          </button>
+        {/if}
+      </div>
+
+      {#if updateStatus === "available" && updateInfo}
+        <p class="mt-3 flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
+          <CheckCircle2 size={12} class="text-(--color-accent-500)" />
+          {t("updater.available", { version: updateInfo.version })}
+        </p>
+        {#if updateInfo.body}
+          <pre class="mt-2 max-h-40 overflow-auto rounded-(--radius-sm) bg-(--color-bg-overlay) p-2 font-mono text-[11px] whitespace-pre-wrap text-(--color-fg-muted)">{updateInfo.body}</pre>
+        {/if}
+      {:else if updateStatus === "up-to-date"}
+        <p class="mt-3 flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
+          <CheckCircle2 size={12} class="text-(--color-success)" />
+          {t("updater.upToDate")}
+        </p>
+      {/if}
+
+      {#if updateError}
+        <p class="mt-3 flex items-start gap-1.5 text-xs text-(--color-danger)">
+          <AlertCircle size={12} class="mt-0.5 shrink-0" />
+          <span class="break-all">{updateError}</span>
+        </p>
+      {/if}
+    </section>
 
     <h2
     class="mt-12 mb-2 font-display text-xl font-medium tracking-tight text-(--color-fg-default)"
@@ -1142,87 +1224,8 @@
   >
     {t("settings.group.app")}
   </h2>
-  <section id="updates" class="mt-4 scroll-mt-20 space-y-3">
-    <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
-      {t("updater.title")}
-    </h3>
-    <div
-      class="rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-subtle)"
-    >
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-2.5">
-          <DownloadCloud size={16} class="text-(--color-accent-500)" />
-          <div class="text-sm">
-            <p class="text-(--color-fg-default)">memorize</p>
-            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">
-              {appVersion ? t("updater.currentVersion", { version: appVersion }) : ""}
-            </p>
-          </div>
-        </div>
-        {#if updateStatus === "available"}
-          <button
-            type="button"
-            onclick={handleInstallUpdate}
-            class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) transition-all hover:bg-(--color-accent-600) hover:shadow-(--shadow-card) active:scale-[0.97]"
-          >
-            <DownloadCloud size={12} />
-            {t("updater.installNow")}
-          </button>
-        {:else if updateStatus === "downloading" || updateStatus === "installing"}
-          <button
-            type="button"
-            disabled
-            class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-bg-overlay) px-3 py-1.5 text-xs text-(--color-fg-subtle)"
-          >
-            <Loader2 size={12} class="animate-spin" />
-            {updateStatus === "installing"
-              ? t("updater.installing")
-              : t("updater.downloading", { percent: downloadProgress ?? 0 })}
-          </button>
-        {:else}
-          <button
-            type="button"
-            onclick={handleCheckUpdates}
-            disabled={updateStatus === "checking"}
-            class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:opacity-50"
-          >
-            {#if updateStatus === "checking"}
-              <Loader2 size={12} class="animate-spin" />
-              {t("updater.checking")}
-            {:else}
-              <RefreshCw size={12} />
-              {t("updater.check")}
-            {/if}
-          </button>
-        {/if}
-      </div>
 
-      {#if updateStatus === "available" && updateInfo}
-        <p class="mt-3 flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
-          <CheckCircle2 size={12} class="text-(--color-accent-500)" />
-          {t("updater.available", { version: updateInfo.version })}
-        </p>
-        {#if updateInfo.body}
-          <pre class="mt-2 max-h-40 overflow-auto rounded-(--radius-sm) bg-(--color-bg-overlay) p-2 font-mono text-[11px] whitespace-pre-wrap text-(--color-fg-muted)">{updateInfo.body}</pre>
-        {/if}
-      {:else if updateStatus === "up-to-date"}
-        <p class="mt-3 flex items-center gap-1.5 text-xs text-(--color-fg-muted)">
-          <CheckCircle2 size={12} class="text-(--color-success)" />
-          {t("updater.upToDate")}
-        </p>
-      {/if}
-
-      {#if updateError}
-        <p class="mt-3 flex items-start gap-1.5 text-xs text-(--color-danger)">
-          <AlertCircle size={12} class="mt-0.5 shrink-0" />
-          <span class="break-all">{updateError}</span>
-        </p>
-      {/if}
-    </div>
-  </section>
-
-
-  <section id="shortcuts" class="mt-10 scroll-mt-20 space-y-3">
+  <section id="shortcuts" class="mt-4 scroll-mt-20 space-y-3">
     <h3 class="text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
       {t("settings.shortcuts")}
     </h3>

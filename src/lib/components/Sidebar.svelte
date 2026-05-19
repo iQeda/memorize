@@ -8,6 +8,7 @@
     X,
     Pencil,
     Trash2,
+    GripVertical,
   } from "lucide-svelte";
   import { collection, type DeckSummary } from "$lib/stores/collection.svelte";
   import { deckOrder } from "$lib/stores/deck-order.svelte";
@@ -63,16 +64,17 @@
   }
 
   // ---- Drag-and-drop ordering (top-level decks only) ----
-  // Anki の deck_tree は flat list だが level でネストを表現している。
-  // level 0 のデッキを「トップ」として並び替え、子デッキ (level > 0) は
-  // 親に追従して原順を保つ。
+  // Anki の deck_tree は flat list で level がネストを表す。Rust 側 walk が
+  // 合成 root (deck_id=0) を skip しつつ level を消費するため、**実際の
+  // トップレベルデッキは level=1** から始まる (Rust 側のテスト
+  // walk_skips_synthetic_root_and_records_depth 参照)。
   type DeckGroup = { parent: DeckSummary; children: DeckSummary[] };
 
   function groupByTop(decks: DeckSummary[]): DeckGroup[] {
     const groups: DeckGroup[] = [];
     let current: DeckGroup | null = null;
     for (const d of decks) {
-      if (d.level === 0) {
+      if (d.level <= 1) {
         current = { parent: d, children: [] };
         groups.push(current);
       } else if (current) {
@@ -104,7 +106,7 @@
 
   function onDeckDragStart(e: DragEvent, deck: DeckSummary) {
     // Top-level のみドラッグ可。子デッキは draggable=false に。
-    if (deck.level !== 0) {
+    if (deck.level > 1) {
       e.preventDefault();
       return;
     }
@@ -116,7 +118,7 @@
   }
 
   function onDeckDragOver(e: DragEvent, deck: DeckSummary) {
-    if (deck.level !== 0) return;
+    if (deck.level > 1) return;
     if (dragSourceId === null || dragSourceId === deck.id) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
@@ -124,10 +126,10 @@
   }
 
   function onDeckDrop(e: DragEvent, deck: DeckSummary) {
-    if (deck.level !== 0) return;
+    if (deck.level > 1) return;
     if (dragSourceId === null || dragSourceId === deck.id) return;
     e.preventDefault();
-    const topIds = collection.decks.filter((d) => d.level === 0).map((d) => d.id);
+    const topIds = collection.decks.filter((d) => d.level <= 1).map((d) => d.id);
     deckOrder.move(topIds, dragSourceId, deck.id);
     dragSourceId = null;
     dragOverId = null;
@@ -385,7 +387,7 @@
         {@const active = collection.selectedDeckId === deck.id}
         {@const badges = deckBadges(deck)}
         {@const tone = deckTone(deck)}
-        {@const isTop = deck.level === 0}
+        {@const isTop = deck.level <= 1}
         {@const isDropTarget = dragOverId === deck.id && dragSourceId !== deck.id}
         {#if renamingId === deck.id}
           <div
@@ -401,26 +403,42 @@
             />
           </div>
         {:else}
-          <button
-            type="button"
-            draggable={isTop}
-            ondragstart={(e) => onDeckDragStart(e, deck)}
+          <div
+            role="presentation"
             ondragover={(e) => onDeckDragOver(e, deck)}
             ondrop={(e) => onDeckDrop(e, deck)}
-            ondragend={onDeckDragEnd}
             ondragleave={() => {
               if (dragOverId === deck.id) dragOverId = null;
             }}
-            onclick={() => selectDeck(deck)}
-            oncontextmenu={(e) => openMenu(e, deck)}
-            class="group flex w-full items-center justify-between gap-2 rounded-md py-1 pr-2 text-left text-sm transition-colors
-              {active
-              ? 'bg-(--color-bg-elevated) text-(--color-fg-default) shadow-(--shadow-subtle)'
-              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}
-              {isDropTarget ? 'ring-2 ring-(--color-accent-500)/60 ring-inset' : ''}
-              {dragSourceId === deck.id ? 'opacity-40' : ''}"
-            style="padding-left: {0.625 + deck.level * 0.75}rem;"
+            class="group flex items-stretch"
+            style="padding-left: {Math.max(0, deck.level - 1) * 0.75}rem;"
           >
+            <span
+              role="button"
+              tabindex="-1"
+              draggable={isTop ? "true" : "false"}
+              ondragstart={(e) => onDeckDragStart(e, deck)}
+              ondragend={onDeckDragEnd}
+              aria-label="Drag to reorder"
+              class="flex w-7 shrink-0 items-center justify-center {isTop
+                ? 'cursor-grab text-(--color-fg-subtle) opacity-50 transition-opacity hover:opacity-100 active:cursor-grabbing'
+                : 'pointer-events-none'}"
+            >
+              {#if isTop}
+                <GripVertical size={16} strokeWidth={2} />
+              {/if}
+            </span>
+            <button
+              type="button"
+              onclick={() => selectDeck(deck)}
+              oncontextmenu={(e) => openMenu(e, deck)}
+              class="flex flex-1 items-center justify-between gap-2 rounded-md py-1 pr-2 pl-2 text-left text-sm transition-colors
+                {active
+                ? 'bg-(--color-bg-elevated) text-(--color-fg-default) shadow-(--shadow-subtle)'
+                : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}
+                {isDropTarget ? 'ring-2 ring-(--color-accent-500)/60 ring-inset' : ''}
+                {dragSourceId === deck.id ? 'opacity-40' : ''}"
+            >
             <span class="flex min-w-0 items-center gap-2">
               <span
                 class="h-1.5 w-1.5 shrink-0 rounded-full transition-colors
@@ -445,7 +463,8 @@
                 {/each}
               </span>
             {/if}
-          </button>
+            </button>
+          </div>
         {/if}
       {/each}
     </div>
