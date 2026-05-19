@@ -10,6 +10,7 @@
     Trash2,
   } from "lucide-svelte";
   import { collection, type DeckSummary } from "$lib/stores/collection.svelte";
+  import { deckOrder } from "$lib/stores/deck-order.svelte";
   import { draggable } from "$lib/actions/draggable";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import { goto } from "$app/navigation";
@@ -59,6 +60,82 @@
       e.preventDefault();
       cancelCreate();
     }
+  }
+
+  // ---- Drag-and-drop ordering (top-level decks only) ----
+  // Anki の deck_tree は flat list だが level でネストを表現している。
+  // level 0 のデッキを「トップ」として並び替え、子デッキ (level > 0) は
+  // 親に追従して原順を保つ。
+  type DeckGroup = { parent: DeckSummary; children: DeckSummary[] };
+
+  function groupByTop(decks: DeckSummary[]): DeckGroup[] {
+    const groups: DeckGroup[] = [];
+    let current: DeckGroup | null = null;
+    for (const d of decks) {
+      if (d.level === 0) {
+        current = { parent: d, children: [] };
+        groups.push(current);
+      } else if (current) {
+        current.children.push(d);
+      } else {
+        // 親なしで孤立した子 — 防御的に独立グループに格上げ
+        groups.push({ parent: d, children: [] });
+      }
+    }
+    return groups;
+  }
+
+  const orderedDecks = $derived.by(() => {
+    const groups = groupByTop(collection.decks);
+    const byParent = new Map(groups.map((g) => [g.parent.id, g]));
+    const sortedTopIds = deckOrder.applyOrder(groups.map((g) => g.parent.id));
+    const out: DeckSummary[] = [];
+    for (const id of sortedTopIds) {
+      const g = byParent.get(id);
+      if (!g) continue;
+      out.push(g.parent);
+      out.push(...g.children);
+    }
+    return out;
+  });
+
+  let dragSourceId = $state<number | null>(null);
+  let dragOverId = $state<number | null>(null);
+
+  function onDeckDragStart(e: DragEvent, deck: DeckSummary) {
+    // Top-level のみドラッグ可。子デッキは draggable=false に。
+    if (deck.level !== 0) {
+      e.preventDefault();
+      return;
+    }
+    dragSourceId = deck.id;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(deck.id));
+    }
+  }
+
+  function onDeckDragOver(e: DragEvent, deck: DeckSummary) {
+    if (deck.level !== 0) return;
+    if (dragSourceId === null || dragSourceId === deck.id) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    dragOverId = deck.id;
+  }
+
+  function onDeckDrop(e: DragEvent, deck: DeckSummary) {
+    if (deck.level !== 0) return;
+    if (dragSourceId === null || dragSourceId === deck.id) return;
+    e.preventDefault();
+    const topIds = collection.decks.filter((d) => d.level === 0).map((d) => d.id);
+    deckOrder.move(topIds, dragSourceId, deck.id);
+    dragSourceId = null;
+    dragOverId = null;
+  }
+
+  function onDeckDragEnd() {
+    dragSourceId = null;
+    dragOverId = null;
   }
 
   // ---- Context menu / rename / delete ----
@@ -304,10 +381,12 @@
           {t("sidebar.empty")}
         </p>
       {/if}
-      {#each collection.decks as deck (deck.id)}
+      {#each orderedDecks as deck (deck.id)}
         {@const active = collection.selectedDeckId === deck.id}
         {@const badges = deckBadges(deck)}
         {@const tone = deckTone(deck)}
+        {@const isTop = deck.level === 0}
+        {@const isDropTarget = dragOverId === deck.id && dragSourceId !== deck.id}
         {#if renamingId === deck.id}
           <div
             class="flex items-center gap-1 py-0.5 pr-2"
@@ -324,12 +403,22 @@
         {:else}
           <button
             type="button"
+            draggable={isTop}
+            ondragstart={(e) => onDeckDragStart(e, deck)}
+            ondragover={(e) => onDeckDragOver(e, deck)}
+            ondrop={(e) => onDeckDrop(e, deck)}
+            ondragend={onDeckDragEnd}
+            ondragleave={() => {
+              if (dragOverId === deck.id) dragOverId = null;
+            }}
             onclick={() => selectDeck(deck)}
             oncontextmenu={(e) => openMenu(e, deck)}
             class="group flex w-full items-center justify-between gap-2 rounded-md py-1 pr-2 text-left text-sm transition-colors
               {active
               ? 'bg-(--color-bg-elevated) text-(--color-fg-default) shadow-(--shadow-subtle)'
-              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}"
+              : 'text-(--color-fg-muted) hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default)'}
+              {isDropTarget ? 'ring-2 ring-(--color-accent-500)/60 ring-inset' : ''}
+              {dragSourceId === deck.id ? 'opacity-40' : ''}"
             style="padding-left: {0.625 + deck.level * 0.75}rem;"
           >
             <span class="flex min-w-0 items-center gap-2">
