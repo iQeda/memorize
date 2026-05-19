@@ -9,6 +9,7 @@
   import { sync } from "$lib/stores/sync.svelte";
   import { checkForAppUpdates } from "$lib/updater";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { onMount } from "svelte";
 
   let { children } = $props();
@@ -22,6 +23,15 @@
   // smooth が CSS 経由で効くため、scrollTo の behavior 指定は不要。
   $effect(() => {
     void collection.selectedDeckId;
+    mainEl?.scrollTo({ top: 0 });
+  });
+
+  // ルート遷移 (settings → home, home → browse など) でも main コンテナ
+  // 自前のスクロールを top に戻す。SvelteKit は window スクロールはリセット
+  // するが、layout が持つ overflow:auto コンテナの scrollTop はそのまま
+  // 残るため (sidebar + main 構造で main 側のみスクロール)、明示的に戻す。
+  $effect(() => {
+    void $page.url.pathname;
     mainEl?.scrollTo({ top: 0 });
   });
 

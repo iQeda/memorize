@@ -680,7 +680,7 @@
     </p>
     <div class="flex items-center gap-1">
       {#if current}
-        <div class="relative">
+        <div class="relative" use:clickOutside={() => (audioMenuOpen = false)}>
           <button
             type="button"
             onclick={() => (audioMenuOpen = !audioMenuOpen)}
@@ -696,7 +696,6 @@
           </button>
           {#if audioMenuOpen}
             <div
-              use:clickOutside={() => (audioMenuOpen = false)}
               class="absolute right-0 top-9 z-50 max-h-[80vh] w-80 overflow-y-auto rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-4 shadow-(--shadow-card)"
               role="dialog"
               aria-label={t("reviewer.audioSettings")}
