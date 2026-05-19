@@ -9,20 +9,24 @@
   --font-display:
     "Fraunces Variable", "Fraunces", "Inter Variable", system-ui, serif;
 
-  /* 暗い部屋でもまぶしくならない soft off-white パレット (paper / cream 寄り)。
-     hue 85 で軽い warm tint、明度は ~93-95% で純白から確実に外す。 */
-  --color-bg-base: oklch(93% 0.012 85);
-  --color-bg-elevated: oklch(95% 0.01 85);
-  --color-bg-overlay: oklch(90% 0.012 85);
-  --color-bg-sunken: oklch(91% 0.012 85);
+  /* 暗い部屋でも眩しくない soft off-white パレット (cool gray, hue 240)。
+     純白を避けつつテキスト (oklch 20%) との contrast 確保。
+     base 93% / elevated 96% / overlay 88% / sunken 89%。
+     sunken は base から沈むが、border-default (82%) が両方に対して
+     コントラストを保てる範囲に置く。 */
+  --color-bg-base: oklch(93% 0.005 240);
+  --color-bg-elevated: oklch(96% 0.004 240);
+  --color-bg-overlay: oklch(88% 0.006 240);
+  --color-bg-sunken: oklch(89% 0.006 240);
 
   --color-fg-default: oklch(20% 0.02 260);
   --color-fg-muted: oklch(45% 0.015 260);
   --color-fg-subtle: oklch(65% 0.01 260);
   --color-fg-onAccent: oklch(99% 0.005 240);
 
-  --color-border-default: oklch(90% 0.005 240);
-  --color-border-strong: oklch(82% 0.008 240);
+  /* base 93% / sunken 89% に下げたので border は両方に対して見える濃度に。 */
+  --color-border-default: oklch(82% 0.008 240);
+  --color-border-strong: oklch(70% 0.012 240);
 
   --color-accent-50: oklch(97% 0.015 260);
   --color-accent-100: oklch(93% 0.04 260);

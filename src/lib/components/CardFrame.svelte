@@ -77,9 +77,9 @@
     const cardClass = side === "answer" ? "card answer" : "card";
     const baseTextColor =
       theme.resolved === "dark" ? "#f3f4f6" : "#0f172a";
-    // light の iframe 内 bg もアプリ全体に合わせて soft warm cream off-white。
-    // 暗い部屋で純白がまぶしいというフィードバックに合わせて paper っぽく。
-    const baseBg = theme.resolved === "dark" ? "#1c1d22" : "#ede7d8";
+    // light の iframe 内 bg もアプリ全体 (--color-bg-elevated, ~96%) に揃えた
+    // soft off-white。暗い部屋で純白がまぶしいというフィードバックに対応。
+    const baseBg = theme.resolved === "dark" ? "#1c1d22" : "#ecedf0";
     const accentColor = "#7c8aff";
     const scrollThumb = theme.resolved === "dark" ? "#3a3b40" : "#c9cad0";
     const scrollThumbHover = theme.resolved === "dark" ? "#4a4b52" : "#a8a9b1";
