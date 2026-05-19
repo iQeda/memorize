@@ -205,7 +205,18 @@ Phase 0 から維持。
    memorize の focused input から選択テキストを読み取る
 
 ショートカットキーは Settings > Keyboard shortcuts で再バインド可能。
-(`shortcuts.svelte.ts` の `Action = Rating | "nani"`)
+(`shortcuts.svelte.ts` の `Action = Rating | "copy" | "speak" | "hide"`)
+
+### グローバルショートカット (非リバインド)
+
+- `⌘,` — Settings を開く
+- `⌘S` — AnkiWeb と同期
+- `⌘F` / `⌘K` — クイックデッキ切替 (Launcher)
+- `⌘Enter` — NoteEditor の保存
+- `Esc` — Reviewer / Launcher / NoteEditor を閉じる
+- `Shift+L` — Reviewer で「デフォルト非表示」設定をその場で反転
+
+Ctrl 修飾子は受け付けません (macOS 専用なので Cmd のみ)。Launcher 内の `Ctrl+N` / `Ctrl+P` は項目移動の Emacs 慣習として残してあります。
 
 ### Deck stats のカウント方式
 

@@ -104,7 +104,15 @@ Stores are class instances using `$state` and live in `src/lib/stores/*.svelte.t
 
 ### Shortcuts store (`stores/shortcuts.svelte.ts`)
 
-Uses `Action = Rating | "nani"`. Adding a new bindable shortcut: extend the `Action` union, add a default key, expose `isXxx(key)` methods. Settings page automatically renders any entry of the shared list.
+Uses `Action = Rating | "copy" | "speak" | "hide"` (rebindable in Settings → Keyboard shortcuts). Adding a new bindable shortcut: extend the `Action` union, add a default key in `defaults`, expose `isXxx(key)` methods, and add it to `ratingShortcuts` in `src/routes/settings/+page.svelte`.
+
+Global (non-rebindable) keys handled directly in `+layout.svelte` and route components:
+- `⌘,` → Settings, `⌘S` → Sync now, `⌘F` / `⌘K` → quick deck launcher. Ctrl modifier is rejected on these (macOS only; Ctrl alias was removed to prevent ambiguous bindings).
+- `Esc` → leave reviewer / close launcher / close editor.
+- `Space` / `↵` → flip card in reviewer; "back to decks" on the done screen.
+- `Shift+L` → toggle the persistent "Hidden by default" setting from the reviewer.
+
+Reviewer-only audio controls live in the Audio popover (gear button in the reviewer header) and are mirrored from `speech.svelte.ts`. Removed `R` hotkey for repeat — repeat is now toggled via the popover checkbox.
 
 ## Conventions
 

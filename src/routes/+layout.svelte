@@ -48,16 +48,16 @@
   }
 
   function onKey(e: KeyboardEvent) {
-    // ⌘, (macOS) / Ctrl+, (other) → Settings
-    if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+    // ⌘, → Settings (macOS のみサポート、Ctrl 修飾子は受け付けない)
+    if (e.metaKey && !e.ctrlKey && e.key === ",") {
       e.preventDefault();
       void goto("/settings/");
       return;
     }
-    // ⌘S / Ctrl+S → sync now (TitleBar の Sync ボタンと同等)。memorize には
+    // ⌘S → sync now (TitleBar の Sync ボタンと同等)。memorize には
     // form 保存動作がないので Cmd+S は WebView 内で衝突せず、Cmd+, と同じく
     // テキスト入力中でも発火させる global action として扱う。
-    if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+    if (e.metaKey && !e.ctrlKey && (e.key === "s" || e.key === "S")) {
       e.preventDefault();
       if (collection.isOpen) void sync.syncNow();
       return;
@@ -66,14 +66,13 @@
     // 含むグローバルショートカットを無効化。Cmd+, (Settings) は global
     // navigation なので編集中でも有効のままにする。
     if (isTextField(e.target)) return;
-    // Cmd+F / Ctrl+K → quick deck launcher.
+    // Cmd+F / Cmd+K → quick deck launcher.
     // - Cmd+F は webview default の in-page find を override（memorize は
     //   in-page find UI を持たないため、no-op だと混乱するので Launcher へ）
-    // - Ctrl+K は Emacs/terminal 系の command palette ショートカット
-    // 逆組み合わせ (Ctrl+F, Cmd+K) は誤爆防止のため受け付けない。
+    // - Cmd+K は他アプリの command palette と同じ慣習
+    // Ctrl 修飾子は受け付けない (誤爆防止)。
     const isLauncherKey =
-      (e.metaKey && !e.ctrlKey && (e.key === "f" || e.key === "F")) ||
-      (e.ctrlKey && !e.metaKey && (e.key === "k" || e.key === "K"));
+      e.metaKey && !e.ctrlKey && (e.key === "f" || e.key === "F" || e.key === "k" || e.key === "K");
     if (isLauncherKey) {
       e.preventDefault();
       launcherOpen = true;

@@ -162,7 +162,7 @@
     if (e.key === "Escape") {
       e.preventDefault();
       onClose();
-    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    } else if (e.key === "Enter" && e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       void save();
     }
