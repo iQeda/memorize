@@ -77,7 +77,9 @@
     const cardClass = side === "answer" ? "card answer" : "card";
     const baseTextColor =
       theme.resolved === "dark" ? "#f3f4f6" : "#0f172a";
-    const baseBg = theme.resolved === "dark" ? "#1c1d22" : "#fafafb";
+    // light の iframe 内 bg もアプリ全体に合わせて soft warm cream off-white。
+    // 暗い部屋で純白がまぶしいというフィードバックに合わせて paper っぽく。
+    const baseBg = theme.resolved === "dark" ? "#1c1d22" : "#ede7d8";
     const accentColor = "#7c8aff";
     const scrollThumb = theme.resolved === "dark" ? "#3a3b40" : "#c9cad0";
     const scrollThumbHover = theme.resolved === "dark" ? "#4a4b52" : "#a8a9b1";
@@ -180,6 +182,13 @@
      カスタム note type では持たないことがあり、memorize 上で左寄せに見えてしまう。
      ユーザーがカード固有の要素を左寄せにしたい場合は要素レベルで上書き可。 */
   .memorize-card-frame { text-align: center; }
+${theme.resolved === "dark" ? `  /* dark theme: ほとんどの Anki note type は body/.card に白背景・黒文字を直接
+     指定しているため dark 環境では眩しい。ここで user CSS より後に強制上書き
+     して soft dark bg + light text に揃える。light theme では template 通り。 */
+  body, .card {
+    background: ${baseBg} !important;
+    color: ${baseTextColor} !important;
+  }` : ""}
 </style>
 </head>
 <body class="${cardClass}"><div class="memorize-card-frame"><div class="memorize-card-host">${html}</div></div>${SCRIPT_OPEN}${wrapJaScript}${SCRIPT_CLOSE}${SCRIPT_OPEN}${keyBridgeScript}${SCRIPT_CLOSE}</body>
