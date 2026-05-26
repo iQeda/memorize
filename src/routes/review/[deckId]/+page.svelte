@@ -699,15 +699,15 @@
           </button>
           {#if audioMenuOpen}
             <div
-              class="absolute right-0 top-9 z-50 max-h-[80vh] w-80 overflow-y-auto rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-4 shadow-(--shadow-card)"
+              class="audio-popover absolute right-0 top-9 z-50 max-h-[80vh] w-[400px] overflow-y-auto rounded-(--radius-lg) border border-(--color-border-default) bg-(--color-bg-elevated) p-5 shadow-(--shadow-card)"
               role="dialog"
               aria-label={t("reviewer.audioSettings")}
             >
-              <p class="mb-3 text-[10px] font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
+              <p class="mb-4 text-xs font-semibold tracking-wider text-(--color-fg-subtle) uppercase">
                 {t("reviewer.audioSettings")}
               </p>
               <!-- Speak question on show -->
-              <label class="mb-2 flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+              <label class="mb-3 flex cursor-pointer items-center justify-between gap-2 text-sm text-(--color-fg-default) select-none">
                 <span>{t("settings.speech.autoLabel")}</span>
                 <input
                   type="checkbox"
@@ -716,11 +716,11 @@
                     speech.setSpeakQuestionOnShow(
                       (e.currentTarget as HTMLInputElement).checked,
                     )}
-                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                  class="h-4 w-4 cursor-pointer accent-(--color-accent-500)"
                 />
               </label>
               <!-- Enable repeat on question start -->
-              <label class="mb-2 flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+              <label class="mb-3 flex cursor-pointer items-center justify-between gap-2 text-sm text-(--color-fg-default) select-none">
                 <span>{t("settings.speech.repeatOnStartLabel")}</span>
                 <input
                   type="checkbox"
@@ -729,15 +729,15 @@
                     speech.setRepeatOnQuestionStart(
                       (e.currentTarget as HTMLInputElement).checked,
                     )}
-                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                  class="h-4 w-4 cursor-pointer accent-(--color-accent-500)"
                 />
               </label>
               <!-- Maximum repeat count -->
-              <div class="mb-2 flex items-center justify-between gap-2">
-                <label for="audio-max-repeat" class="text-xs text-(--color-fg-default)">
+              <div class="mb-3 flex items-center justify-between gap-2">
+                <label for="audio-max-repeat" class="text-sm text-(--color-fg-default)">
                   {t("settings.speech.maxRepeatLabel")}
                 </label>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                   <input
                     id="audio-max-repeat"
                     type="range"
@@ -753,19 +753,19 @@
                       if (Number.isFinite(next)) speech.setMaxRepeat(next);
                     }}
                     aria-label={t("settings.speech.maxRepeatLabel")}
-                    class="w-24 accent-(--color-accent-500)"
+                    class="w-40 accent-(--color-accent-500)"
                   />
-                  <span class="number-tabular w-8 text-right text-[10px] text-(--color-fg-muted)">
+                  <span class="number-tabular w-10 text-right text-xs text-(--color-fg-muted)">
                     {speech.maxRepeat}
                   </span>
                 </div>
               </div>
               <!-- Repeat interval (seconds) -->
-              <div class="mb-2 flex items-center justify-between gap-2">
-                <label for="audio-interval" class="text-xs text-(--color-fg-default)">
+              <div class="mb-3 flex items-center justify-between gap-2">
+                <label for="audio-interval" class="text-sm text-(--color-fg-default)">
                   {t("settings.speech.repeatIntervalLabel")}
                 </label>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                   <input
                     id="audio-interval"
                     type="range"
@@ -780,19 +780,19 @@
                       if (Number.isFinite(next)) speech.setRepeatIntervalSec(next);
                     }}
                     aria-label={t("settings.speech.repeatIntervalLabel")}
-                    class="w-24 accent-(--color-accent-500)"
+                    class="w-40 accent-(--color-accent-500)"
                   />
-                  <span class="number-tabular w-10 text-right text-[10px] text-(--color-fg-muted)">
+                  <span class="number-tabular w-12 text-right text-xs text-(--color-fg-muted)">
                     {speech.repeatIntervalSec.toFixed(2)}s
                   </span>
                 </div>
               </div>
               <!-- Speech rate -->
-              <div class="mb-2 flex items-center justify-between gap-2">
-                <label for="audio-rate" class="text-xs text-(--color-fg-default)">
+              <div class="mb-3 flex items-center justify-between gap-2">
+                <label for="audio-rate" class="text-sm text-(--color-fg-default)">
                   {t("settings.speech.rateLabel")}
                 </label>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                   <input
                     id="audio-rate"
                     type="range"
@@ -808,9 +808,9 @@
                       if (Number.isFinite(next)) speech.setSpeechRate(next);
                     }}
                     aria-label={t("settings.speech.rateLabel")}
-                    class="w-20 accent-(--color-accent-500)"
+                    class="w-32 accent-(--color-accent-500)"
                   />
-                  <span class="number-tabular w-9 text-right text-[10px] text-(--color-fg-muted)">
+                  <span class="number-tabular w-10 text-right text-xs text-(--color-fg-muted)">
                     {speech.speechRate}
                   </span>
                   <button
@@ -823,20 +823,20 @@
                         volume: speech.volume,
                       }).catch((e) => console.error("sample play failed", e));
                     }}
-                    class="flex items-center gap-1 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-[10px] hover:bg-(--color-bg-overlay) active:scale-[0.97]"
+                    class="flex items-center gap-1 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1.5 text-xs hover:bg-(--color-bg-overlay) active:scale-[0.97]"
                     title={t("settings.speech.ratePreview")}
                     aria-label={t("settings.speech.ratePreview")}
                   >
-                    <Volume2 size={10} strokeWidth={2.25} />
+                    <Volume2 size={12} strokeWidth={2.25} />
                   </button>
                 </div>
               </div>
               <!-- Volume -->
-              <div class="mb-2 flex items-center justify-between gap-2">
-                <label for="audio-volume" class="text-xs text-(--color-fg-default)">
+              <div class="mb-3 flex items-center justify-between gap-2">
+                <label for="audio-volume" class="text-sm text-(--color-fg-default)">
                   {t("settings.speech.volumeLabel")}
                 </label>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                   <input
                     id="audio-volume"
                     type="range"
@@ -852,19 +852,19 @@
                       if (Number.isFinite(next)) speech.setVolume(next);
                     }}
                     aria-label={t("settings.speech.volumeLabel")}
-                    class="w-24 accent-(--color-accent-500)"
+                    class="w-40 accent-(--color-accent-500)"
                   />
-                  <span class="number-tabular w-8 text-right text-[10px] text-(--color-fg-muted)">
+                  <span class="number-tabular w-12 text-right text-xs text-(--color-fg-muted)">
                     {speech.volume}%
                   </span>
                 </div>
               </div>
               <!-- Sentence pause -->
-              <div class="mb-2 flex items-center justify-between gap-2">
-                <label for="audio-pause" class="text-xs text-(--color-fg-default)">
+              <div class="mb-3 flex items-center justify-between gap-2">
+                <label for="audio-pause" class="text-sm text-(--color-fg-default)">
                   {t("settings.speech.sentencePauseLabel")}
                 </label>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2">
                   <input
                     id="audio-pause"
                     type="range"
@@ -880,18 +880,18 @@
                       if (Number.isFinite(next)) speech.setSentencePauseMs(next);
                     }}
                     aria-label={t("settings.speech.sentencePauseLabel")}
-                    class="w-24 accent-(--color-accent-500)"
+                    class="w-40 accent-(--color-accent-500)"
                   />
-                  <span class="number-tabular w-12 text-right text-[10px] text-(--color-fg-muted)">
+                  <span class="number-tabular w-14 text-right text-xs text-(--color-fg-muted)">
                     {speech.sentencePauseMs}ms
                   </span>
                 </div>
               </div>
-              <div class="my-3 border-t border-(--color-border-default)"></div>
+              <div class="my-4 border-t border-(--color-border-default)"></div>
               <!-- Repeat session toggle -->
-              <label class="mb-2 flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
-                <span class="flex items-center gap-1.5">
-                  <Repeat size={12} />
+              <label class="mb-3 flex cursor-pointer items-center justify-between gap-2 text-sm text-(--color-fg-default) select-none">
+                <span class="flex items-center gap-2">
+                  <Repeat size={14} />
                   {t("reviewer.repeat")}
                 </span>
                 <input
@@ -904,12 +904,12 @@
                       repeatTimer = null;
                     }
                   }}
-                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                  class="h-4 w-4 cursor-pointer accent-(--color-accent-500)"
                   aria-label={t("reviewer.repeat")}
                 />
               </label>
               <!-- Auto-reveal after repeat -->
-              <label class="flex cursor-pointer items-center justify-between gap-2 text-xs text-(--color-fg-default) select-none">
+              <label class="flex cursor-pointer items-center justify-between gap-2 text-sm text-(--color-fg-default) select-none">
                 <span>{t("reviewer.autoRevealAfterRepeat")}</span>
                 <input
                   type="checkbox"
@@ -918,7 +918,7 @@
                     speech.setAutoRevealAfterRepeat(
                       (e.currentTarget as HTMLInputElement).checked,
                     )}
-                  class="h-3.5 w-3.5 cursor-pointer accent-(--color-accent-500)"
+                  class="h-4 w-4 cursor-pointer accent-(--color-accent-500)"
                 />
               </label>
             </div>
