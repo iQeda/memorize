@@ -13,6 +13,9 @@ import {
   DEFAULT_SENTENCE_PAUSE_MS,
   SENTENCE_PAUSE_MIN,
   SENTENCE_PAUSE_MAX,
+  DEFAULT_SPEECH_VOLUME,
+  SPEECH_VOLUME_MIN,
+  SPEECH_VOLUME_MAX,
 } from "./speech.svelte";
 
 describe("speech store — repeat", () => {
@@ -185,6 +188,40 @@ describe("speech store — auto reveal after repeat", () => {
     expect(speech.autoRevealAfterRepeat).toBe(true);
     speech.setAutoRevealAfterRepeat(false);
     expect(speech.autoRevealAfterRepeat).toBe(false);
+  });
+});
+
+describe("speech store — volume", () => {
+  beforeEach(() => {
+    speech.volume = DEFAULT_SPEECH_VOLUME;
+  });
+
+  it("defaults to 100 (full volume, voice default)", () => {
+    expect(DEFAULT_SPEECH_VOLUME).toBe(100);
+    expect(speech.volume).toBe(100);
+  });
+
+  it("setVolume clamps to range and rounds to int", () => {
+    speech.setVolume(50);
+    expect(speech.volume).toBe(50);
+
+    // 0 (mute) は有効
+    speech.setVolume(0);
+    expect(speech.volume).toBe(SPEECH_VOLUME_MIN);
+
+    // 上限超過 → 100
+    speech.setVolume(SPEECH_VOLUME_MAX + 50);
+    expect(speech.volume).toBe(SPEECH_VOLUME_MAX);
+
+    // 負値 → 0
+    speech.setVolume(-30);
+    expect(speech.volume).toBe(SPEECH_VOLUME_MIN);
+
+    // 非整数 → round
+    speech.setVolume(72.4);
+    expect(speech.volume).toBe(72);
+    speech.setVolume(72.6);
+    expect(speech.volume).toBe(73);
   });
 });
 

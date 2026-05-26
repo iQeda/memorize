@@ -195,6 +195,9 @@ export const messages = {
     "settings.speech.sentencePauseLabel": "Sentence pause (0–5000 ms)",
     "settings.speech.sentencePauseBody":
       "Extra silence inserted after each `.` `!` `?` (and Japanese counterparts). 0 disables. Uses `say`'s embedded `[[slnc N]]` command.",
+    "settings.speech.volumeLabel": "Volume (0–200%)",
+    "settings.speech.volumeBody":
+      "0–100%: `say`'s embedded `[[volm 0.0–1.0]]`. 101–200%: `say -o aiff` rendered then played via `afplay -v <gain>` for amplification. Beyond ~150% the audio may clip and distort.",
     "settings.speech.hideDefaultLabel": "Hidden by default",
     "settings.speech.hideDefaultBody":
       "When enabled, each new card starts with the front hidden — press L to reveal. Combine with Speech and Repeat for listening practice.",
@@ -492,6 +495,9 @@ export const messages = {
     "settings.speech.ratePreview": "サンプル再生",
     "settings.speech.ratePreviewText":
       "Hello, this is a sample of the current speech rate. Notice the pause between sentences. Does it feel right?",
+    "settings.speech.volumeLabel": "音量 (0〜200%)",
+    "settings.speech.volumeBody":
+      "0〜100% は `say` に `[[volm 0.0〜1.0]]` を埋め込み、101〜200% は `say -o aiff` でレンダーしてから `afplay -v <gain>` で増幅再生します。150% を超えると音割れする可能性があります。",
     "settings.speech.sentencePauseLabel": "文末ポーズ (0〜5000 ms)",
     "settings.speech.sentencePauseBody":
       "`.` `!` `?` および `。` `！` `？` の後に挿入する無音時間。0 で無効。say の埋め込み `[[slnc N]]` で実装。",

@@ -49,12 +49,19 @@ class CollectionStore {
         return;
       }
       const lastPath = browser ? localStorage.getItem(LAST_PATH_KEY) : null;
-      if (lastPath) {
+      // DEV モードでは sandbox 以外の lastPath は使わない。本物の Anki
+      // collection を持つ手元では lastPath にプロダクションパスが残っている
+      // ことが多く、それを再 open してしまうと「dev deck が読み込まれる」と
+      // いう dev フローの前提が崩れる。sandbox path 以外は無視し、必ず
+      // bootstrap に流す。
+      const isDevSandbox = lastPath?.includes("/.memorize-dev/collection.anki2") ?? false;
+      if (lastPath && (!import.meta.env.DEV || isDevSandbox)) {
         await this.open(lastPath, /* skipPersist */ true);
-      } else if (import.meta.env.DEV) {
-        // Dev builds bootstrap a sandbox collection at <repo>/.memorize-dev
-        // so `pnpm tauri dev` always lands in a usable state. Production
-        // builds skip this entirely (the command is cfg(debug_assertions)).
+      }
+      // Dev builds bootstrap a sandbox collection at <repo>/.memorize-dev
+      // so `pnpm tauri dev` always lands in a usable state. Production
+      // builds skip this entirely (the command is cfg(debug_assertions)).
+      if (!this.isOpen && import.meta.env.DEV) {
         await this.bootstrapDevCollection();
       }
       await this.refreshInfo();

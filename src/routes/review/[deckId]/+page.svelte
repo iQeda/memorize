@@ -23,6 +23,8 @@
     MAX_REPEAT_MAX,
     REPEAT_INTERVAL_MIN,
     REPEAT_INTERVAL_MAX,
+    SPEECH_VOLUME_MIN,
+    SPEECH_VOLUME_MAX,
   } from "$lib/stores/speech.svelte";
 
   type Counts = { new: number; learning: number; review: number };
@@ -388,6 +390,7 @@
         text,
         rate: speech.speechRate,
         sentencePauseMs: speech.sentencePauseMs,
+        volume: speech.volume,
       }).catch((e) => {
         console.error("start_speak_text failed", e);
       });
@@ -734,43 +737,55 @@
                 <label for="audio-max-repeat" class="text-xs text-(--color-fg-default)">
                   {t("settings.speech.maxRepeatLabel")}
                 </label>
-                <input
-                  id="audio-max-repeat"
-                  type="number"
-                  min={MAX_REPEAT_MIN}
-                  max={MAX_REPEAT_MAX}
-                  step="1"
-                  value={speech.maxRepeat}
-                  oninput={(e) => {
-                    const next = Number.parseInt(
-                      (e.currentTarget as HTMLInputElement).value,
-                      10,
-                    );
-                    if (Number.isFinite(next)) speech.setMaxRepeat(next);
-                  }}
-                  class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
-                />
+                <div class="flex items-center gap-1.5">
+                  <input
+                    id="audio-max-repeat"
+                    type="range"
+                    min={MAX_REPEAT_MIN}
+                    max={MAX_REPEAT_MAX}
+                    step="1"
+                    value={speech.maxRepeat}
+                    oninput={(e) => {
+                      const next = Number.parseInt(
+                        (e.currentTarget as HTMLInputElement).value,
+                        10,
+                      );
+                      if (Number.isFinite(next)) speech.setMaxRepeat(next);
+                    }}
+                    aria-label={t("settings.speech.maxRepeatLabel")}
+                    class="w-24 accent-(--color-accent-500)"
+                  />
+                  <span class="number-tabular w-8 text-right text-[10px] text-(--color-fg-muted)">
+                    {speech.maxRepeat}
+                  </span>
+                </div>
               </div>
               <!-- Repeat interval (seconds) -->
               <div class="mb-2 flex items-center justify-between gap-2">
                 <label for="audio-interval" class="text-xs text-(--color-fg-default)">
                   {t("settings.speech.repeatIntervalLabel")}
                 </label>
-                <input
-                  id="audio-interval"
-                  type="number"
-                  min={REPEAT_INTERVAL_MIN}
-                  max={REPEAT_INTERVAL_MAX}
-                  step="0.01"
-                  value={speech.repeatIntervalSec}
-                  oninput={(e) => {
-                    const next = Number.parseFloat(
-                      (e.currentTarget as HTMLInputElement).value,
-                    );
-                    if (Number.isFinite(next)) speech.setRepeatIntervalSec(next);
-                  }}
-                  class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
-                />
+                <div class="flex items-center gap-1.5">
+                  <input
+                    id="audio-interval"
+                    type="range"
+                    min={REPEAT_INTERVAL_MIN}
+                    max={REPEAT_INTERVAL_MAX}
+                    step="0.01"
+                    value={speech.repeatIntervalSec}
+                    oninput={(e) => {
+                      const next = Number.parseFloat(
+                        (e.currentTarget as HTMLInputElement).value,
+                      );
+                      if (Number.isFinite(next)) speech.setRepeatIntervalSec(next);
+                    }}
+                    aria-label={t("settings.speech.repeatIntervalLabel")}
+                    class="w-24 accent-(--color-accent-500)"
+                  />
+                  <span class="number-tabular w-10 text-right text-[10px] text-(--color-fg-muted)">
+                    {speech.repeatIntervalSec.toFixed(2)}s
+                  </span>
+                </div>
               </div>
               <!-- Speech rate -->
               <div class="mb-2 flex items-center justify-between gap-2">
@@ -780,7 +795,7 @@
                 <div class="flex items-center gap-1.5">
                   <input
                     id="audio-rate"
-                    type="number"
+                    type="range"
                     min={SPEECH_RATE_MIN}
                     max={SPEECH_RATE_MAX}
                     step="10"
@@ -792,8 +807,12 @@
                       );
                       if (Number.isFinite(next)) speech.setSpeechRate(next);
                     }}
-                    class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
+                    aria-label={t("settings.speech.rateLabel")}
+                    class="w-20 accent-(--color-accent-500)"
                   />
+                  <span class="number-tabular w-9 text-right text-[10px] text-(--color-fg-muted)">
+                    {speech.speechRate}
+                  </span>
                   <button
                     type="button"
                     onclick={() => {
@@ -801,6 +820,7 @@
                         text: t("settings.speech.ratePreviewText"),
                         rate: speech.speechRate,
                         sentencePauseMs: speech.sentencePauseMs,
+                        volume: speech.volume,
                       }).catch((e) => console.error("sample play failed", e));
                     }}
                     class="flex items-center gap-1 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-[10px] hover:bg-(--color-bg-overlay) active:scale-[0.97]"
@@ -811,27 +831,61 @@
                   </button>
                 </div>
               </div>
+              <!-- Volume -->
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <label for="audio-volume" class="text-xs text-(--color-fg-default)">
+                  {t("settings.speech.volumeLabel")}
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <input
+                    id="audio-volume"
+                    type="range"
+                    min={SPEECH_VOLUME_MIN}
+                    max={SPEECH_VOLUME_MAX}
+                    step="1"
+                    value={speech.volume}
+                    oninput={(e) => {
+                      const next = Number.parseInt(
+                        (e.currentTarget as HTMLInputElement).value,
+                        10,
+                      );
+                      if (Number.isFinite(next)) speech.setVolume(next);
+                    }}
+                    aria-label={t("settings.speech.volumeLabel")}
+                    class="w-24 accent-(--color-accent-500)"
+                  />
+                  <span class="number-tabular w-8 text-right text-[10px] text-(--color-fg-muted)">
+                    {speech.volume}%
+                  </span>
+                </div>
+              </div>
               <!-- Sentence pause -->
               <div class="mb-2 flex items-center justify-between gap-2">
                 <label for="audio-pause" class="text-xs text-(--color-fg-default)">
                   {t("settings.speech.sentencePauseLabel")}
                 </label>
-                <input
-                  id="audio-pause"
-                  type="number"
-                  min={SENTENCE_PAUSE_MIN}
-                  max={SENTENCE_PAUSE_MAX}
-                  step="100"
-                  value={speech.sentencePauseMs}
-                  oninput={(e) => {
-                    const next = Number.parseInt(
-                      (e.currentTarget as HTMLInputElement).value,
-                      10,
-                    );
-                    if (Number.isFinite(next)) speech.setSentencePauseMs(next);
-                  }}
-                  class="number-tabular w-20 rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-2 py-1 text-right text-xs outline-none focus:border-(--color-accent-500)"
-                />
+                <div class="flex items-center gap-1.5">
+                  <input
+                    id="audio-pause"
+                    type="range"
+                    min={SENTENCE_PAUSE_MIN}
+                    max={SENTENCE_PAUSE_MAX}
+                    step="100"
+                    value={speech.sentencePauseMs}
+                    oninput={(e) => {
+                      const next = Number.parseInt(
+                        (e.currentTarget as HTMLInputElement).value,
+                        10,
+                      );
+                      if (Number.isFinite(next)) speech.setSentencePauseMs(next);
+                    }}
+                    aria-label={t("settings.speech.sentencePauseLabel")}
+                    class="w-24 accent-(--color-accent-500)"
+                  />
+                  <span class="number-tabular w-12 text-right text-[10px] text-(--color-fg-muted)">
+                    {speech.sentencePauseMs}ms
+                  </span>
+                </div>
               </div>
               <div class="my-3 border-t border-(--color-border-default)"></div>
               <!-- Repeat session toggle -->

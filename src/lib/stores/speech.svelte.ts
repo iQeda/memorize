@@ -8,6 +8,7 @@ const HIDE_DEFAULT_KEY = "memorize:hide-default";
 const SPEECH_RATE_KEY = "memorize:speech-rate-wpm";
 const SENTENCE_PAUSE_KEY = "memorize:sentence-pause-ms";
 const AUTO_REVEAL_KEY = "memorize:auto-reveal-after-repeat";
+const SPEECH_VOLUME_KEY = "memorize:speech-volume";
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;
@@ -36,6 +37,15 @@ export const DEFAULT_SENTENCE_PAUSE_MS = 500;
 export const SENTENCE_PAUSE_MIN = 0;
 export const SENTENCE_PAUSE_MAX = 5000;
 
+/** 読み上げ音量 (0-200, %)。100 = `say` の voice 既定 (フル音量)。
+ *  100 以下: Rust 側で `[[volm <0.0..1.0>]]` を埋め込み (低レイテンシ)。
+ *  100 超: `say -o aiff` → `afplay -v gain` で増幅再生 (gain=vol/100)。
+ *  200 を上限にしているのは afplay の高ゲインで音割れが顕著になるため。
+ *  デフォルトは 100 で従来挙動を維持。 */
+export const DEFAULT_SPEECH_VOLUME = 100;
+export const SPEECH_VOLUME_MIN = 0;
+export const SPEECH_VOLUME_MAX = 200;
+
 function clampMaxRepeat(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_MAX_REPEAT;
   return Math.min(MAX_REPEAT_MAX, Math.max(MAX_REPEAT_MIN, Math.round(n)));
@@ -56,6 +66,11 @@ function clampSpeechRate(n: number): number {
 function clampSentencePause(n: number): number {
   if (!Number.isFinite(n)) return DEFAULT_SENTENCE_PAUSE_MS;
   return Math.min(SENTENCE_PAUSE_MAX, Math.max(SENTENCE_PAUSE_MIN, Math.round(n)));
+}
+
+function clampSpeechVolume(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_SPEECH_VOLUME;
+  return Math.min(SPEECH_VOLUME_MAX, Math.max(SPEECH_VOLUME_MIN, Math.round(n)));
 }
 
 class SpeechStore {
@@ -86,6 +101,9 @@ class SpeechStore {
   /** リピート再生がサイクル完了 (`repeatCount >= maxRepeat`) を満たした時、
    *  Reviewer 側で hidden 状態を自動的に解除するか。永続化。デフォルト false。 */
   autoRevealAfterRepeat = $state(false);
+  /** 読み上げ音量 (0-100, %)。永続化、デフォルト 100。
+   *  Rust 側で `[[volm X.XX]]` を `say` に埋め込んで制御する。 */
+  volume = $state(DEFAULT_SPEECH_VOLUME);
 
   constructor() {
     if (browser) {
@@ -117,6 +135,10 @@ class SpeechStore {
       }
       const storedAutoReveal = localStorage.getItem(AUTO_REVEAL_KEY);
       if (storedAutoReveal === "1") this.autoRevealAfterRepeat = true;
+      const storedVolume = localStorage.getItem(SPEECH_VOLUME_KEY);
+      if (storedVolume !== null) {
+        this.volume = clampSpeechVolume(Number.parseInt(storedVolume, 10));
+      }
     }
   }
 
@@ -177,6 +199,14 @@ class SpeechStore {
     this.autoRevealAfterRepeat = enabled;
     if (browser) {
       localStorage.setItem(AUTO_REVEAL_KEY, enabled ? "1" : "0");
+    }
+  }
+
+  setVolume(value: number) {
+    const clamped = clampSpeechVolume(value);
+    this.volume = clamped;
+    if (browser) {
+      localStorage.setItem(SPEECH_VOLUME_KEY, String(clamped));
     }
   }
 
