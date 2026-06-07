@@ -4,6 +4,7 @@
   import { sync } from "$lib/stores/sync.svelte";
   import { goto } from "$app/navigation";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
+  import AnkiDesktopSuggestion from "$lib/components/AnkiDesktopSuggestion.svelte";
   import FutureDueChart from "$lib/components/charts/FutureDueChart.svelte";
   import CardCountsPie from "$lib/components/charts/CardCountsPie.svelte";
   import HistogramChart from "$lib/components/charts/HistogramChart.svelte";
@@ -280,6 +281,7 @@
         {#if collection.error}
           <p class="text-xs text-(--color-danger)">{collection.error}</p>
         {/if}
+        <AnkiDesktopSuggestion class="w-full text-left" />
       </div>
     </div>
   {:else if selected}

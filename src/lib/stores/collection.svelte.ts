@@ -197,6 +197,18 @@ class CollectionStore {
   get selectedDeck(): DeckSummary | null {
     return this.decks.find((d) => d.id === this.selectedDeckId) ?? null;
   }
+
+  /** The Anki Desktop collection path to suggest switching to, or null
+   *  when there's nothing to suggest. Returns a path only when an Anki
+   *  Desktop collection was detected AND it differs from whatever is
+   *  currently open (when nothing is open, currentPath is null so any
+   *  detected path is offered). Drives the "switch to your AnkiWeb-synced
+   *  collection" suggestion shown on both the welcome screen and Settings. */
+  get ankiDesktopSuggestion(): string | null {
+    if (!this.ankiDesktopPath) return null;
+    if (this.ankiDesktopPath === this.currentPath) return null;
+    return this.ankiDesktopPath;
+  }
 }
 
 export const collection = new CollectionStore();

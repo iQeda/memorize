@@ -1,6 +1,7 @@
 <script lang="ts">
   import { theme, type Theme } from "$lib/stores/theme.svelte";
   import { collection } from "$lib/stores/collection.svelte";
+  import AnkiDesktopSuggestion from "$lib/components/AnkiDesktopSuggestion.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import {
     pkg,
@@ -612,32 +613,7 @@
         </div>
       {/if}
 
-      {#if collection.ankiDesktopPath && collection.ankiDesktopPath !== collection.currentPath}
-        <div
-          class="mt-4 rounded-(--radius-md) border border-(--color-accent-500)/40 bg-(--color-accent-500)/8 p-3 text-xs"
-        >
-          <p class="text-(--color-fg-default)">
-            {t("settings.ankiDesktopDetected")}
-          </p>
-          <p class="mt-1 truncate font-mono text-[11px] text-(--color-fg-subtle)">
-            {collection.ankiDesktopPath}
-          </p>
-          <p class="mt-2 leading-relaxed whitespace-pre-line text-(--color-fg-muted)">
-            {t("settings.ankiDesktopHint")}
-          </p>
-          <button
-            type="button"
-            onclick={() => {
-              if (collection.ankiDesktopPath) {
-                void collection.open(collection.ankiDesktopPath);
-              }
-            }}
-            class="mt-2 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) hover:bg-(--color-accent-600) active:scale-[0.97]"
-          >
-            {t("settings.switchToThis")}
-          </button>
-        </div>
-      {/if}
+      <AnkiDesktopSuggestion class="mt-4" />
     </div>
   </section>
 
