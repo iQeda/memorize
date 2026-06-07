@@ -9,12 +9,16 @@ memorize の本番リリースは **`main` への push で完全自動**。`.git
 
 ## 前提運用ルール（毎回これを思い出す）
 
-1. **毎リリースで patch を必ず bump する**（重要）
-   - `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` の `version` を **3 ファイル同時に** patch +1
-   - 過去履歴例: `9906ced` で 0.4.12 → 0.4.13、`fb338f2` で 0.4.18 → 0.4.19。実際は **commit ごとに patch +1** している
-   - これを忘れると **`tauri-plugin-updater` が反応しない**。updater は `latest.json` の `version` で判定するため、同じ version で release を出しても既存ユーザーの自動 update が起動しない（過去に実害あり）
-   - bump はリリース対象の機能 commit に含めて 1 commit で行う（別 commit に分けない方が履歴を追いやすい）
-   - commit メッセージ末尾に `- version 0.4.X → 0.4.Y` の 1 行を入れる慣習（過去履歴参照）
+1. **毎リリースで version を必ず bump する（bump 幅は semver で決める）**（重要）
+   - `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` の `version` を **3 ファイル同時に** 上げる
+   - **bump 幅は変更の種類で決める**（ユーザー指示 2026-06-07）:
+     - バグ修正 / リファクタ / chore / ci のみ → **patch**（`0.5.5` → `0.5.6`）
+     - 後方互換のある機能追加 → **minor**（`0.5.5` → `0.6.0`）
+     - 破壊的変更 → **major**（`0.5.5` → `1.0.0`）
+   - 「機能追加系は適宜マイナーを上げる」こと。patch 固定で出さない（過去に TSV インポート機能を patch で出して再指摘を受けた）
+   - これを忘れる（同じ version で出す）と **`tauri-plugin-updater` が反応しない**。updater は `latest.json` の `version` で判定するため、同じ version で release を出しても既存ユーザーの自動 update が起動しない（過去に実害あり）
+   - bump 後は一度 `cargo check --manifest-path src-tauri/Cargo.toml` を走らせて `src-tauri/Cargo.lock` も追従させ、まとめて 1 commit に含める
+   - commit メッセージ末尾に `- version 0.5.X → 0.5.Y`（または `0.X.0`）の 1 行を入れる慣習（過去履歴参照）
 
 2. **`vendor/anki` の dirty は絶対に commit しない**
    - `apply-vendor-patches.sh` が `vendor/anki/rslib/...` に local patch を当てるので、submodule は常に dirty 状態（`m vendor/anki`）
@@ -128,7 +132,7 @@ GitHub Release は `gh release delete <tag>` + tag 削除 (`git push --delete or
 ## チェックリスト（迷ったらこれを順に通す）
 
 - [ ] `git status` で変更確認、`vendor/anki` の dirty 以外を把握
-- [ ] バージョン bump は本当に必要か？（普段は不要）
+- [ ] version を 3 ファイル bump したか？（毎リリース必須。機能追加=minor / 修正=patch）
 - [ ] ビルドチェック通った？（svelte-check / cargo check / pnpm build）
 - [ ] `git add` でファイル名明示（`-A` 使ってない）
 - [ ] commit メッセージは `feat(area): ...` 日本語スタイル + Co-Authored-By
