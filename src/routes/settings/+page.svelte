@@ -2,7 +2,11 @@
   import { theme, type Theme } from "$lib/stores/theme.svelte";
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
-  import { pkg } from "$lib/stores/package.svelte";
+  import {
+    pkg,
+    type CsvPreview,
+    type DupeResolution,
+  } from "$lib/stores/package.svelte";
   import {
     speech,
     MAX_REPEAT_MIN,
@@ -33,6 +37,7 @@
     History,
     Package,
     FilePlus2,
+    FileText,
     FolderOpen,
     Power,
     DownloadCloud,
@@ -131,6 +136,11 @@
   let exportWithScheduling = $state(false);
   let exportWithMedia = $state(true);
   let exportWithDeckConfigs = $state(true);
+
+  // ---- TSV / CSV import confirmation dialog ----
+  let csvPath = $state<string | null>(null);
+  let csvPreview = $state<CsvPreview | null>(null);
+  let csvDupe = $state<DupeResolution>("update");
 
   // ---- Launch at login (autostart) ----
   let autostartEnabled = $state(false);
@@ -301,6 +311,44 @@
     } catch (e) {
       console.error(e);
     }
+  }
+
+  async function handleTsvImport() {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Text (TSV / CSV)", extensions: ["tsv", "csv", "txt"] }],
+      });
+      if (typeof picked !== "string") return;
+      const preview = await pkg.csvMetadata(picked);
+      if (!preview) return;
+      csvPath = picked;
+      csvPreview = preview;
+      csvDupe = (["update", "preserve", "duplicate"] as const).includes(
+        preview.dupe_resolution as DupeResolution,
+      )
+        ? (preview.dupe_resolution as DupeResolution)
+        : "update";
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function cancelTsvImport() {
+    csvPath = null;
+    csvPreview = null;
+  }
+
+  async function confirmTsvImport() {
+    if (!csvPath) return;
+    const path = csvPath;
+    const dupe = csvDupe;
+    csvPath = null;
+    csvPreview = null;
+    const r = await pkg.importTsv(path, dupe);
+    if (r) await collection.refreshDecks();
   }
 
   async function handleExportAll() {
@@ -869,11 +917,35 @@
         </button>
       </div>
 
+      <div class="mt-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5">
+          <FileText size={16} class="text-(--color-accent-500)" />
+          <div class="text-sm">
+            <p class="text-(--color-fg-default)">{t("io.tsvImportLabel")}</p>
+            <p class="mt-0.5 text-xs text-(--color-fg-subtle)">{t("io.tsvImportBody")}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick={handleTsvImport}
+          disabled={pkg.busy || !collection.isOpen}
+          class="flex shrink-0 items-center gap-1.5 rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {#if pkg.busy}
+            <Loader2 size={12} class="animate-spin" />
+          {:else}
+            <FileText size={12} />
+          {/if}
+          {t("io.tsvImportPick")}
+        </button>
+      </div>
+
       {#if pkg.lastImport}
-        <div class="mt-3 grid grid-cols-3 gap-2 text-xs sm:grid-cols-5">
+        <div class="mt-3 grid grid-cols-3 gap-2 text-xs sm:grid-cols-6">
           {#each [
             { label: t("io.statNew"), value: pkg.lastImport.new },
             { label: t("io.statUpdated"), value: pkg.lastImport.updated },
+            { label: t("io.statMatched"), value: pkg.lastImport.first_field_match },
             { label: t("io.statDuplicate"), value: pkg.lastImport.duplicate },
             { label: t("io.statConflicting"), value: pkg.lastImport.conflicting },
             { label: t("io.statFound"), value: pkg.lastImport.found_notes }
@@ -1344,3 +1416,121 @@
   </section>
   </div>
 </div>
+
+{#if csvPreview && csvPath}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+    onclick={(e) => {
+      if (e.target === e.currentTarget) cancelTsvImport();
+    }}
+    onkeydown={(e) => {
+      if (e.key === "Escape") cancelTsvImport();
+    }}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+  >
+    <div
+      class="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-(--radius-xl) border border-(--color-border-default) bg-(--color-bg-elevated) shadow-(--shadow-card)"
+    >
+      <header
+        class="flex items-center gap-2 border-b border-(--color-border-default) px-5 py-3"
+      >
+        <FileText size={16} class="text-(--color-accent-500)" />
+        <h2 class="text-sm font-semibold tracking-wide">{t("io.tsvDialogTitle")}</h2>
+      </header>
+
+      <div class="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <div>
+            <dt class="text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
+              {t("io.tsvDeck")}
+            </dt>
+            <dd class="mt-0.5 text-(--color-fg-default)">{csvPreview.deck || "—"}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
+              {t("io.tsvNotetype")}
+            </dt>
+            <dd class="mt-0.5 text-(--color-fg-default)">{csvPreview.notetype || "—"}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
+              {t("io.tsvDelimiter")}
+            </dt>
+            <dd class="mt-0.5 text-(--color-fg-default)">{csvPreview.delimiter}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
+              {t("io.tsvColumns")}
+            </dt>
+            <dd class="mt-0.5 text-(--color-fg-default)">{csvPreview.columns}</dd>
+          </div>
+        </dl>
+
+        <label class="block">
+          <span class="mb-1 block text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
+            {t("io.tsvDupe")}
+          </span>
+          <select
+            bind:value={csvDupe}
+            class="w-full rounded-(--radius-md) border border-(--color-border-default) bg-(--color-bg-base) px-3 py-1.5 text-sm shadow-(--shadow-subtle) outline-none focus:border-(--color-accent-500)"
+          >
+            <option value="update">{t("io.tsvDupeUpdate")}</option>
+            <option value="preserve">{t("io.tsvDupePreserve")}</option>
+            <option value="duplicate">{t("io.tsvDupeDuplicate")}</option>
+          </select>
+        </label>
+
+        {#if csvPreview.preview_rows.length > 0}
+          <div>
+            <p class="mb-1 text-[10px] tracking-wider text-(--color-fg-subtle) uppercase">
+              {t("io.tsvPreview")}
+            </p>
+            <div
+              class="overflow-x-auto rounded-(--radius-md) border border-(--color-border-default)"
+            >
+              <table class="w-full border-collapse text-xs">
+                <tbody>
+                  {#each csvPreview.preview_rows as row, ri (ri)}
+                    <tr class="border-b border-(--color-border-default) last:border-0">
+                      {#each row as cell, ci (ci)}
+                        <td
+                          class="max-w-[16rem] truncate px-2 py-1 align-top text-(--color-fg-muted)"
+                          >{cell}</td
+                        >
+                      {/each}
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <footer
+        class="flex items-center justify-end gap-2 border-t border-(--color-border-default) px-5 py-3"
+      >
+        <button
+          type="button"
+          onclick={cancelTsvImport}
+          class="rounded-(--radius-md) border border-(--color-border-strong) px-3 py-1.5 text-xs text-(--color-fg-default) transition-colors hover:bg-(--color-bg-overlay) active:scale-[0.98]"
+        >
+          {t("io.tsvCancel")}
+        </button>
+        <button
+          type="button"
+          onclick={confirmTsvImport}
+          disabled={pkg.busy}
+          class="flex items-center gap-1.5 rounded-(--radius-md) bg-(--color-accent-500) px-3 py-1.5 text-xs font-medium text-(--color-fg-onAccent) shadow-(--shadow-subtle) transition-all hover:bg-(--color-accent-600) active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {#if pkg.busy}
+            <Loader2 size={12} class="animate-spin" />
+          {/if}
+          {t("io.tsvImportConfirm")}
+        </button>
+      </footer>
+    </div>
+  </div>
+{/if}

@@ -12,6 +12,19 @@ export type ImportReport = {
   found_notes: number;
 };
 
+export type CsvPreview = {
+  deck: string;
+  notetype: string;
+  delimiter: string;
+  dupe_resolution: string;
+  columns: number;
+  preview_rows: string[][];
+  is_html: boolean;
+  tags_column: number;
+};
+
+export type DupeResolution = "update" | "preserve" | "duplicate";
+
 export type ExportReport = { note_count: number };
 
 export type ExportInput = {
@@ -35,6 +48,37 @@ class PackageStore {
     this.lastError = null;
     try {
       const r = await invoke<ImportReport>("import_apkg", { inPath });
+      this.lastImport = r;
+      return r;
+    } catch (e) {
+      this.lastError = String(e);
+      return null;
+    } finally {
+      this.busy = false;
+      this.busyReason = null;
+    }
+  }
+
+  /** Detect import settings for a CSV/TSV file without mutating the collection. */
+  async csvMetadata(inPath: string): Promise<CsvPreview | null> {
+    this.lastError = null;
+    try {
+      return await invoke<CsvPreview>("csv_metadata", { inPath });
+    } catch (e) {
+      this.lastError = String(e);
+      return null;
+    }
+  }
+
+  async importTsv(
+    inPath: string,
+    dupeResolution: DupeResolution,
+  ): Promise<ImportReport | null> {
+    this.busy = true;
+    this.busyReason = "Import 中…";
+    this.lastError = null;
+    try {
+      const r = await invoke<ImportReport>("import_tsv", { inPath, dupeResolution });
       this.lastImport = r;
       return r;
     } catch (e) {

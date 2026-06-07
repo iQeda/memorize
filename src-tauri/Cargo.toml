@@ -1,6 +1,6 @@
 [package]
 name = "memorize"
-version = "0.5.4"
+version = "0.5.5"
 description = "Anki-compatible English vocabulary learning app"
 authors = ["iQeda"]
 edition = "2021"

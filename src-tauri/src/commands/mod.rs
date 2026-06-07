@@ -2,6 +2,7 @@ pub mod app;
 pub mod backup;
 pub mod cards;
 pub mod collection;
+pub mod csv;
 pub mod decks;
 #[cfg(debug_assertions)]
 pub mod dev;

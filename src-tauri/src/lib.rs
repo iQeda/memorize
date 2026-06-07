@@ -123,6 +123,8 @@ pub fn run() {
             commands::backup::import_colpkg,
             commands::package::import_apkg,
             commands::package::export_all_apkg,
+            commands::csv::csv_metadata,
+            commands::csv::import_tsv,
             commands::study::start_study,
             commands::study::get_next_card,
             commands::study::answer_card_now,

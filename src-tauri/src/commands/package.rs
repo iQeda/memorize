@@ -1,6 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::progress::ProgressEmitter;
 use crate::state::AppState;
+use anki::import_export::NoteLog;
 use anki_proto::import_export::ExportAnkiPackageOptions;
 use anki_proto::import_export::ImportAnkiPackageOptions;
 use anki_proto::import_export::ImportAnkiPackageUpdateCondition;
@@ -18,6 +19,24 @@ pub struct ImportReport {
     pub missing_deck: u32,
     pub empty_first_field: u32,
     pub found_notes: u32,
+}
+
+impl ImportReport {
+    /// Translate rslib's `NoteLog` into the hand-written IPC DTO. Shared by the
+    /// `.apkg` and TSV/CSV import paths so both surface identical statistics.
+    pub fn from_note_log(log: &NoteLog) -> Self {
+        Self {
+            new: log.new.len() as u32,
+            updated: log.updated.len() as u32,
+            duplicate: log.duplicate.len() as u32,
+            conflicting: log.conflicting.len() as u32,
+            first_field_match: log.first_field_match.len() as u32,
+            missing_notetype: log.missing_notetype.len() as u32,
+            missing_deck: log.missing_deck.len() as u32,
+            empty_first_field: log.empty_first_field.len() as u32,
+            found_notes: log.found_notes,
+        }
+    }
 }
 
 #[tauri::command]
@@ -38,19 +57,7 @@ pub async fn import_apkg(
         with_deck_configs: true,
     };
     let out = col.import_apkg(&in_path, options)?;
-    let log = out.output;
-
-    Ok(ImportReport {
-        new: log.new.len() as u32,
-        updated: log.updated.len() as u32,
-        duplicate: log.duplicate.len() as u32,
-        conflicting: log.conflicting.len() as u32,
-        first_field_match: log.first_field_match.len() as u32,
-        missing_notetype: log.missing_notetype.len() as u32,
-        missing_deck: log.missing_deck.len() as u32,
-        empty_first_field: log.empty_first_field.len() as u32,
-        found_notes: log.found_notes,
-    })
+    Ok(ImportReport::from_note_log(&out.output))
 }
 
 #[derive(Deserialize, Debug)]
