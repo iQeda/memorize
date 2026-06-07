@@ -4,6 +4,7 @@
   import TitleBar from "$lib/components/TitleBar.svelte";
   import PageTransition from "$lib/components/PageTransition.svelte";
   import Launcher from "$lib/components/Launcher.svelte";
+  import ImportPreviewModal from "$lib/components/ImportPreviewModal.svelte";
   import { theme } from "$lib/stores/theme.svelte";
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
@@ -139,3 +140,4 @@
 </div>
 
 <Launcher bind:open={launcherOpen} />
+<ImportPreviewModal />

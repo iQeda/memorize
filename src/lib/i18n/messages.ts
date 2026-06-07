@@ -12,6 +12,7 @@ export const messages = {
     // Sidebar
     "sidebar.decks": "Decks",
     "sidebar.newDeck": "New deck",
+    "sidebar.import": "Import (.apkg / .tsv / .csv)",
     "sidebar.deckPlaceholder": "Deck name (a::b for nested)",
     "sidebar.create": "Create",
     "sidebar.cancel": "Cancel",
@@ -287,14 +288,10 @@ export const messages = {
 
     // Import / Export
     "io.title": "Import / Export",
-    "io.importLabel": "Import .apkg",
+    "io.importLabel": "Import",
     "io.importBody":
-      "Merge into the current collection. Scheduling state is preserved.",
+      "Add to the current collection from .apkg, .tsv or .csv. Packages keep their scheduling state; text files add or update words keyed by the first field.",
     "io.importPick": "Choose file…",
-    "io.tsvImportLabel": "Import .tsv / .csv",
-    "io.tsvImportBody":
-      "Add or update words keyed by the first field. Deck, notetype and separator are read from the file's header lines (#deck, #notetype, #separator).",
-    "io.tsvImportPick": "Choose file…",
     "io.tsvDialogTitle": "Confirm import",
     "io.tsvDeck": "Deck",
     "io.tsvNotetype": "Notetype",
@@ -332,6 +329,7 @@ export const messages = {
     // Sidebar
     "sidebar.decks": "デッキ",
     "sidebar.newDeck": "新規デッキ",
+    "sidebar.import": "インポート (.apkg / .tsv / .csv)",
     "sidebar.deckPlaceholder": "デッキ名 (a::b でネスト)",
     "sidebar.create": "作成",
     "sidebar.cancel": "キャンセル",
@@ -606,14 +604,10 @@ export const messages = {
 
     // Import / Export
     "io.title": "インポート / エクスポート",
-    "io.importLabel": ".apkg をインポート",
+    "io.importLabel": "インポート",
     "io.importBody":
-      "現在のコレクションにマージ。スケジューリング情報も復元します",
+      "現在のコレクションに .apkg / .tsv / .csv から取り込み。パッケージはスケジューリング情報も復元、テキストは 1 列目をキーに追加・更新します",
     "io.importPick": "ファイルを選択…",
-    "io.tsvImportLabel": ".tsv / .csv をインポート",
-    "io.tsvImportBody":
-      "1 列目をキーに単語を追加・更新。デッキ・ノートタイプ・区切り文字はファイル先頭のヘッダー行 (#deck, #notetype, #separator) から読み取ります",
-    "io.tsvImportPick": "ファイルを選択…",
     "io.tsvDialogTitle": "インポート内容の確認",
     "io.tsvDeck": "デッキ",
     "io.tsvNotetype": "ノートタイプ",

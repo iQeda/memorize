@@ -4,6 +4,7 @@
     Search,
     Settings as SettingsIcon,
     Plus,
+    Import,
     Check,
     X,
     Pencil,
@@ -11,6 +12,8 @@
     GripVertical,
   } from "lucide-svelte";
   import { collection, type DeckSummary } from "$lib/stores/collection.svelte";
+  import { pkg } from "$lib/stores/package.svelte";
+  import { importFlow } from "$lib/stores/import-flow.svelte";
   import { deckOrder } from "$lib/stores/deck-order.svelte";
   import { draggable } from "$lib/actions/draggable";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
@@ -341,9 +344,20 @@
           </span>
           <button
             type="button"
+            onclick={() => importFlow.start()}
+            disabled={pkg.busy}
+            aria-label={t("sidebar.import")}
+            title={t("sidebar.import")}
+            class="grid h-4 w-4 place-items-center rounded text-(--color-fg-subtle) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default) disabled:opacity-40"
+          >
+            <Import size={12} strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
             onclick={startCreate}
             disabled={creating}
             aria-label={t("sidebar.newDeck")}
+            title={t("sidebar.newDeck")}
             class="grid h-4 w-4 place-items-center rounded text-(--color-fg-subtle) transition-colors hover:bg-(--color-bg-overlay) hover:text-(--color-fg-default) disabled:opacity-40"
           >
             <Plus size={12} strokeWidth={2.5} />

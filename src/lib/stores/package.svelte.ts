@@ -25,6 +25,20 @@ export type CsvPreview = {
 
 export type DupeResolution = "update" | "preserve" | "duplicate";
 
+export type ImportKind = "apkg" | "text";
+
+/** Route an import file to the right backend based on its extension.
+ *  `.apkg` is a one-shot package merge; `.tsv` / `.csv` / `.txt` go
+ *  through the text-import preview flow. Returns null for anything we
+ *  can't import. Used by the unified "Import" button so .apkg and text
+ *  files share a single picker instead of separate buttons. */
+export function importKindForPath(path: string): ImportKind | null {
+  const ext = path.toLowerCase().split(".").pop() ?? "";
+  if (ext === "apkg") return "apkg";
+  if (ext === "tsv" || ext === "csv" || ext === "txt") return "text";
+  return null;
+}
+
 export type ExportReport = { note_count: number };
 
 export type ExportInput = {
