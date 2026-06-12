@@ -1132,7 +1132,7 @@
           <button
             type="button"
             onclick={() => {
-              void invoke("start_speak_text", {
+              void invoke<void>("start_speak_text", {
                 text: t("settings.speech.ratePreviewText"),
                 rate: speech.speechRate,
                 sentencePauseMs: speech.sentencePauseMs,
@@ -1175,7 +1175,7 @@
           <button
             type="button"
             onclick={() => {
-              void invoke("start_speak_text", {
+              void invoke<void>("start_speak_text", {
                 text: t("settings.speech.ratePreviewText"),
                 rate: speech.speechRate,
                 sentencePauseMs: speech.sentencePauseMs,

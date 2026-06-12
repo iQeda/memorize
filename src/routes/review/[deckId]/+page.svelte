@@ -167,7 +167,7 @@
     error = null;
     cursor = 0;
     try {
-      await invoke("start_study", { deckId });
+      await invoke<void>("start_study", { deckId });
       await loadNext(/* isFirst */ true);
     } catch (e) {
       error = String(e);
@@ -249,7 +249,7 @@
     if (!current) return;
     const ms = Math.min(60_000, Math.round(performance.now() - shownAt));
     try {
-      await invoke("answer_card_now", {
+      await invoke<void>("answer_card_now", {
         rating,
         millisecondsTaken: ms,
       });
@@ -368,7 +368,7 @@
     // ad-hoc 署名) でも動く。要アクセシビリティ権限 (初回プロンプトあり)。
     // Nani が未インストールなら Cmd+J は OS の他処理にフォールバックする
     // だけで Memorize 側に害はない。
-    void invoke("start_nani_lookup", { word: text }).catch((e) => {
+    void invoke<void>("start_nani_lookup", { word: text }).catch((e) => {
       console.error("start_nani_lookup failed", e);
     });
   }
@@ -386,7 +386,7 @@
       if (!host) return;
       const text = (host.textContent ?? "").trim().replace(/\s+/g, " ");
       if (!text) return;
-      void invoke("start_speak_text", {
+      void invoke<void>("start_speak_text", {
         text,
         rate: speech.speechRate,
         sentencePauseMs: speech.sentencePauseMs,
@@ -820,7 +820,7 @@
                   <button
                     type="button"
                     onclick={() => {
-                      void invoke("start_speak_text", {
+                      void invoke<void>("start_speak_text", {
                         text: t("settings.speech.ratePreviewText"),
                         rate: speech.speechRate,
                         sentencePauseMs: speech.sentencePauseMs,

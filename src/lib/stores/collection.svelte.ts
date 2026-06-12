@@ -73,7 +73,7 @@ class CollectionStore {
 
   private async bootstrapDevCollection() {
     try {
-      await invoke("bootstrap_dev_collection");
+      await invoke<void>("bootstrap_dev_collection");
       this.isOpen = true;
       await this.refreshDecks();
     } catch (e) {
@@ -88,7 +88,7 @@ class CollectionStore {
     this.loading = true;
     this.error = null;
     try {
-      await invoke("open_collection", { path });
+      await invoke<void>("open_collection", { path });
       this.isOpen = true;
       if (!skipPersist && browser) {
         localStorage.setItem(LAST_PATH_KEY, path);
@@ -144,7 +144,7 @@ class CollectionStore {
 
   async close() {
     try {
-      await invoke("close_collection");
+      await invoke<void>("close_collection");
     } finally {
       this.isOpen = false;
       this.decks = [];
@@ -175,7 +175,7 @@ class CollectionStore {
 
   async renameDeck(deckId: number, newName: string): Promise<boolean> {
     try {
-      await invoke("rename_deck", { deckId, newName });
+      await invoke<void>("rename_deck", { deckId, newName });
       await this.refreshDecks();
       return true;
     } catch (e) {
@@ -186,7 +186,7 @@ class CollectionStore {
 
   async deleteDeck(deckId: number): Promise<boolean> {
     try {
-      await invoke("delete_deck", { deckId });
+      await invoke<void>("delete_deck", { deckId });
       if (this.selectedDeckId === deckId) {
         this.selectedDeckId = null;
       }

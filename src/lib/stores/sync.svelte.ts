@@ -170,7 +170,7 @@ class SyncStore {
     await runAsync(
       this,
       async () => {
-        await invoke("export_colpkg", { outPath, includeMedia });
+        await invoke<void>("export_colpkg", { outPath, includeMedia });
         this.lastBackupPath = outPath;
         this.lastMessage = t("backup.lastPath", { path: outPath });
       },
@@ -183,7 +183,7 @@ class SyncStore {
     await runAsync(
       this,
       async () => {
-        await invoke("import_colpkg", { inPath });
+        await invoke<void>("import_colpkg", { inPath });
         this.lastMessage = t("backup.lastPath", { path: inPath });
       },
       { reason: t("backup.restoreButton") },
@@ -218,7 +218,7 @@ class SyncStore {
     await runAsync(
       this,
       async () => {
-        await invoke("sync_logout");
+        await invoke<void>("sync_logout");
         this.loggedIn = false;
         this.username = null;
       },
@@ -274,7 +274,7 @@ class SyncStore {
     const endpointOverride = this.lastReport?.new_endpoint ?? null;
     try {
       await this.runWithAutoBackup(t("sync.uploadRunning"), () =>
-        invoke("sync_full_upload", { endpointOverride }),
+        invoke<void>("sync_full_upload", { endpointOverride }),
       );
       this.fullSyncRequired = null;
       this.lastMessage = t("sync.uploadDone");
@@ -288,7 +288,7 @@ class SyncStore {
     const endpointOverride = this.lastReport?.new_endpoint ?? null;
     try {
       await this.runWithAutoBackup(t("sync.downloadRunning"), () =>
-        invoke("sync_full_download", { endpointOverride }),
+        invoke<void>("sync_full_download", { endpointOverride }),
       );
       this.fullSyncRequired = null;
       this.lastMessage = t("sync.downloadDone");

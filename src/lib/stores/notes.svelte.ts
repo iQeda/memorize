@@ -64,7 +64,7 @@ class NotesStore {
     tags: string[];
   }): Promise<boolean> {
     const ok = await runAsync(this, async () => {
-      await invoke("update_note", {
+      await invoke<void>("update_note", {
         input: {
           note_id: input.noteId,
           fields: input.fields,
@@ -81,7 +81,7 @@ class NotesStore {
     deckId: number;
   }): Promise<boolean> {
     const ok = await runAsync(this, async () => {
-      await invoke("set_note_deck", {
+      await invoke<void>("set_note_deck", {
         input: { note_id: input.noteId, deck_id: input.deckId },
       });
       return true;

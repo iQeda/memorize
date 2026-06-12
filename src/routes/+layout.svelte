@@ -104,7 +104,7 @@
         try {
           await sync.tryAutoSync(collection.isOpen);
         } finally {
-          await invoke("confirm_exit");
+          await invoke<void>("confirm_exit");
         }
       });
     } catch (e) {
