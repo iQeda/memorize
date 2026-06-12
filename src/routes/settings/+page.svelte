@@ -5,19 +5,7 @@
   import { sync } from "$lib/stores/sync.svelte";
   import { pkg } from "$lib/stores/package.svelte";
   import { importFlow } from "$lib/stores/import-flow.svelte";
-  import {
-    speech,
-    MAX_REPEAT_MIN,
-    MAX_REPEAT_MAX,
-    REPEAT_INTERVAL_MIN,
-    REPEAT_INTERVAL_MAX,
-    SPEECH_RATE_MIN,
-    SPEECH_RATE_MAX,
-    SENTENCE_PAUSE_MIN,
-    SENTENCE_PAUSE_MAX,
-    SPEECH_VOLUME_MIN,
-    SPEECH_VOLUME_MAX,
-  } from "$lib/stores/speech.svelte";
+  import { speech, SPEECH_LIMITS } from "$lib/stores/speech.svelte";
   import { i18n, t, type Locale } from "$lib/i18n/index.svelte";
   import { shortcuts, type Action } from "$lib/stores/shortcuts.svelte";
   import { invoke } from "$lib/ipc";
@@ -1061,8 +1049,8 @@
         <div class="flex items-center gap-2">
           <input
             type="range"
-            min={MAX_REPEAT_MIN}
-            max={MAX_REPEAT_MAX}
+            min={SPEECH_LIMITS.maxRepeat.min}
+            max={SPEECH_LIMITS.maxRepeat.max}
             step="1"
             value={speech.maxRepeat}
             oninput={(e) => {
@@ -1088,8 +1076,8 @@
         <div class="flex items-center gap-2">
           <input
             type="range"
-            min={REPEAT_INTERVAL_MIN}
-            max={REPEAT_INTERVAL_MAX}
+            min={SPEECH_LIMITS.repeatIntervalSec.min}
+            max={SPEECH_LIMITS.repeatIntervalSec.max}
             step="0.01"
             value={speech.repeatIntervalSec}
             oninput={(e) => {
@@ -1115,8 +1103,8 @@
         <div class="flex items-center gap-2">
           <input
             type="range"
-            min={SPEECH_RATE_MIN}
-            max={SPEECH_RATE_MAX}
+            min={SPEECH_LIMITS.rateWpm.min}
+            max={SPEECH_LIMITS.rateWpm.max}
             step="10"
             value={speech.speechRate}
             oninput={(e) => {
@@ -1158,8 +1146,8 @@
         <div class="flex items-center gap-2">
           <input
             type="range"
-            min={SPEECH_VOLUME_MIN}
-            max={SPEECH_VOLUME_MAX}
+            min={SPEECH_LIMITS.volume.min}
+            max={SPEECH_LIMITS.volume.max}
             step="1"
             value={speech.volume}
             oninput={(e) => {
@@ -1201,8 +1189,8 @@
         <div class="flex items-center gap-2">
           <input
             type="range"
-            min={SENTENCE_PAUSE_MIN}
-            max={SENTENCE_PAUSE_MAX}
+            min={SPEECH_LIMITS.sentencePauseMs.min}
+            max={SPEECH_LIMITS.sentencePauseMs.max}
             step="100"
             value={speech.sentencePauseMs}
             oninput={(e) => {
