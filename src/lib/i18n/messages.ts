@@ -284,6 +284,8 @@ export const messages = {
 
     // Import / Export
     "io.title": "Import / Export",
+    "io.importing": "Importing…",
+    "io.exporting": "Exporting…",
     "io.importLabel": "Import",
     "io.importBody":
       "Add to the current collection from .apkg, .tsv or .csv. Packages keep their scheduling state; text files add or update words keyed by the first field.",
@@ -596,6 +598,8 @@ export const messages = {
 
     // Import / Export
     "io.title": "インポート / エクスポート",
+    "io.importing": "インポート中…",
+    "io.exporting": "エクスポート中…",
     "io.importLabel": "インポート",
     "io.importBody":
       "現在のコレクションに .apkg / .tsv / .csv から取り込み。パッケージはスケジューリング情報も復元、テキストは 1 列目をキーに追加・更新します",

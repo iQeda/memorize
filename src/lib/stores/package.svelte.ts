@@ -1,4 +1,5 @@
 import { invoke } from "$lib/ipc";
+import { t } from "$lib/i18n/index.svelte";
 
 export type ImportReport = {
   new: number;
@@ -58,7 +59,7 @@ class PackageStore {
 
   async importApkg(inPath: string): Promise<ImportReport | null> {
     this.busy = true;
-    this.busyReason = "Import 中…";
+    this.busyReason = t("io.importing");
     this.lastError = null;
     try {
       const r = await invoke<ImportReport>("import_apkg", { inPath });
@@ -89,7 +90,7 @@ class PackageStore {
     dupeResolution: DupeResolution,
   ): Promise<ImportReport | null> {
     this.busy = true;
-    this.busyReason = "Import 中…";
+    this.busyReason = t("io.importing");
     this.lastError = null;
     try {
       const r = await invoke<ImportReport>("import_tsv", { inPath, dupeResolution });
@@ -106,7 +107,7 @@ class PackageStore {
 
   async exportAll(input: ExportInput): Promise<ExportReport | null> {
     this.busy = true;
-    this.busyReason = "Export 中…";
+    this.busyReason = t("io.exporting");
     this.lastError = null;
     try {
       const r = await invoke<ExportReport>("export_all_apkg", {
