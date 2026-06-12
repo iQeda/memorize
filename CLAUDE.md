@@ -112,7 +112,7 @@ Stores are class instances using `$state` and live in `src/lib/stores/*.svelte.t
 ### Routes layout
 
 - `src/routes/+page.svelte` — Decks browser + the stats panel grid (Today / Future Due / Calendar / Reviews / Card Counts / Intervals / Card Ease / Retention / Hourly / Answer Buttons / Added). All panels are 260px fixed-height in a 2-column grid via `auto-rows-[260px]`.
-- `src/routes/review/[deckId]/+page.svelte` — the reviewer. Cards render at full container width (no `max-w` clamp). Includes the Nani lookup feature: extracts the front word, populates an off-screen `<input>`, focuses+selects it, then `invoke('nani_lookup')` which `pbcopy`s the word and synthesizes Cmd+J via `osascript`.
+- `src/routes/review/[deckId]/+page.svelte` — the reviewer. Cards render at full container width (no `max-w` clamp). Includes the Nani lookup feature: selects the card iframe text, copies it to the clipboard, then `invoke('start_nani_lookup')` opens the `naniapp://translate?source=<word>` deep link via `/usr/bin/open` (no CGEvent / osascript / accessibility permission needed).
 - `src/routes/browse` — card browser.
 - `src/routes/settings` — profile, theme, locale, sync, backup, import/export, shortcut rebinding.
 

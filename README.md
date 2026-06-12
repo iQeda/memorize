@@ -88,6 +88,13 @@ pnpm exec svelte-check
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
+ユニットテスト:
+
+```sh
+pnpm test:run     # Vitest (jsdom)
+pnpm test:rust    # cargo test (要 protoc — PATH に無ければ PROTOC=/opt/homebrew/bin/protoc)
+```
+
 ## 本番ビルド (DMG)
 
 ローカルで:
@@ -137,18 +144,27 @@ memorize/
 │   ├── app.css                   # Tailwind v4 @theme トークン
 │   ├── lib/
 │   │   ├── ipc.ts                # invoke() ラッパ
+│   │   ├── storage-keys.ts       # localStorage キーの単一ソース
 │   │   ├── actions/draggable.ts  # window.startDragging() を mousedown で呼ぶ
-│   │   ├── stores/               # collection / theme / sync (Svelte 5 class state)
-│   │   ├── components/           # Sidebar / TitleBar / CardFrame / PageTransition
-│   │   └── reviewer/             # Anki Reviewer JS の最小ポート (script 再評価)
-│   └── routes/                   # /, /browse, /review/[deckId], /settings
+│   │   ├── stores/               # collection / sync / speech / shortcuts ほか (Svelte 5 runes クラス)
+│   │   ├── i18n/                 # en/ja メッセージカタログ + t()
+│   │   ├── stats/                # ホーム統計の DTO 型 + チャート変換の純関数
+│   │   ├── reviewer/             # Reviewer ロジック層 (session / speech-cycle / hidden-overlay など、テスト付き)
+│   │   └── components/           # Sidebar / TitleBar / CardFrame / SpeechControls
+│   │       ├── charts/           #   統計チャート + chart-utils
+│   │       ├── home/             #   WelcomeScreen / StatsPanelGrid
+│   │       ├── settings/         #   Settings の各セクション部品
+│   │       └── reviewer/         #   Reviewer の UI 部品
+│   └── routes/                   # /, /browse, /review/[deckId], /settings (各ページは薄い composition root)
 ├── src-tauri/                    # Tauri 2 + Rust
 │   ├── Cargo.toml                # [workspace] を書かない (重要、後述)
 │   ├── examples/smoke.rs         # スタンドアロン smoke test
 │   └── src/
-│       ├── state.rs              # Mutex<Option<Collection>> + http client + col_path
+│       ├── state.rs              # Mutex<Option<Collection>> + with_collection ヘルパー + http client
 │       ├── error.rs              # serde-serializable AppError
-│       └── commands/             # collection / decks / cards / reviewer / sync
+│       ├── render.rs             # RenderedNode → HTML 変換 (reviewer / study 共用)
+│       └── commands/             # collection / decks/ (mod・stats・graphs) / cards / reviewer /
+│                                 # study / notes / sync / backup / csv / package / speech / nani
 └── vendor/anki/                  # git submodule → ankitects/anki @ 35b727a
 ```
 
@@ -162,6 +178,7 @@ memorize/
 | `0001-expose-progress-module.patch` | `mod progress;` → `pub mod progress;` | Tauri command で `Arc<Mutex<ProgressState>>` を構築 |
 | `0002-tolerate-missing-original-size-header.patch` | `io_monitor.rs` で zstd ヘッダ無しの応答を許容 | AnkiWeb `/upload` が plain `OK` を返す挙動への対処 |
 | `0003-expose-graph-data-for-search.patch` | `Collection::graph_data_for_search` を pub に | Decks 画面の Stats パネルで内部 graph data API を利用 |
+| `0004-paren-wrap-did-search-or-clause.patch` | `did:X` の SQL OR 句を外側括弧で包む | upstream の検索 SQL 優先順位バグで `did:X "foo"` がデッキ内全カードを leak するのを修正 |
 
 submodule 更新後は必ず `./scripts/apply-vendor-patches.sh` を再実行する。
 将来は upstream に PR するか fork に切り替える。
@@ -197,12 +214,15 @@ Phase 0 から維持。
 
 ### Nani lookup (Phase 5)
 
-解答画面の "Nani" ボタン (デフォルトショートカット `n`) で:
+解答画面の "Nani" ボタン (デフォルトショートカット `j`) で:
 
-1. front (英単語) を抽出してオフスクリーン `<input>` に詰めて全選択
-2. `osascript` 経由で Cmd+J を OS に送出
-3. Nani の global hotkey (Cmd+J 想定) が macOS Accessibility API で
-   memorize の focused input から選択テキストを読み取る
+1. カード iframe の本文テキストを全選択してクリップボードへコピー
+2. `start_nani_lookup` コマンドが `naniapp://translate?source=<URL-encoded word>`
+   の deep link を `/usr/bin/open` に渡す
+3. Nani.app が起動して該当ワードの翻訳画面を開く
+
+CGEvent / osascript / pbcopy は使わない (アクセシビリティ権限や Apple Events
+entitlement が不要で、本番ビルドの Hardened Runtime でもそのまま動く)。
 
 ショートカットキーは Settings > Keyboard shortcuts で再バインド可能。
 (`shortcuts.svelte.ts` の `Action = Rating | "copy" | "speak" | "hide"`)
@@ -264,15 +284,19 @@ third-party クライアントについて以下の通り述べています:
 
 ### 認証情報の保管
 
-ログイン後、host-key は **macOS Keychain** に `dev.iqeda.memorize` /
-`ankiweb-credentials` として JSON 形式で保存される (`keyring` crate)。
+ログイン後、host-key は **app data dir の `ankiweb-credentials.json`** に
+mode 0600 の JSON で保存される (`src-tauri/src/commands/sync.rs`)。
 パスワード本体は保存しない (host-key はパスワードと等価ではないが、
 sync API には十分な権限を持つので慎重に)。
 
-ログアウト or `keychain` の該当エントリを削除すれば破棄できる:
+Keychain を使わないのは、開発中は再コンパイルごとにバイナリの署名が変わり
+起動のたびに Keychain の許可プロンプトが出るため。署名付きリリースに
+移行したら Keychain backend に戻す選択肢がある。
+
+ログアウト or ファイル削除で破棄できる:
 
 ```sh
-security delete-generic-password -s dev.iqeda.memorize -a ankiweb-credentials
+rm "$HOME/Library/Application Support/dev.iqeda.memorize/ankiweb-credentials.json"
 ```
 
 ## Import / Export / Backup
@@ -289,9 +313,8 @@ security delete-generic-password -s dev.iqeda.memorize -a ankiweb-credentials
 
 ## 既知の限界
 
-- Phase 5 (英単語特化 note type / 発音 / 語源 / TTS など) は未着手 — ユーザー要件待ち
-- 同期前後のデッキ一覧 auto-refresh は手動 (Import 後のみ自動 refresh)
-- vendor/anki に local patch 1 件 (`patches/0001-expose-progress-module.patch`) を当てているため、submodule update 後は `./scripts/apply-vendor-patches.sh` を実行する必要あり
+- Phase 5 (英単語特化 note type / 発音 / 語源など) は Nani lookup と読み上げ以外は未着手 — ユーザー要件待ち
+- vendor/anki に local patch 4 件 (`patches/` 参照) を当てているため、submodule update 後は `./scripts/apply-vendor-patches.sh` を実行する必要あり
 
 ## ライセンス
 
