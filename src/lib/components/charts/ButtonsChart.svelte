@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CHART_W, CHART_H, inner, tickValues } from "./chart-utils";
   type ButtonsCounts = {
     learning: number[];
     young: number[];
@@ -6,14 +7,12 @@
   };
   let { counts }: { counts: ButtonsCounts } = $props();
 
-  const W = 720;
-  const H = 140;
-  const padL = 28;
-  const padR = 6;
-  const padT = 6;
-  const padB = 24;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
+  const W = CHART_W;
+  const H = CHART_H;
+  const { w: innerW, h: innerH, pad } = inner({ r: 6, b: 24 });
+  const padL = pad.l;
+  const padR = pad.r;
+  const padT = pad.t;
 
   const groups = $derived([
     { label: "Learning", values: counts.learning },
@@ -28,17 +27,10 @@
   const groupW = $derived(innerW / groups.length);
   const barW = $derived((groupW * 0.75) / 4);
 
-  function tickValues(): number[] {
-    const step = Math.max(1, Math.ceil(maxValue / 4));
-    const out: number[] = [];
-    for (let v = 0; v <= maxValue; v += step) out.push(v);
-    if (out[out.length - 1] !== maxValue) out.push(maxValue);
-    return out;
-  }
 </script>
 
 <svg viewBox="0 0 {W} {H}" class="h-[140px] w-full" preserveAspectRatio="none" aria-label="Answer buttons chart">
-  {#each tickValues() as v, ti (ti)}
+  {#each tickValues(maxValue) as v, ti (ti)}
     {@const y = padT + innerH - (v / maxValue) * innerH}
     <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="currentColor" class="text-(--color-border-default)" stroke-width="0.5" />
     <text x={padL - 6} y={y + 3} text-anchor="end" class="fill-(--color-fg-subtle) text-[9px]">{v}</text>

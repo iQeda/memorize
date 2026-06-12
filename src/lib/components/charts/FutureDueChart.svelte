@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CHART_W, CHART_H, inner, tickValues } from "./chart-utils";
   type Bucket = { day: number; count: number };
 
   type Props = {
@@ -7,14 +8,12 @@
   };
   let { buckets, days }: Props = $props();
 
-  const W = 720;
-  const H = 140;
-  const padL = 28;
-  const padR = 28;
-  const padT = 6;
-  const padB = 20;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
+  const W = CHART_W;
+  const H = CHART_H;
+  const { w: innerW, h: innerH, pad } = inner();
+  const padL = pad.l;
+  const padR = pad.r;
+  const padT = pad.t;
 
   const maxCount = $derived(Math.max(1, ...buckets.map((b) => b.count)));
   const barW = $derived(innerW / Math.max(1, days));
@@ -40,13 +39,6 @@
     cumPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" "),
   );
 
-  function tickValues(): number[] {
-    const step = Math.max(1, Math.ceil(maxCount / 4));
-    const out: number[] = [];
-    for (let v = 0; v <= maxCount; v += step) out.push(v);
-    if (out[out.length - 1] !== maxCount) out.push(maxCount);
-    return out;
-  }
 </script>
 
 <svg
@@ -56,7 +48,7 @@
   aria-label="Future due chart"
 >
   <!-- left axis ticks -->
-  {#each tickValues() as v, i (i)}
+  {#each tickValues(maxCount) as v, i (i)}
     {@const y = padT + innerH - (v / maxCount) * innerH}
     <line
       x1={padL}

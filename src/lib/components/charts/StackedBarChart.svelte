@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CHART_W, CHART_H, inner, tickValues } from "./chart-utils";
   type Series = { label: string; values: number[]; color: string };
   type Props = {
     /** Each value is a column. Multiple series stack within a column. */
@@ -18,14 +19,12 @@
     xLabels,
   }: Props = $props();
 
-  const W = 720;
-  const H = 140;
-  const padL = 28;
-  const padR = 28;
-  const padT = 6;
-  const padB = 20;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
+  const W = CHART_W;
+  const H = CHART_H;
+  const { w: innerW, h: innerH, pad } = inner();
+  const padL = pad.l;
+  const padR = pad.r;
+  const padT = pad.t;
 
   const colW = $derived(innerW / Math.max(1, columns));
   const totals = $derived(
@@ -35,13 +34,6 @@
   );
   const maxTotal = $derived(Math.max(1, ...totals));
 
-  function tickValues(): number[] {
-    const step = Math.max(1, Math.ceil(maxTotal / 4));
-    const out: number[] = [];
-    for (let v = 0; v <= maxTotal; v += step) out.push(v);
-    if (out[out.length - 1] !== maxTotal) out.push(maxTotal);
-    return out;
-  }
 
   function xTicks(): number[] {
     if (xLabels) return xLabels;
@@ -50,7 +42,7 @@
 </script>
 
 <svg viewBox="0 0 {W} {H}" class="h-[140px] w-full" preserveAspectRatio="none" aria-label="Stacked bar chart">
-  {#each tickValues() as v, i (i)}
+  {#each tickValues(maxTotal) as v, i (i)}
     {@const y = padT + innerH - (v / maxTotal) * innerH}
     <line
       x1={padL}

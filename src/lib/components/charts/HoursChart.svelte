@@ -1,31 +1,23 @@
 <script lang="ts">
+  import { CHART_W, CHART_H, inner, tickValues } from "./chart-utils";
   type HourBucket = { hour: number; total: number; correct: number };
   let { hours }: { hours: HourBucket[] } = $props();
 
-  const W = 720;
-  const H = 140;
-  const padL = 28;
-  const padR = 28;
-  const padT = 6;
-  const padB = 20;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
+  const W = CHART_W;
+  const H = CHART_H;
+  const { w: innerW, h: innerH, pad } = inner();
+  const padL = pad.l;
+  const padR = pad.r;
+  const padT = pad.t;
 
   const cols = 24;
   const colW = $derived(innerW / cols);
   const maxTotal = $derived(Math.max(1, ...hours.map((h) => h.total)));
 
-  function tickValues(): number[] {
-    const step = Math.max(1, Math.ceil(maxTotal / 4));
-    const out: number[] = [];
-    for (let v = 0; v <= maxTotal; v += step) out.push(v);
-    if (out[out.length - 1] !== maxTotal) out.push(maxTotal);
-    return out;
-  }
 </script>
 
 <svg viewBox="0 0 {W} {H}" class="h-[140px] w-full" preserveAspectRatio="none" aria-label="Hours chart">
-  {#each tickValues() as v, i (i)}
+  {#each tickValues(maxTotal) as v, i (i)}
     {@const y = padT + innerH - (v / maxTotal) * innerH}
     <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="currentColor" class="text-(--color-border-default)" stroke-width="0.5" />
     <text x={padL - 6} y={y + 3} text-anchor="end" class="fill-(--color-fg-subtle) text-[9px]">{v}</text>
