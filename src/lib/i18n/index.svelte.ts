@@ -1,7 +1,8 @@
 import { browser } from "$app/environment";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 import { messages, type Locale, type MessageKey } from "./messages";
 
-const STORAGE_KEY = "memorize:locale";
+const STORAGE_KEY = STORAGE_KEYS.locale;
 const DEFAULT_LOCALE: Locale = "en";
 
 class I18nStore {

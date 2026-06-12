@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 
-const ORDER_KEY = "memorize:deck-order";
+const ORDER_KEY = STORAGE_KEYS.deckOrder;
 
 /** Sidebar のトップレベルデッキの並び順を管理。子デッキは親に追従するので
  *  並び順 ID は level=0 のデッキのみを対象とする (実装簡略化)。

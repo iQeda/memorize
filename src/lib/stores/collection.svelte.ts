@@ -1,5 +1,6 @@
 import { invoke } from "$lib/ipc";
 import { browser } from "$app/environment";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 
 export type DeckSummary = {
   id: number;
@@ -10,7 +11,7 @@ export type DeckSummary = {
   review_count: number;
 };
 
-const LAST_PATH_KEY = "memorize:last-collection-path";
+const LAST_PATH_KEY = STORAGE_KEYS.lastCollectionPath;
 
 type CollectionInfo = {
   current_path: string | null;

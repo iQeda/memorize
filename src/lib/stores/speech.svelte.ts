@@ -1,14 +1,15 @@
 import { browser } from "$app/environment";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 
-const SPEAK_QUESTION_KEY = "memorize:speak-question-on-show";
-const REPEAT_ON_START_KEY = "memorize:repeat-on-question-start";
-const MAX_REPEAT_KEY = "memorize:max-repeat";
-const REPEAT_INTERVAL_KEY = "memorize:repeat-interval-sec";
-const HIDE_DEFAULT_KEY = "memorize:hide-default";
-const SPEECH_RATE_KEY = "memorize:speech-rate-wpm";
-const SENTENCE_PAUSE_KEY = "memorize:sentence-pause-ms";
-const AUTO_REVEAL_KEY = "memorize:auto-reveal-after-repeat";
-const SPEECH_VOLUME_KEY = "memorize:speech-volume";
+const SPEAK_QUESTION_KEY = STORAGE_KEYS.speakQuestionOnShow;
+const REPEAT_ON_START_KEY = STORAGE_KEYS.repeatOnQuestionStart;
+const MAX_REPEAT_KEY = STORAGE_KEYS.maxRepeat;
+const REPEAT_INTERVAL_KEY = STORAGE_KEYS.repeatIntervalSec;
+const HIDE_DEFAULT_KEY = STORAGE_KEYS.hideDefault;
+const SPEECH_RATE_KEY = STORAGE_KEYS.speechRateWpm;
+const SENTENCE_PAUSE_KEY = STORAGE_KEYS.sentencePauseMs;
+const AUTO_REVEAL_KEY = STORAGE_KEYS.autoRevealAfterRepeat;
+const SPEECH_VOLUME_KEY = STORAGE_KEYS.speechVolume;
 
 /** デフォルト最大連続再生回数 (1 回目を含む)。設定画面の数値入力で上書き可能。 */
 export const DEFAULT_MAX_REPEAT = 3;

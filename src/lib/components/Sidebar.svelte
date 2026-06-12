@@ -16,6 +16,7 @@
   import { importFlow } from "$lib/stores/import-flow.svelte";
   import { deckOrder } from "$lib/stores/deck-order.svelte";
   import { draggable } from "$lib/actions/draggable";
+  import { STORAGE_KEYS } from "$lib/storage-keys";
   import ContextMenu from "$lib/components/ContextMenu.svelte";
   import { goto } from "$app/navigation";
   import { tick } from "svelte";
@@ -240,7 +241,7 @@
   } as const;
 
   // ---- Resizable width ----
-  const SIDEBAR_WIDTH_KEY = "sidebar.width";
+  const SIDEBAR_WIDTH_KEY = STORAGE_KEYS.sidebarWidth;
   const SIDEBAR_MIN = 180;
   const SIDEBAR_MAX = 480;
   const SIDEBAR_DEFAULT = 240;

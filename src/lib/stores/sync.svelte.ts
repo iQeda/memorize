@@ -1,6 +1,7 @@
 import { invoke } from "$lib/ipc";
 import { browser } from "$app/environment";
 import { t } from "$lib/i18n/index.svelte";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 
 type SyncStatus = { logged_in: boolean; username: string | null };
 
@@ -39,8 +40,8 @@ type ProgressEvent =
   | { kind: "export"; message: string }
   | { kind: "other" };
 
-const AUTO_BACKUP_KEY = "memorize:auto-backup-before-sync";
-const AUTO_SYNC_KEY = "memorize:auto-sync-on-start-stop";
+const AUTO_BACKUP_KEY = STORAGE_KEYS.autoBackupBeforeSync;
+const AUTO_SYNC_KEY = STORAGE_KEYS.autoSyncOnStartStop;
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;

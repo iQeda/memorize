@@ -1,9 +1,10 @@
 import { browser } from "$app/environment";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 
 export type Rating = "again" | "hard" | "good" | "easy";
 export type Action = Rating | "copy" | "speak" | "hide";
 
-const STORAGE_KEY = "memorize:rating-keys";
+const STORAGE_KEY = STORAGE_KEYS.ratingKeys;
 
 const defaults: Record<Action, string> = {
   again: "a",

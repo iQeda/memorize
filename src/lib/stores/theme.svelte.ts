@@ -1,6 +1,7 @@
 import { browser } from "$app/environment";
+import { STORAGE_KEYS } from "$lib/storage-keys";
 
-const STORAGE_KEY = "memorize:theme";
+const STORAGE_KEY = STORAGE_KEYS.theme;
 
 export type Theme = "light" | "dark" | "system";
 
