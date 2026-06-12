@@ -52,9 +52,9 @@ jobs:
             vendor/anki
 
       - name: Setup pnpm
+        # version は package.json の packageManager フィールドから解決される。
+        # ここで version 入力を併記すると action-setup がエラーになる。
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
