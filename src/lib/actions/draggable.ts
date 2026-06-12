@@ -12,7 +12,9 @@ const interactiveTags = new Set([
   "LABEL",
 ]);
 
-function isInteractive(el: EventTarget | null): boolean {
+/** ドラッグ開始を抑止すべきインタラクティブ要素 (またはその子孫) か。
+ *  `data-no-drag` 属性を持つ祖先があれば同様に抑止。export はテスト用。 */
+export function isInteractive(el: EventTarget | null): boolean {
   let node = el as HTMLElement | null;
   while (node && node !== document.body) {
     if (interactiveTags.has(node.tagName)) return true;
