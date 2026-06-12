@@ -45,4 +45,7 @@ rusqlite = { version = "0.36.0", features = ["bundled"] }
 tempfile = "3"
 
 [features]
+# tauri-cli が `tauri build` 時に `--features custom-protocol` で外部から有効化する。
+# repo 内 grep でヒットしなくても削除禁止 — 消すと本番 DMG ビルドが壊れる
+# (dev/test の検証ゲートでは検出できない)。
 custom-protocol = ["tauri/custom-protocol"]
