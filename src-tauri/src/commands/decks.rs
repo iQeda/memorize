@@ -310,6 +310,22 @@ pub async fn deck_stats(
         .await
 }
 
+/// 通常デッキ + filtered deck 退避中 (odid) のカードを対象にする共通フィルタ。
+const IN_DECK: &str = "(did = ?1 OR (odid != 0 AND odid = ?1))";
+
+/// `IN_DECK` フィルタ + 追加述語で COUNT(*) を撃つ。`select_expr` は
+/// total_notes の COUNT(DISTINCT nid) だけが異なるため引数化している。
+fn count_cards(
+    db: &rusqlite::Connection,
+    deck_id: i64,
+    select_expr: &str,
+    extra_predicate: &str,
+) -> AppResult<u32> {
+    let sql = format!("SELECT {select_expr} FROM cards WHERE {IN_DECK}{extra_predicate}");
+    db.query_row(&sql, [deck_id], |r| r.get(0))
+        .map_err(AppError::Db)
+}
+
 fn deck_stats_inner(
     col: &mut anki::collection::Collection,
     deck_id: i64,
@@ -318,30 +334,14 @@ fn deck_stats_inner(
     // queue: -1 = Suspended, -2/-3 = Buried, 0 = New, 1/3 = Learn,
     //        2 = Review.
     let db = col.storage.db();
-    let count = |sql: &str| -> AppResult<u32> {
-        db.query_row(sql, [deck_id], |r| r.get(0))
-            .map_err(AppError::Db)
-    };
-    let in_deck = "(did = ?1 OR (odid != 0 AND odid = ?1))";
-    let total_cards = count(&format!("SELECT COUNT(*) FROM cards WHERE {in_deck}"))?;
-    let suspended = count(&format!(
-        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue = -1"
-    ))?;
-    let buried = count(&format!(
-        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue IN (-2, -3)"
-    ))?;
-    let new_cards = count(&format!(
-        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue = 0"
-    ))?;
-    let learn_cards = count(&format!(
-        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue IN (1, 3)"
-    ))?;
-    let review_cards = count(&format!(
-        "SELECT COUNT(*) FROM cards WHERE {in_deck} AND queue = 2"
-    ))?;
-    let total_notes = count(&format!(
-        "SELECT COUNT(DISTINCT nid) FROM cards WHERE {in_deck}"
-    ))?;
+    let count = |pred: &str| count_cards(db, deck_id, "COUNT(*)", pred);
+    let total_cards = count("")?;
+    let suspended = count(" AND queue = -1")?;
+    let buried = count(" AND queue IN (-2, -3)")?;
+    let new_cards = count(" AND queue = 0")?;
+    let learn_cards = count(" AND queue IN (1, 3)")?;
+    let review_cards = count(" AND queue = 2")?;
+    let total_notes = count_cards(db, deck_id, "COUNT(DISTINCT nid)", "")?;
 
     Ok(DeckStats {
         total_cards,
