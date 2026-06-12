@@ -95,6 +95,20 @@ Do **not** use `is:learn`/`is:review` etc. searches for these counts — those m
 
 Stores are class instances using `$state` and live in `src/lib/stores/*.svelte.ts`. The `.svelte.ts` extension (not just `.ts`) is required for runes to compile — same for `src/lib/i18n/index.svelte.ts`. Importing from `$lib/i18n/index.svelte` (no `.ts`) is the correct usage; SvelteKit resolves it.
 
+### Shared modules introduced by the 2026-06-12 refactor (Phases 1–7)
+
+- `src-tauri/src/render.rs` — `rendered_nodes_to_html` is the single RenderedNode→HTML conversion; reviewer.rs / study.rs both call it.
+- `AppState::with_collection` (`src-tauri/src/state.rs`) — the canonical "lock col, error if closed" helper. study.rs / backup.rs / sync.rs keep manual lock patterns on purpose (see comments there) — don't "clean them up".
+- `src-tauri/src/commands/decks/` — split into `mod.rs` (CRUD) / `stats.rs` (queue-based deck_stats) / `graphs.rs`. `lib.rs`'s `generate_handler!` relies on the glob re-exports in `decks/mod.rs`.
+- `src/lib/storage-keys.ts` — every localStorage key. Values are frozen by a snapshot test; renaming one orphans user settings.
+- `src/lib/stores/run-async.ts` — shared busy/busyReason/lastError lifecycle. `collection.open` and `sync.syncNow` intentionally don't use it.
+- `src/lib/stores/speech.svelte.ts` exports `SPEECH_LIMITS` (min/max/default per speech param) — the only source for those ranges.
+- `src/lib/components/SpeechControls.svelte` — the single speech-settings UI, `layout="rows"` (settings) / `layout="popover"` (reviewer Audio popover). Don't re-inline speech sliders anywhere.
+- `src/lib/components/charts/chart-utils.ts` — chart geometry + `tickValues`. ButtonsChart overrides pad via `inner({ r: 6, b: 24 })`.
+- `src/lib/stats/` (types + transform) and `src/lib/components/home/` — the home page is a thin composition root.
+- `src/lib/reviewer/` — reviewer logic as tested pure modules: `session.svelte.ts` (ReviewSession), `speech-cycle.svelte.ts` (repeat timer), `answer-html.ts`, `frame-text.ts`, `hidden-overlay.ts`, `speak.ts`, `copy-nani.ts`, `totals.ts`. `src/lib/components/reviewer/` holds the UI pieces.
+- `.claude/skills/refactor/SKILL.md` の行番号・実測値は監査時点 (commit `8cb9775`) のもので、Phase 1–7 完了後の現状とはズレている。
+
 ### Routes layout
 
 - `src/routes/+page.svelte` — Decks browser + the stats panel grid (Today / Future Due / Calendar / Reviews / Card Counts / Intervals / Card Ease / Retention / Hourly / Answer Buttons / Added). All panels are 260px fixed-height in a 2-column grid via `auto-rows-[260px]`.
@@ -104,7 +118,7 @@ Stores are class instances using `$state` and live in `src/lib/stores/*.svelte.t
 
 ### Shortcuts store (`stores/shortcuts.svelte.ts`)
 
-Uses `Action = Rating | "copy" | "speak" | "hide"` (rebindable in Settings → Keyboard shortcuts). Adding a new bindable shortcut: extend the `Action` union, add a default key in `defaults`, expose `isXxx(key)` methods, and add it to `ratingShortcuts` in `src/routes/settings/+page.svelte`.
+Uses `Action = Rating | "copy" | "speak" | "hide"` (rebindable in Settings → Keyboard shortcuts). Adding a new bindable shortcut: extend the `Action` union, add a default key in `defaults`, expose `isXxx(key)` methods, and add it to `ratingShortcuts` in `src/lib/components/settings/ShortcutsSection.svelte`.
 
 Global (non-rebindable) keys handled directly in `+layout.svelte` and route components:
 - `⌘,` → Settings, `⌘S` → Sync now, `⌘F` / `⌘K` → quick deck launcher. Ctrl modifier is rejected on these (macOS only; Ctrl alias was removed to prevent ambiguous bindings).
