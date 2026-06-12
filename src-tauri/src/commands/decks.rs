@@ -299,7 +299,13 @@ pub async fn deck_stats(
 ) -> AppResult<DeckStats> {
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    deck_stats_inner(col, deck_id)
+}
 
+fn deck_stats_inner(
+    col: &mut anki::collection::Collection,
+    deck_id: i64,
+) -> AppResult<DeckStats> {
     // Classify each card mutually exclusively by queue first.
     // queue: -1 = Suspended, -2/-3 = Buried, 0 = New, 1/3 = Learn,
     //        2 = Review.
@@ -401,7 +407,11 @@ fn walk(node: &anki_proto::decks::DeckTreeNode, level: u32, out: &mut Vec<DeckSu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anki::collection::{Collection, CollectionBuilder};
+    use anki::notes::Note;
+    use anki::prelude::DeckId;
     use std::collections::HashMap;
+    use tempfile::TempDir;
 
     fn node(deck_id: i64, name: &str, children: Vec<anki_proto::decks::DeckTreeNode>) -> anki_proto::decks::DeckTreeNode {
         anki_proto::decks::DeckTreeNode {
@@ -485,5 +495,114 @@ mod tests {
         assert_eq!((out[0].hour, out[0].total, out[0].correct), (0, 1, 1));
         assert_eq!((out[1].hour, out[1].total, out[1].correct), (1, 5, 3));
         assert_eq!((out[2].hour, out[2].total, out[2].correct), (2, 0, 0));
+    }
+
+    // ---- deck_stats: queue ベース分類の回帰テスト (Phase 4 の安全網) ----
+
+    fn test_collection() -> (TempDir, Collection) {
+        let tmp = TempDir::new().expect("tmpdir");
+        let path = tmp.path().join("test.anki2");
+        let col = CollectionBuilder::new(&path).build().expect("build col");
+        (tmp, col)
+    }
+
+    fn add_basic_note(col: &mut Collection, deck: DeckId, front: &str) {
+        let nt = col
+            .get_all_notetypes()
+            .expect("notetypes")
+            .into_iter()
+            .find(|nt| nt.config.kind == 0 && nt.fields.len() >= 2)
+            .expect("a normal notetype with >=2 fields");
+        let mut note = Note::new(&nt);
+        note.set_field(0, front).unwrap();
+        note.set_field(1, "back").unwrap();
+        col.add_note(&mut note, deck).expect("add_note");
+    }
+
+    /// 追加順 (= id 昇順) でデッキ内のカード id を返す。
+    fn card_ids(col: &Collection, deck: DeckId) -> Vec<i64> {
+        let db = col.storage.db();
+        let mut stmt = db
+            .prepare("SELECT id FROM cards WHERE did = ?1 ORDER BY id")
+            .unwrap();
+        let ids = stmt
+            .query_map([deck.0], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<Vec<i64>, _>>()
+            .unwrap();
+        ids
+    }
+
+    fn set_card_state(col: &Collection, card_id: i64, queue: i64, ctype: i64) {
+        col.storage
+            .db()
+            .execute(
+                "UPDATE cards SET queue = ?1, type = ?2 WHERE id = ?3",
+                [queue, ctype, card_id],
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn deck_stats_classifies_by_queue_mutually_exclusively() {
+        let (_tmp, mut col) = test_collection();
+        let deck = col.get_or_create_normal_deck("Stats").expect("deck").id;
+        for i in 0..5 {
+            add_basic_note(&mut col, deck, &format!("w{i}"));
+        }
+        let ids = card_ids(&col, deck);
+        assert_eq!(ids.len(), 5);
+
+        // queue/type: new(0/0) はそのまま、残りを learn(1/1) / review(2/2) /
+        // suspended(-1) / buried(-2) に振り分ける。
+        set_card_state(&col, ids[1], 1, 1); // learning
+        set_card_state(&col, ids[2], 2, 2); // review
+        set_card_state(&col, ids[3], -1, 2); // suspended (review type)
+        set_card_state(&col, ids[4], -2, 0); // buried (new type)
+
+        let s = deck_stats_inner(&mut col, deck.0).unwrap();
+        assert_eq!(s.total_cards, 5);
+        assert_eq!(s.total_notes, 5);
+        assert_eq!(s.new_cards, 1);
+        assert_eq!(s.learn_cards, 1);
+        assert_eq!(s.review_cards, 1);
+        assert_eq!(s.suspended, 1);
+        assert_eq!(s.buried, 1);
+        // 相互排他: 各カテゴリの合計が総数に一致する。
+        assert_eq!(
+            s.new_cards + s.learn_cards + s.review_cards + s.suspended + s.buried,
+            s.total_cards
+        );
+    }
+
+    #[test]
+    fn suspended_while_learning_counts_only_as_suspended() {
+        // 過去バグの再発防止 (CLAUDE.md の queue-vs-type ルール):
+        // type=1 (learning) のまま queue=-1 (suspended) になったカードが
+        // learn と suspended の両方にカウントされてはいけない。
+        let (_tmp, mut col) = test_collection();
+        let deck = col.get_or_create_normal_deck("Stats").expect("deck").id;
+        add_basic_note(&mut col, deck, "word");
+        let ids = card_ids(&col, deck);
+
+        set_card_state(&col, ids[0], -1, 1); // queue=suspended, type=learning
+
+        let s = deck_stats_inner(&mut col, deck.0).unwrap();
+        assert_eq!(s.suspended, 1);
+        assert_eq!(s.learn_cards, 0, "type=learn but queue=suspended must not count as learn");
+        assert_eq!(s.new_cards + s.learn_cards + s.review_cards + s.suspended + s.buried, 1);
+    }
+
+    #[test]
+    fn deck_stats_ignores_cards_in_other_decks() {
+        let (_tmp, mut col) = test_collection();
+        let a = col.get_or_create_normal_deck("A").expect("deck").id;
+        let b = col.get_or_create_normal_deck("B").expect("deck").id;
+        add_basic_note(&mut col, a, "in_a");
+        add_basic_note(&mut col, b, "in_b");
+
+        let s = deck_stats_inner(&mut col, a.0).unwrap();
+        assert_eq!(s.total_cards, 1);
+        assert_eq!(s.new_cards, 1);
     }
 }
