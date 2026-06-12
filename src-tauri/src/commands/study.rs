@@ -41,8 +41,13 @@ pub async fn start_study(
 ) -> AppResult<()> {
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    col.set_current_deck(DeckId(deck_id))?;
+    start_study_inner(col, deck_id)?;
     *state.last_queued.lock().await = None;
+    Ok(())
+}
+
+fn start_study_inner(col: &mut anki::collection::Collection, deck_id: i64) -> AppResult<()> {
+    col.set_current_deck(DeckId(deck_id))?;
     Ok(())
 }
 
@@ -50,7 +55,17 @@ pub async fn start_study(
 pub async fn get_next_card(state: State<'_, AppState>) -> AppResult<NextCard> {
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    let (next, entry) = get_next_card_inner(col)?;
+    *state.last_queued.lock().await = entry;
+    Ok(next)
+}
 
+/// Pull the next queued card and build its DTO. Returns the cache entry the
+/// caller must stash so a later answer_card_now can construct the CardAnswer
+/// (None when the queue is exhausted).
+fn get_next_card_inner(
+    col: &mut anki::collection::Collection,
+) -> AppResult<(NextCard, Option<CachedQueueEntry>)> {
     let queued = col.get_queued_cards(1, false)?;
     let counts = Counts {
         new: queued.new_count as u32,
@@ -59,8 +74,7 @@ pub async fn get_next_card(state: State<'_, AppState>) -> AppResult<NextCard> {
     };
 
     let Some(qc) = queued.cards.into_iter().next() else {
-        *state.last_queued.lock().await = None;
-        return Ok(NextCard::Done(counts));
+        return Ok((NextCard::Done(counts), None));
     };
 
     let card_id = qc.card.id();
@@ -75,12 +89,12 @@ pub async fn get_next_card(state: State<'_, AppState>) -> AppResult<NextCard> {
         remaining: counts,
     };
 
-    *state.last_queued.lock().await = Some(CachedQueueEntry {
+    let entry = CachedQueueEntry {
         card_id,
         states: qc.states,
         shown_at: Instant::now(),
-    });
-    Ok(NextCard::Card(card))
+    };
+    Ok((NextCard::Card(card), Some(entry)))
 }
 
 #[derive(Deserialize, Debug)]
@@ -105,6 +119,21 @@ pub async fn answer_card_now(
         .clone()
         .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("no card queued")))?;
 
+    let mut guard = state.col.lock().await;
+    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    answer_card_now_inner(col, &entry, rating, milliseconds_taken)?;
+
+    // Invalidate cache so frontend must call get_next_card again.
+    *state.last_queued.lock().await = None;
+    Ok(())
+}
+
+fn answer_card_now_inner(
+    col: &mut anki::collection::Collection,
+    entry: &CachedQueueEntry,
+    rating: AnswerRating,
+    milliseconds_taken: Option<u32>,
+) -> AppResult<()> {
     let (rating_enum, new_state) = match rating {
         AnswerRating::Again => (Rating::Again, entry.states.again.clone()),
         AnswerRating::Hard => (Rating::Hard, entry.states.hard.clone()),
@@ -125,12 +154,106 @@ pub async fn answer_card_now(
         custom_data: None,
         from_queue: true,
     };
-
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
     col.answer_card(&mut answer)?;
-
-    // Invalidate cache so frontend must call get_next_card again.
-    *state.last_queued.lock().await = None;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anki::collection::{Collection, CollectionBuilder};
+    use anki::notes::Note;
+    use tempfile::TempDir;
+
+    fn test_collection() -> (TempDir, Collection) {
+        let tmp = TempDir::new().expect("tmpdir");
+        let path = tmp.path().join("test.anki2");
+        let col = CollectionBuilder::new(&path).build().expect("build col");
+        (tmp, col)
+    }
+
+    fn add_basic_note(col: &mut Collection, deck: DeckId, front: &str, back: &str) {
+        let nt = col
+            .get_all_notetypes()
+            .expect("notetypes")
+            .into_iter()
+            .find(|nt| nt.config.kind == 0 && nt.fields.len() >= 2)
+            .expect("a normal notetype with >=2 fields");
+        let mut note = Note::new(&nt);
+        note.set_field(0, front).unwrap();
+        note.set_field(1, back).unwrap();
+        col.add_note(&mut note, deck).expect("add_note");
+    }
+
+    fn card_queue(col: &Collection, card_id: i64) -> i64 {
+        col.storage
+            .db()
+            .query_row("SELECT queue FROM cards WHERE id = ?1", [card_id], |r| {
+                r.get(0)
+            })
+            .expect("card queue")
+    }
+
+    #[test]
+    fn full_study_flow_serves_card_then_good_moves_it_to_learning() {
+        let (_tmp, mut col) = test_collection();
+        let deck = col.get_or_create_normal_deck("Study").expect("deck").id;
+        add_basic_note(&mut col, deck, "civil", "polite");
+
+        start_study_inner(&mut col, deck.0).expect("start");
+
+        let (next, entry) = get_next_card_inner(&mut col).expect("next");
+        let NextCard::Card(card) = next else {
+            panic!("expected a card, got Done");
+        };
+        let entry = entry.expect("entry must accompany a served card");
+        assert_eq!(card.card_id, entry.card_id.0);
+        assert!(card.question_html.contains("civil"));
+        assert!(card.answer_html.contains("polite"));
+        // 新規 1 枚だけのデッキ: remaining は現在カードを含むカウント。
+        assert_eq!(card.remaining.new, 1);
+        assert_eq!(card.remaining.learning, 0);
+        assert_eq!(card.remaining.review, 0);
+
+        // 回答前: queue = 0 (new)。Good で learning queue (1 or 3) へ遷移する。
+        assert_eq!(card_queue(&col, card.card_id), 0);
+        answer_card_now_inner(&mut col, &entry, AnswerRating::Good, Some(1200))
+            .expect("answer");
+        let q = card_queue(&col, card.card_id);
+        assert!(q == 1 || q == 3, "expected learning queue after Good, got {q}");
+    }
+
+    #[test]
+    fn empty_deck_returns_done_with_zero_counts_and_no_entry() {
+        let (_tmp, mut col) = test_collection();
+        let deck = col.get_or_create_normal_deck("Empty").expect("deck").id;
+        start_study_inner(&mut col, deck.0).expect("start");
+
+        let (next, entry) = get_next_card_inner(&mut col).expect("next");
+        assert!(entry.is_none());
+        let NextCard::Done(counts) = next else {
+            panic!("expected Done for an empty deck");
+        };
+        assert_eq!((counts.new, counts.learning, counts.review), (0, 0, 0));
+    }
+
+    #[test]
+    fn answering_again_keeps_card_in_learning_and_queue_serves_it_again() {
+        let (_tmp, mut col) = test_collection();
+        let deck = col.get_or_create_normal_deck("Study").expect("deck").id;
+        add_basic_note(&mut col, deck, "exit", "to leave");
+        start_study_inner(&mut col, deck.0).expect("start");
+
+        let (_, entry) = get_next_card_inner(&mut col).expect("next");
+        let entry = entry.expect("entry");
+        answer_card_now_inner(&mut col, &entry, AnswerRating::Again, Some(500))
+            .expect("answer");
+
+        // Again はカードを learning に留めるので、もう一度引ける。
+        let (next, _) = get_next_card_inner(&mut col).expect("next again");
+        let NextCard::Card(card) = next else {
+            panic!("expected the card to be re-served after Again");
+        };
+        assert_eq!(card.card_id, entry.card_id.0);
+    }
 }
