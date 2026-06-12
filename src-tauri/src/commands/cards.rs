@@ -121,9 +121,9 @@ pub async fn list_cards(
     limit: u32,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<CardSummary>> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    list_cards_inner(col, deck_id, query.as_deref(), limit)
+    state
+        .with_collection(|col| list_cards_inner(col, deck_id, query.as_deref(), limit))
+        .await
 }
 
 #[tauri::command]
@@ -132,9 +132,9 @@ pub async fn list_due_cards(
     limit: u32,
     state: State<'_, AppState>,
 ) -> AppResult<Vec<CardSummary>> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    list_due_cards_inner(col, deck_id, limit)
+    state
+        .with_collection(|col| list_due_cards_inner(col, deck_id, limit))
+        .await
 }
 
 #[cfg(test)]

@@ -16,13 +16,14 @@ pub struct DeckSummary {
 
 #[tauri::command]
 pub async fn list_decks(state: State<'_, AppState>) -> AppResult<Vec<DeckSummary>> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let tree = col.deck_tree(Some(TimestampSecs::now()))?;
-
-    let mut out = Vec::new();
-    walk(&tree, 0, &mut out);
-    Ok(out)
+    state
+        .with_collection(|col| {
+            let tree = col.deck_tree(Some(TimestampSecs::now()))?;
+            let mut out = Vec::new();
+            walk(&tree, 0, &mut out);
+            Ok(out)
+        })
+        .await
 }
 
 #[derive(Serialize, Debug)]
@@ -187,9 +188,16 @@ pub async fn deck_graph_stats(
     state: State<'_, AppState>,
 ) -> AppResult<DeckGraphStats> {
     tracing::info!(deck_id, days, "deck_graph_stats called");
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    state
+        .with_collection(|col| deck_graph_stats_inner(col, deck_id, days))
+        .await
+}
 
+fn deck_graph_stats_inner(
+    col: &mut anki::collection::Collection,
+    deck_id: i64,
+    days: u32,
+) -> AppResult<DeckGraphStats> {
     let search = format!("did:{}", deck_id);
     let resp = col.graph_data_for_search(&search, days)?;
     tracing::info!("deck_graph_stats: graph_data_for_search ok");
@@ -297,9 +305,9 @@ pub async fn deck_stats(
     deck_id: i64,
     state: State<'_, AppState>,
 ) -> AppResult<DeckStats> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    deck_stats_inner(col, deck_id)
+    state
+        .with_collection(|col| deck_stats_inner(col, deck_id))
+        .await
 }
 
 fn deck_stats_inner(
@@ -355,10 +363,12 @@ pub async fn create_deck(
     if trimmed.is_empty() {
         return Err(AppError::Anyhow(anyhow::anyhow!("deck name is empty")));
     }
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let deck = col.get_or_create_normal_deck(trimmed)?;
-    Ok(deck.id.0)
+    state
+        .with_collection(|col| {
+            let deck = col.get_or_create_normal_deck(trimmed)?;
+            Ok(deck.id.0)
+        })
+        .await
 }
 
 #[tauri::command]
@@ -371,10 +381,12 @@ pub async fn rename_deck(
     if trimmed.is_empty() {
         return Err(AppError::Anyhow(anyhow::anyhow!("deck name is empty")));
     }
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    col.rename_deck(anki::prelude::DeckId(deck_id), trimmed)?;
-    Ok(())
+    state
+        .with_collection(|col| {
+            col.rename_deck(anki::prelude::DeckId(deck_id), trimmed)?;
+            Ok(())
+        })
+        .await
 }
 
 #[tauri::command]
@@ -382,10 +394,12 @@ pub async fn delete_deck(
     deck_id: i64,
     state: State<'_, AppState>,
 ) -> AppResult<usize> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let out = col.remove_decks_and_child_decks(&[anki::prelude::DeckId(deck_id)])?;
-    Ok(out.output)
+    state
+        .with_collection(|col| {
+            let out = col.remove_decks_and_child_decks(&[anki::prelude::DeckId(deck_id)])?;
+            Ok(out.output)
+        })
+        .await
 }
 
 fn walk(node: &anki_proto::decks::DeckTreeNode, level: u32, out: &mut Vec<DeckSummary>) {

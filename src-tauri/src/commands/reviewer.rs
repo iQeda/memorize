@@ -1,4 +1,4 @@
-use crate::error::{AppError, AppResult};
+use crate::error::AppResult;
 use crate::render::rendered_nodes_to_html;
 use crate::state::AppState;
 use anki::card::CardId;
@@ -17,9 +17,9 @@ pub async fn get_card_render(
     card_id: i64,
     state: State<'_, AppState>,
 ) -> AppResult<RenderedCard> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    get_card_render_inner(col, card_id)
+    state
+        .with_collection(|col| get_card_render_inner(col, card_id))
+        .await
 }
 
 fn get_card_render_inner(

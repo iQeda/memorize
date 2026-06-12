@@ -15,17 +15,19 @@ pub struct NotetypeSummary {
 
 #[tauri::command]
 pub async fn list_notetypes(state: State<'_, AppState>) -> AppResult<Vec<NotetypeSummary>> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let nts = col.get_all_notetypes()?;
-    Ok(nts
-        .into_iter()
-        .map(|nt| NotetypeSummary {
-            id: nt.id.0,
-            name: nt.name.clone(),
-            field_names: nt.fields.iter().map(|f| f.name.clone()).collect(),
+    state
+        .with_collection(|col| {
+            let nts = col.get_all_notetypes()?;
+            Ok(nts
+                .into_iter()
+                .map(|nt| NotetypeSummary {
+                    id: nt.id.0,
+                    name: nt.name.clone(),
+                    field_names: nt.fields.iter().map(|f| f.name.clone()).collect(),
+                })
+                .collect())
         })
-        .collect())
+        .await
 }
 
 #[derive(Serialize, Debug)]
@@ -45,8 +47,10 @@ pub struct NoteDetail {
 
 #[tauri::command]
 pub async fn get_note(note_id: i64, state: State<'_, AppState>) -> AppResult<NoteDetail> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+    state.with_collection(|col| get_note_inner(col, note_id)).await
+}
+
+fn get_note_inner(col: &mut Collection, note_id: i64) -> AppResult<NoteDetail> {
     let note = col
         .storage
         .get_note(NoteId(note_id))?
@@ -90,20 +94,22 @@ pub async fn add_note(
     input: AddNoteInput,
     state: State<'_, AppState>,
 ) -> AppResult<i64> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let nt = col
-        .get_notetype(NotetypeId(input.notetype_id))?
-        .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("notetype not found")))?;
-    let mut note = Note::new(&nt);
-    for (i, value) in input.fields.into_iter().enumerate() {
-        if i < nt.fields.len() {
-            note.set_field(i, value)?;
-        }
-    }
-    note.tags = input.tags;
-    col.add_note(&mut note, DeckId(input.deck_id))?;
-    Ok(note.id.0)
+    state
+        .with_collection(|col| {
+            let nt = col
+                .get_notetype(NotetypeId(input.notetype_id))?
+                .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("notetype not found")))?;
+            let mut note = Note::new(&nt);
+            for (i, value) in input.fields.into_iter().enumerate() {
+                if i < nt.fields.len() {
+                    note.set_field(i, value)?;
+                }
+            }
+            note.tags = input.tags;
+            col.add_note(&mut note, DeckId(input.deck_id))?;
+            Ok(note.id.0)
+        })
+        .await
 }
 
 #[derive(Deserialize, Debug)]
@@ -118,20 +124,22 @@ pub async fn update_note(
     input: UpdateNoteInput,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let mut note = col
-        .storage
-        .get_note(NoteId(input.note_id))?
-        .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("note not found")))?;
-    for (i, value) in input.fields.into_iter().enumerate() {
-        if i < note.fields().len() {
-            note.set_field(i, value)?;
-        }
-    }
-    note.tags = input.tags;
-    col.update_note(&mut note)?;
-    Ok(())
+    state
+        .with_collection(|col| {
+            let mut note = col
+                .storage
+                .get_note(NoteId(input.note_id))?
+                .ok_or_else(|| AppError::Anyhow(anyhow::anyhow!("note not found")))?;
+            for (i, value) in input.fields.into_iter().enumerate() {
+                if i < note.fields().len() {
+                    note.set_field(i, value)?;
+                }
+            }
+            note.tags = input.tags;
+            col.update_note(&mut note)?;
+            Ok(())
+        })
+        .await
 }
 
 #[tauri::command]
@@ -139,11 +147,13 @@ pub async fn delete_notes(
     note_ids: Vec<i64>,
     state: State<'_, AppState>,
 ) -> AppResult<usize> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    let nids: Vec<NoteId> = note_ids.into_iter().map(NoteId).collect();
-    let out = col.remove_notes(&nids)?;
-    Ok(out.output)
+    state
+        .with_collection(|col| {
+            let nids: Vec<NoteId> = note_ids.into_iter().map(NoteId).collect();
+            let out = col.remove_notes(&nids)?;
+            Ok(out.output)
+        })
+        .await
 }
 
 #[derive(Deserialize, Debug)]
@@ -168,9 +178,9 @@ pub async fn set_note_deck(
     input: SetNoteDeckInput,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    set_note_deck_inner(col, input.note_id, input.deck_id)
+    state
+        .with_collection(|col| set_note_deck_inner(col, input.note_id, input.deck_id))
+        .await
 }
 
 #[cfg(test)]

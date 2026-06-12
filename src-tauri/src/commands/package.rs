@@ -1,4 +1,4 @@
-use crate::error::{AppError, AppResult};
+use crate::error::AppResult;
 use crate::progress::ProgressEmitter;
 use crate::state::AppState;
 use anki::import_export::NoteLog;
@@ -46,18 +46,19 @@ pub async fn import_apkg(
     state: State<'_, AppState>,
 ) -> AppResult<ImportReport> {
     let _emitter = ProgressEmitter::start(app, state.progress.clone());
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-
-    let options = ImportAnkiPackageOptions {
-        merge_notetypes: true,
-        update_notes: ImportAnkiPackageUpdateCondition::Always as i32,
-        update_notetypes: ImportAnkiPackageUpdateCondition::Always as i32,
-        with_scheduling: true,
-        with_deck_configs: true,
-    };
-    let out = col.import_apkg(&in_path, options)?;
-    Ok(ImportReport::from_note_log(&out.output))
+    state
+        .with_collection(|col| {
+            let options = ImportAnkiPackageOptions {
+                merge_notetypes: true,
+                update_notes: ImportAnkiPackageUpdateCondition::Always as i32,
+                update_notetypes: ImportAnkiPackageUpdateCondition::Always as i32,
+                with_scheduling: true,
+                with_deck_configs: true,
+            };
+            let out = col.import_apkg(&in_path, options)?;
+            Ok(ImportReport::from_note_log(&out.output))
+        })
+        .await
 }
 
 #[derive(Deserialize, Debug)]
@@ -81,18 +82,19 @@ pub async fn export_all_apkg(
     state: State<'_, AppState>,
 ) -> AppResult<ExportReport> {
     let _emitter = ProgressEmitter::start(app, state.progress.clone());
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-
-    let options = ExportAnkiPackageOptions {
-        with_scheduling: input.with_scheduling,
-        with_deck_configs: input.with_deck_configs,
-        with_media: input.with_media,
-        legacy: input.legacy,
-    };
-    // Empty search string is parsed as SearchNode::WholeCollection by rslib.
-    let count = col.export_apkg(&input.out_path, options, "", None)?;
-    Ok(ExportReport {
-        note_count: count as u32,
-    })
+    state
+        .with_collection(|col| {
+            let options = ExportAnkiPackageOptions {
+                with_scheduling: input.with_scheduling,
+                with_deck_configs: input.with_deck_configs,
+                with_media: input.with_media,
+                legacy: input.legacy,
+            };
+            // Empty search string is parsed as SearchNode::WholeCollection by rslib.
+            let count = col.export_apkg(&input.out_path, options, "", None)?;
+            Ok(ExportReport {
+                note_count: count as u32,
+            })
+        })
+        .await
 }

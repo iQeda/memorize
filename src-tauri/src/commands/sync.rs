@@ -190,6 +190,8 @@ pub async fn sync_now(
     let mut guard = state.col.lock().await;
     let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
 
+    // with_collection は使わない: normal_sync は guard を保持したまま await
+    // する必要がある (closure は同期前提)。full_sync 側は take() でムーブ。
     tracing::info!("starting normal_sync");
     let out = col.normal_sync(auth, state.http.clone()).await?;
     tracing::info!(

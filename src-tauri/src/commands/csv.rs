@@ -10,7 +10,7 @@
 //! is the "add & update words daily" workflow.
 
 use super::package::ImportReport;
-use crate::error::{AppError, AppResult};
+use crate::error::AppResult;
 use crate::progress::ProgressEmitter;
 use crate::state::AppState;
 use anki::collection::Collection;
@@ -136,9 +136,9 @@ fn import_csv_inner(
 /// collection. Used to populate the confirmation dialog.
 #[tauri::command]
 pub async fn csv_metadata(in_path: String, state: State<'_, AppState>) -> AppResult<CsvPreview> {
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    csv_preview_inner(col, &in_path)
+    state
+        .with_collection(|col| csv_preview_inner(col, &in_path))
+        .await
 }
 
 /// Import a CSV/TSV file. `dupe_resolution` (update/preserve/duplicate) overrides
@@ -153,9 +153,9 @@ pub async fn import_tsv(
 ) -> AppResult<ImportReport> {
     let dupe = dupe_resolution.as_deref().and_then(dupe_from_code);
     let _emitter = ProgressEmitter::start(app, state.progress.clone());
-    let mut guard = state.col.lock().await;
-    let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
-    import_csv_inner(col, &in_path, dupe)
+    state
+        .with_collection(|col| import_csv_inner(col, &in_path, dupe))
+        .await
 }
 
 #[cfg(test)]

@@ -1,3 +1,4 @@
+use crate::error::AppError;
 use anki::collection::Collection;
 use anki::prelude::CardId;
 use anki::progress::ProgressState;
@@ -40,6 +41,25 @@ pub struct AppState {
     /// `com.apple.security.automation.apple-events` entitlement が不要)
     /// は従来と同じ。
     pub speech_cancel: Mutex<Option<oneshot::Sender<()>>>,
+}
+
+impl AppState {
+    /// `col.lock().await` → `as_mut()` → `CollectionNotOpen` 変換の定型を
+    /// 一元化する。closure は Collection に対して **同期的** であること
+    /// (guard 越しに await すると lock を持ったまま suspend する)。
+    ///
+    /// 適用除外 (手動パターンを維持する箇所):
+    /// - sync.rs::full_sync / backup.rs — Collection を `take()` でムーブする
+    /// - study.rs — `last_queued` の第二 mutex とロック順序が交錯する
+    /// - sync.rs::sync_now — guard を保持したまま await する必要がある
+    pub async fn with_collection<T>(
+        &self,
+        f: impl FnOnce(&mut Collection) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        let mut guard = self.col.lock().await;
+        let col = guard.as_mut().ok_or(AppError::CollectionNotOpen)?;
+        f(col)
+    }
 }
 
 impl Default for AppState {

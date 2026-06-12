@@ -9,6 +9,9 @@ use tauri::{AppHandle, Manager, State};
 
 /// Export the currently-open collection as a .colpkg file at `out_path`.
 /// Re-opens the same collection afterwards so the app continues working.
+///
+/// AppState::with_collection は使わない: export_colpkg / import_colpkg は
+/// Collection を `take()` でムーブして消費するため `&mut` closure に乗らない。
 async fn export_to(state: &State<'_, AppState>, out_path: &Path, include_media: bool) -> AppResult<()> {
     let path = state
         .col_path

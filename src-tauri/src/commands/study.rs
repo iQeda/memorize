@@ -32,6 +32,10 @@ pub enum NextCard {
     Done(Counts),
 }
 
+// このモジュールは AppState::with_collection を使わない: 各コマンドが
+// `col` と `last_queued` の 2 つの mutex を跨いで操作するため、closure 化
+// するとロック取得順序が変わり交錯のリスクがある。手動パターンを維持する。
+
 /// Set the active deck (used by the scheduler queue) and clear any cached
 /// previous QueuedCard. Call before requesting the first card of a session.
 #[tauri::command]
