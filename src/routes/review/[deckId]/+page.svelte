@@ -537,6 +537,10 @@
     if (e.repeat) return;
     // The editor mounts its own inputs/textarea; let it handle its own keys.
     if (editing) return;
+    // 意図的に $lib/utils/keyboard の isTextFieldTarget より狭いチェック
+    // (input/textarea のみ + 上の editing フラグ)。reviewer には select /
+    // contentEditable が無く、Nani 用オフスクリーン input との組み合わせを
+    // 既存挙動のまま保つため、広いバリアントに置き換えないこと。
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     // 修飾子付きのキーは OS / WebView の標準ショートカットに譲る。
     // 特に Cmd+J は Nani.app のグローバルホットキー — Copy が "j" にバインド

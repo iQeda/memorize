@@ -9,6 +9,7 @@
   import { collection } from "$lib/stores/collection.svelte";
   import { sync } from "$lib/stores/sync.svelte";
   import { checkForAppUpdates } from "$lib/updater";
+  import { isTextFieldTarget } from "$lib/utils/keyboard";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { onMount } from "svelte";
@@ -36,18 +37,6 @@
     mainEl?.scrollTo({ top: 0 });
   });
 
-  function isTextField(target: EventTarget | null): boolean {
-    const el = target as HTMLElement | null;
-    if (!el) return false;
-    const tag = el.tagName;
-    return (
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT" ||
-      el.isContentEditable
-    );
-  }
-
   function onKey(e: KeyboardEvent) {
     // ⌘, → Settings (macOS のみサポート、Ctrl 修飾子は受け付けない)
     if (e.metaKey && !e.ctrlKey && e.key === ",") {
@@ -66,7 +55,7 @@
     // テキスト入力中（NoteEditor の input/textarea など）は Launcher を
     // 含むグローバルショートカットを無効化。Cmd+, (Settings) は global
     // navigation なので編集中でも有効のままにする。
-    if (isTextField(e.target)) return;
+    if (isTextFieldTarget(e.target)) return;
     // Cmd+F / Cmd+K → quick deck launcher.
     // - Cmd+F は webview default の in-page find を override（memorize は
     //   in-page find UI を持たないため、no-op だと混乱するので Launcher へ）

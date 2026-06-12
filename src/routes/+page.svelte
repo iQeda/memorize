@@ -15,6 +15,7 @@
   import CalendarHeatmap from "$lib/components/charts/CalendarHeatmap.svelte";
   import { t } from "$lib/i18n/index.svelte";
   import { invoke } from "$lib/ipc";
+  import { hasModifier, isTextFieldTarget } from "$lib/utils/keyboard";
 
   type DeckStats = {
     total_cards: number;
@@ -189,27 +190,13 @@
     if (e.repeat || e.defaultPrevented) return;
     // Skip when the user is typing in a form field (deck rename, note editor,
     // launcher search, etc).
-    const target = e.target as HTMLElement | null;
-    if (
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement ||
-      target?.isContentEditable
-    ) {
-      return;
-    }
+    if (isTextFieldTarget(e.target)) return;
     if ((e.key === "Enter" || e.key === " ") && selected && totalDue > 0) {
       e.preventDefault();
       startStudy();
       return;
     }
-    if (
-      (e.key === "n" || e.key === "N") &&
-      !e.metaKey &&
-      !e.ctrlKey &&
-      !e.altKey &&
-      collection.isOpen
-    ) {
+    if ((e.key === "n" || e.key === "N") && !hasModifier(e) && collection.isOpen) {
       e.preventDefault();
       showAddNote = true;
     }
