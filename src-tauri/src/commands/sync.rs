@@ -1,3 +1,10 @@
+//! AnkiWeb 同期コマンドと credential 保管。
+//!
+//! テスト方針: credential の save/load/delete と auth_from は TempDir で
+//! ユニットテスト済み。sync_now / full_sync は AnkiWeb サーバーとの
+//! ネットワーク往復に依存するためユニットテスト対象外 (手動スモークと
+//! rslib 側のテストに委ねる)。
+
 use crate::commands::collection::build_app_collection;
 use crate::error::{AppError, AppResult};
 use crate::progress::ProgressEmitter;
@@ -5,7 +12,7 @@ use crate::state::AppState;
 use anki::sync::collection::normal::SyncActionRequired;
 use anki::sync::login::{sync_login, SyncAuth};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, State};
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
@@ -20,18 +27,26 @@ struct StoredCredentials {
 /// every recompile produces a binary with a different code signature, which
 /// triggers a permission prompt every single launch. When we ship a signed
 /// release we can swap this back to a keychain backend.
-fn credentials_path(app: &AppHandle) -> AppResult<PathBuf> {
+fn app_credentials_dir(app: &AppHandle) -> AppResult<PathBuf> {
     let dir = app
         .path()
         .app_data_dir()
         .map_err(|e| AppError::Anyhow(anyhow::anyhow!("app_data_dir: {e}")))?;
     std::fs::create_dir_all(&dir)
         .map_err(|e| AppError::Anyhow(anyhow::anyhow!("mkdir app_data_dir: {e}")))?;
-    Ok(dir.join("ankiweb-credentials.json"))
+    Ok(dir)
+}
+
+fn credentials_path_in(dir: &Path) -> PathBuf {
+    dir.join("ankiweb-credentials.json")
 }
 
 fn load_credentials(app: &AppHandle) -> AppResult<Option<StoredCredentials>> {
-    let path = credentials_path(app)?;
+    load_credentials_in(&app_credentials_dir(app)?)
+}
+
+fn load_credentials_in(dir: &Path) -> AppResult<Option<StoredCredentials>> {
+    let path = credentials_path_in(dir);
     match std::fs::read_to_string(&path) {
         Ok(s) => {
             let creds: StoredCredentials = serde_json::from_str(&s).map_err(|e| {
@@ -45,7 +60,11 @@ fn load_credentials(app: &AppHandle) -> AppResult<Option<StoredCredentials>> {
 }
 
 fn save_credentials(app: &AppHandle, creds: &StoredCredentials) -> AppResult<()> {
-    let path = credentials_path(app)?;
+    save_credentials_in(&app_credentials_dir(app)?, creds)
+}
+
+fn save_credentials_in(dir: &Path, creds: &StoredCredentials) -> AppResult<()> {
+    let path = credentials_path_in(dir);
     let payload = serde_json::to_string_pretty(creds)
         .map_err(|e| AppError::Anyhow(anyhow::anyhow!("serialize: {e}")))?;
     std::fs::write(&path, payload)
@@ -64,7 +83,11 @@ fn save_credentials(app: &AppHandle, creds: &StoredCredentials) -> AppResult<()>
 }
 
 fn delete_credentials(app: &AppHandle) -> AppResult<()> {
-    let path = credentials_path(app)?;
+    delete_credentials_in(&app_credentials_dir(app)?)
+}
+
+fn delete_credentials_in(dir: &Path) -> AppResult<()> {
+    let path = credentials_path_in(dir);
     match std::fs::remove_file(&path) {
         Ok(_) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -304,4 +327,91 @@ async fn full_sync(
 
     result?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn sample() -> StoredCredentials {
+        StoredCredentials {
+            username: "alice@example.com".into(),
+            hkey: "deadbeefcafe".into(),
+            endpoint: Some("https://sync13.ankiweb.net/".into()),
+        }
+    }
+
+    #[test]
+    fn save_load_delete_roundtrip() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path();
+
+        assert!(load_credentials_in(dir).unwrap().is_none(), "starts empty");
+
+        save_credentials_in(dir, &sample()).unwrap();
+        let loaded = load_credentials_in(dir).unwrap().expect("saved creds");
+        assert_eq!(loaded.username, "alice@example.com");
+        assert_eq!(loaded.hkey, "deadbeefcafe");
+        assert_eq!(loaded.endpoint.as_deref(), Some("https://sync13.ankiweb.net/"));
+
+        delete_credentials_in(dir).unwrap();
+        assert!(load_credentials_in(dir).unwrap().is_none(), "deleted");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn saved_file_is_chmod_0600() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = TempDir::new().unwrap();
+        save_credentials_in(tmp.path(), &sample()).unwrap();
+        let mode = std::fs::metadata(credentials_path_in(tmp.path()))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600, "credentials must be owner-only");
+    }
+
+    #[test]
+    fn delete_on_missing_file_is_ok() {
+        let tmp = TempDir::new().unwrap();
+        delete_credentials_in(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn load_rejects_corrupt_json() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::write(credentials_path_in(tmp.path()), "not json").unwrap();
+        assert!(load_credentials_in(tmp.path()).is_err());
+    }
+
+    #[test]
+    fn auth_from_maps_hkey_and_parses_endpoint() {
+        let auth = auth_from(&sample()).unwrap();
+        assert_eq!(auth.hkey, "deadbeefcafe");
+        assert_eq!(
+            auth.endpoint.as_ref().map(|u| u.as_str()),
+            Some("https://sync13.ankiweb.net/")
+        );
+        assert!(auth.io_timeout_secs.is_none());
+    }
+
+    #[test]
+    fn auth_from_without_endpoint_leaves_none() {
+        let creds = StoredCredentials {
+            endpoint: None,
+            ..sample()
+        };
+        let auth = auth_from(&creds).unwrap();
+        assert!(auth.endpoint.is_none());
+    }
+
+    #[test]
+    fn auth_from_rejects_invalid_endpoint_url() {
+        let creds = StoredCredentials {
+            endpoint: Some("not a url".into()),
+            ..sample()
+        };
+        assert!(auth_from(&creds).is_err());
+    }
 }
