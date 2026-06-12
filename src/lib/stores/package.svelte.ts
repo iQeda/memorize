@@ -1,5 +1,6 @@
 import { invoke } from "$lib/ipc";
 import { t } from "$lib/i18n/index.svelte";
+import { runAsync } from "./run-async";
 
 export type ImportReport = {
   new: number;
@@ -58,20 +59,15 @@ class PackageStore {
   lastError = $state<string | null>(null);
 
   async importApkg(inPath: string): Promise<ImportReport | null> {
-    this.busy = true;
-    this.busyReason = t("io.importing");
-    this.lastError = null;
-    try {
-      const r = await invoke<ImportReport>("import_apkg", { inPath });
-      this.lastImport = r;
-      return r;
-    } catch (e) {
-      this.lastError = String(e);
-      return null;
-    } finally {
-      this.busy = false;
-      this.busyReason = null;
-    }
+    return runAsync(
+      this,
+      async () => {
+        const r = await invoke<ImportReport>("import_apkg", { inPath });
+        this.lastImport = r;
+        return r;
+      },
+      { reason: t("io.importing") },
+    );
   }
 
   /** Detect import settings for a CSV/TSV file without mutating the collection. */
@@ -89,45 +85,35 @@ class PackageStore {
     inPath: string,
     dupeResolution: DupeResolution,
   ): Promise<ImportReport | null> {
-    this.busy = true;
-    this.busyReason = t("io.importing");
-    this.lastError = null;
-    try {
-      const r = await invoke<ImportReport>("import_tsv", { inPath, dupeResolution });
-      this.lastImport = r;
-      return r;
-    } catch (e) {
-      this.lastError = String(e);
-      return null;
-    } finally {
-      this.busy = false;
-      this.busyReason = null;
-    }
+    return runAsync(
+      this,
+      async () => {
+        const r = await invoke<ImportReport>("import_tsv", { inPath, dupeResolution });
+        this.lastImport = r;
+        return r;
+      },
+      { reason: t("io.importing") },
+    );
   }
 
   async exportAll(input: ExportInput): Promise<ExportReport | null> {
-    this.busy = true;
-    this.busyReason = t("io.exporting");
-    this.lastError = null;
-    try {
-      const r = await invoke<ExportReport>("export_all_apkg", {
-        input: {
-          out_path: input.outPath,
-          with_scheduling: input.withScheduling,
-          with_media: input.withMedia,
-          with_deck_configs: input.withDeckConfigs,
-          legacy: input.legacy,
-        },
-      });
-      this.lastExportPath = input.outPath;
-      return r;
-    } catch (e) {
-      this.lastError = String(e);
-      return null;
-    } finally {
-      this.busy = false;
-      this.busyReason = null;
-    }
+    return runAsync(
+      this,
+      async () => {
+        const r = await invoke<ExportReport>("export_all_apkg", {
+          input: {
+            out_path: input.outPath,
+            with_scheduling: input.withScheduling,
+            with_media: input.withMedia,
+            with_deck_configs: input.withDeckConfigs,
+            legacy: input.legacy,
+          },
+        });
+        this.lastExportPath = input.outPath;
+        return r;
+      },
+      { reason: t("io.exporting") },
+    );
   }
 }
 

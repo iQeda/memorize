@@ -1,4 +1,5 @@
 import { invoke } from "$lib/ipc";
+import { runAsync } from "./run-async";
 
 export type NotetypeSummary = {
   id: number;
@@ -19,6 +20,7 @@ export type NoteDetail = {
 class NotesStore {
   notetypes = $state<NotetypeSummary[]>([]);
   busy = $state(false);
+  busyReason = $state<string | null>(null);
   lastError = $state<string | null>(null);
 
   async refreshNotetypes() {
@@ -44,24 +46,16 @@ class NotesStore {
     fields: string[];
     tags: string[];
   }): Promise<number | null> {
-    this.busy = true;
-    this.lastError = null;
-    try {
-      const id = await invoke<number>("add_note", {
+    return runAsync(this, () =>
+      invoke<number>("add_note", {
         input: {
           deck_id: input.deckId,
           notetype_id: input.notetypeId,
           fields: input.fields,
           tags: input.tags,
         },
-      });
-      return id;
-    } catch (e) {
-      this.lastError = String(e);
-      return null;
-    } finally {
-      this.busy = false;
-    }
+      }),
+    );
   }
 
   async updateNote(input: {
@@ -69,9 +63,7 @@ class NotesStore {
     fields: string[];
     tags: string[];
   }): Promise<boolean> {
-    this.busy = true;
-    this.lastError = null;
-    try {
+    const ok = await runAsync(this, async () => {
       await invoke("update_note", {
         input: {
           note_id: input.noteId,
@@ -80,44 +72,28 @@ class NotesStore {
         },
       });
       return true;
-    } catch (e) {
-      this.lastError = String(e);
-      return false;
-    } finally {
-      this.busy = false;
-    }
+    });
+    return ok ?? false;
   }
 
   async setNoteDeck(input: {
     noteId: number;
     deckId: number;
   }): Promise<boolean> {
-    this.busy = true;
-    this.lastError = null;
-    try {
+    const ok = await runAsync(this, async () => {
       await invoke("set_note_deck", {
         input: { note_id: input.noteId, deck_id: input.deckId },
       });
       return true;
-    } catch (e) {
-      this.lastError = String(e);
-      return false;
-    } finally {
-      this.busy = false;
-    }
+    });
+    return ok ?? false;
   }
 
   async deleteNotes(noteIds: number[]): Promise<number> {
-    this.busy = true;
-    this.lastError = null;
-    try {
-      return await invoke<number>("delete_notes", { noteIds });
-    } catch (e) {
-      this.lastError = String(e);
-      return 0;
-    } finally {
-      this.busy = false;
-    }
+    const n = await runAsync(this, () =>
+      invoke<number>("delete_notes", { noteIds }),
+    );
+    return n ?? 0;
   }
 }
 

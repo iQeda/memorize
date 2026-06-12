@@ -81,6 +81,9 @@ class CollectionStore {
     }
   }
 
+  // runAsync は使わない: この store は busy/lastError でなく loading/error を
+  // 公開しており (UI が collection.error を参照)、エラー時に isOpen リセットと
+  // stale path の削除という固有の副作用も持つため、共通ヘルパーに合わない。
   async open(path: string, skipPersist = false) {
     this.loading = true;
     this.error = null;

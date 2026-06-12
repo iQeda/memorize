@@ -2,6 +2,7 @@ import { invoke } from "$lib/ipc";
 import { browser } from "$app/environment";
 import { t } from "$lib/i18n/index.svelte";
 import { STORAGE_KEYS } from "$lib/storage-keys";
+import { runAsync } from "./run-async";
 
 type SyncStatus = { logged_in: boolean; username: string | null };
 
@@ -131,6 +132,8 @@ class SyncStore {
     }
   }
 
+  // runAsync は使わない: backup 失敗時のエラーメッセージ合成 (sync.backupAborted)
+  // と 2 段階の busyReason 切り替えが絡み、共通ライフサイクルに乗らない。
   private async runWithAutoBackup<T>(
     label: string,
     fn: () => Promise<T>,
@@ -164,35 +167,27 @@ class SyncStore {
   }
 
   async manualBackup(outPath: string, includeMedia: boolean) {
-    this.busy = true;
-    this.busyReason = t("sync.creatingBackup");
-    this.lastError = null;
-    try {
-      await invoke("export_colpkg", { outPath, includeMedia });
-      this.lastBackupPath = outPath;
-      this.lastMessage = t("backup.lastPath", { path: outPath });
-    } catch (e) {
-      this.lastError = String(e);
-    } finally {
-      this.busy = false;
-      this.busyReason = null;
-    }
+    await runAsync(
+      this,
+      async () => {
+        await invoke("export_colpkg", { outPath, includeMedia });
+        this.lastBackupPath = outPath;
+        this.lastMessage = t("backup.lastPath", { path: outPath });
+      },
+      { reason: t("sync.creatingBackup") },
+    );
   }
 
   async restore(inPath: string) {
-    this.busy = true;
-    this.busyReason = t("backup.restoreButton");
-    this.lastError = null;
     this.lastMessage = null;
-    try {
-      await invoke("import_colpkg", { inPath });
-      this.lastMessage = t("backup.lastPath", { path: inPath });
-    } catch (e) {
-      this.lastError = String(e);
-    } finally {
-      this.busy = false;
-      this.busyReason = null;
-    }
+    await runAsync(
+      this,
+      async () => {
+        await invoke("import_colpkg", { inPath });
+        this.lastMessage = t("backup.lastPath", { path: inPath });
+      },
+      { reason: t("backup.restoreButton") },
+    );
   }
 
   async refresh() {
@@ -206,31 +201,29 @@ class SyncStore {
   }
 
   async login(username: string, password: string, endpoint?: string) {
-    this.busy = true;
-    this.lastError = null;
-    try {
-      const s = await invoke<SyncStatus>("sync_login_cmd", {
-        input: { username, password, endpoint: endpoint || null },
-      });
-      this.loggedIn = s.logged_in;
-      this.username = s.username;
-    } catch (e) {
-      this.lastError = String(e);
-      throw e;
-    } finally {
-      this.busy = false;
-    }
+    await runAsync(
+      this,
+      async () => {
+        const s = await invoke<SyncStatus>("sync_login_cmd", {
+          input: { username, password, endpoint: endpoint || null },
+        });
+        this.loggedIn = s.logged_in;
+        this.username = s.username;
+      },
+      { rethrow: true },
+    );
   }
 
   async logout() {
-    this.busy = true;
-    try {
-      await invoke("sync_logout");
-      this.loggedIn = false;
-      this.username = null;
-    } finally {
-      this.busy = false;
-    }
+    await runAsync(
+      this,
+      async () => {
+        await invoke("sync_logout");
+        this.loggedIn = false;
+        this.username = null;
+      },
+      { rethrow: true },
+    );
   }
 
   async syncNow() {
