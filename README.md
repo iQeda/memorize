@@ -41,8 +41,8 @@ Apple Silicon (arm64) のみ。Intel Mac は非対応。
 ### 直接 DMG をダウンロード
 
 [Releases](https://github.com/iQeda/memorize/releases) から
-`memorize_<version>_aarch64.dmg` をダウンロード → マウント →
-`memorize.app` を `/Applications` にドラッグ。未署名なので初回起動は
+`Memorize_<version>_aarch64.dmg` をダウンロード → マウント →
+`Memorize.app` を `/Applications` にドラッグ。未署名なので初回起動は
 **右クリック → 開く → 開く** で Gatekeeper をバイパスしてください
 (brew cask 経由なら postflight で自動的に xattr が剥がされるので不要)。
 
@@ -96,8 +96,8 @@ cargo check --manifest-path src-tauri/Cargo.toml
 pnpm tauri build
 ```
 
-- 出力: `src-tauri/target/release/bundle/dmg/memorize_<version>_<arch>.dmg`
-  および `src-tauri/target/release/bundle/macos/memorize.app`
+- 出力: `src-tauri/target/release/bundle/dmg/Memorize_<version>_<arch>.dmg`
+  および `src-tauri/target/release/bundle/macos/Memorize.app`
 - `tauri.conf.json` の `bundle.active` は `true`、`bundle.targets` は `["app", "dmg"]`
 - 初回ビルドは Anki rslib の release 最適化込みで 5–10 分程度かかる
 - 署名・公証 (codesign / notarize) は未設定。配布時は別途設定が必要
