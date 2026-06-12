@@ -1,3 +1,7 @@
+//! ユニットテスト免除: confirm_exit は AtomicBool 反転 + app.exit(0) のみで、
+//! AppHandle をモックするとフレームワークのモックをテストするだけになる
+//! (2026-06-12 リファクタ監査で確認)。
+
 use crate::error::AppResult;
 use crate::state::AppState;
 use std::sync::atomic::Ordering;
