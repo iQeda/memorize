@@ -1,8 +1,8 @@
 use crate::error::{AppError, AppResult};
+use crate::render::rendered_nodes_to_html;
 use crate::state::{AppState, CachedQueueEntry};
 use anki::prelude::{DeckId, TimestampMillis};
 use anki::scheduler::answering::{CardAnswer, Rating};
-use anki::template::RenderedNode;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use tauri::State;
@@ -30,16 +30,6 @@ pub struct Counts {
 pub enum NextCard {
     Card(StudyCard),
     Done(Counts),
-}
-
-fn render_nodes(nodes: &[RenderedNode]) -> String {
-    nodes
-        .iter()
-        .map(|n| match n {
-            RenderedNode::Text { text } => text.clone(),
-            RenderedNode::Replacement { current_text, .. } => current_text.clone(),
-        })
-        .collect()
 }
 
 /// Set the active deck (used by the scheduler queue) and clear any cached
@@ -79,8 +69,8 @@ pub async fn get_next_card(state: State<'_, AppState>) -> AppResult<NextCard> {
     let card = StudyCard {
         card_id: card_id.0,
         note_id: note_id.0,
-        question_html: render_nodes(&rendered.qnodes),
-        answer_html: render_nodes(&rendered.anodes),
+        question_html: rendered_nodes_to_html(&rendered.qnodes),
+        answer_html: rendered_nodes_to_html(&rendered.anodes),
         css: rendered.css,
         remaining: counts,
     };

@@ -1,6 +1,7 @@
 mod commands;
 mod error;
 mod progress;
+mod render;
 mod state;
 
 use state::AppState;

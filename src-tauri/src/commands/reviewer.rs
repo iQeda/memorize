@@ -1,4 +1,5 @@
 use crate::error::{AppError, AppResult};
+use crate::render::rendered_nodes_to_html;
 use crate::state::AppState;
 use anki::card::CardId;
 use serde::Serialize;
@@ -22,31 +23,9 @@ pub async fn get_card_render(
     let cid = CardId(card_id);
     let rendered = col.render_existing_card(cid, false, false)?;
 
-    let question_html = rendered
-        .qnodes
-        .iter()
-        .map(render_node_to_html)
-        .collect::<String>();
-    let answer_html = rendered
-        .anodes
-        .iter()
-        .map(render_node_to_html)
-        .collect::<String>();
-
     Ok(RenderedCard {
-        question_html,
-        answer_html,
+        question_html: rendered_nodes_to_html(&rendered.qnodes),
+        answer_html: rendered_nodes_to_html(&rendered.anodes),
         css: rendered.css,
     })
-}
-
-fn render_node_to_html(node: &anki::template::RenderedNode) -> String {
-    match node {
-        anki::template::RenderedNode::Text { text } => text.clone(),
-        anki::template::RenderedNode::Replacement {
-            field_name: _,
-            current_text,
-            filters: _,
-        } => current_text.clone(),
-    }
 }
