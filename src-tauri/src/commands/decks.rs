@@ -320,7 +320,7 @@ fn deck_stats_inner(
     let db = col.storage.db();
     let count = |sql: &str| -> AppResult<u32> {
         db.query_row(sql, [deck_id], |r| r.get(0))
-            .map_err(|e| AppError::Anyhow(anyhow::anyhow!(e)))
+            .map_err(AppError::Db)
     };
     let in_deck = "(did = ?1 OR (odid != 0 AND odid = ?1))";
     let total_cards = count(&format!("SELECT COUNT(*) FROM cards WHERE {in_deck}"))?;
@@ -361,7 +361,7 @@ pub async fn create_deck(
 ) -> AppResult<i64> {
     let trimmed = name.trim();
     if trimmed.is_empty() {
-        return Err(AppError::Anyhow(anyhow::anyhow!("deck name is empty")));
+        return Err(AppError::InvalidInput("deck name is empty".into()));
     }
     state
         .with_collection(|col| {
@@ -379,7 +379,7 @@ pub async fn rename_deck(
 ) -> AppResult<()> {
     let trimmed = new_name.trim();
     if trimmed.is_empty() {
-        return Err(AppError::Anyhow(anyhow::anyhow!("deck name is empty")));
+        return Err(AppError::InvalidInput("deck name is empty".into()));
     }
     state
         .with_collection(|col| {

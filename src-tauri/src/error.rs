@@ -6,8 +6,16 @@ pub enum AppError {
     #[error("collection is not open")]
     CollectionNotOpen,
 
+    /// ユーザー入力の検証エラー。メッセージはそのままフロントに表示される。
+    #[error("{0}")]
+    InvalidInput(String),
+
     #[error(transparent)]
     Anki(#[from] anki::error::AnkiError),
+
+    /// コマンドが col.storage.db() に直接撃つ生 SQL のエラー。
+    #[error(transparent)]
+    Db(#[from] rusqlite::Error),
 
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
@@ -63,6 +71,25 @@ mod tests {
         assert!(msg.contains("save sync state"), "got: {msg}");
         assert!(msg.contains("write credentials"), "got: {msg}");
         assert!(msg.contains("disk full"), "got: {msg}");
+    }
+
+    #[test]
+    fn invalid_input_serializes_to_its_message_verbatim() {
+        // フロントの表示文字列なので、variant 移行で文言が変わらないこと。
+        let err = AppError::InvalidInput("deck name is empty".into());
+        let json = serde_json::to_string(&err).unwrap();
+        assert_eq!(json, "\"deck name is empty\"");
+    }
+
+    #[test]
+    fn db_error_serializes_to_rusqlite_display() {
+        let err = AppError::Db(rusqlite::Error::QueryReturnedNoRows);
+        let json = serde_json::to_string(&err).unwrap();
+        // rusqlite の Display と一致する (transparent)。
+        assert_eq!(
+            json,
+            serde_json::to_string(&rusqlite::Error::QueryReturnedNoRows.to_string()).unwrap()
+        );
     }
 
     #[test]
