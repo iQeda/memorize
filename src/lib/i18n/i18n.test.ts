@@ -51,4 +51,10 @@ describe("i18n", () => {
     const missing = "__totally.missing.key__" as never;
     expect(t(missing)).toBe(missing);
   });
+
+  it("en and ja catalogues have the exact same key sets", () => {
+    const enKeys = Object.keys(messages.en).sort();
+    const jaKeys = Object.keys(messages.ja).sort();
+    expect(jaKeys).toEqual(enKeys);
+  });
 });

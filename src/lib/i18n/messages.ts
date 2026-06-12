@@ -27,7 +27,6 @@ export const messages = {
     // Nav
     "nav.browse": "Browse",
     "nav.settings": "Settings",
-    "nav.home": "Home",
 
     // Title bar / Sync button
     "titlebar.openCollectionFirst": "Open a collection first",
@@ -47,7 +46,6 @@ export const messages = {
     "decks.new": "New",
     "decks.learning": "Learning",
     "decks.review": "Review",
-    "decks.parentPath": "Parent path",
     "decks.totalNotes": "Total words",
     "decks.suspended": "Suspended",
     "decks.buried": "Buried",
@@ -81,7 +79,6 @@ export const messages = {
 
     // Reviewer
     "reviewer.back": "Back",
-    "reviewer.reload": "Reload",
     "reviewer.loading": "Loading…",
     "reviewer.done": "Done ✦",
     "reviewer.sessionFinished": "All cards reviewed for this session",
@@ -270,7 +267,6 @@ export const messages = {
     "sync.login": "Sign in",
     "sync.noChanges": "No changes",
     "sync.normalDone": "Sync complete",
-    "sync.fullRequired": "Full sync required",
     "sync.fullRequiredManual":
       "Full sync required (both sides have unsynced changes) — choose manually",
     "sync.autoUploading": "Running full upload…",
@@ -344,7 +340,6 @@ export const messages = {
     // Nav
     "nav.browse": "ブラウズ",
     "nav.settings": "設定",
-    "nav.home": "ホーム",
 
     // Title bar / Sync button
     "titlebar.openCollectionFirst": "コレクションを開いてください",
@@ -364,7 +359,6 @@ export const messages = {
     "decks.new": "新規",
     "decks.learning": "学習中",
     "decks.review": "復習",
-    "decks.parentPath": "親パス",
     "decks.totalNotes": "総単語数",
     "decks.suspended": "停止中",
     "decks.buried": "保留",
@@ -398,7 +392,6 @@ export const messages = {
 
     // Reviewer
     "reviewer.back": "戻る",
-    "reviewer.reload": "再読込",
     "reviewer.loading": "読み込み中…",
     "reviewer.done": "完了 ✦",
     "reviewer.sessionFinished": "このセッションのカードは終わりました",
@@ -586,7 +579,6 @@ export const messages = {
     "sync.login": "ログイン",
     "sync.noChanges": "変更なし",
     "sync.normalDone": "同期完了",
-    "sync.fullRequired": "フル同期が必要です",
     "sync.fullRequiredManual":
       "フル同期が必要 (両側に未同期変更あり) - 手動選択してください",
     "sync.autoUploading": "フル同期 (アップロード) を自動実行します…",
