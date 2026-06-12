@@ -20,9 +20,10 @@
   function color(v: number): string {
     if (v <= 0) return "var(--color-bg-overlay)";
     const t = Math.min(1, v / maxVal);
-    // Blend accent at varying opacities
-    const opacity = 0.25 + 0.75 * t;
-    return `rgba(124, 138, 255, ${opacity.toFixed(2)})`;
+    // Blend accent at varying opacities. Use the theme token so the
+    // heatmap follows light/dark accent changes instead of a hardcoded rgba.
+    const pct = Math.round((0.25 + 0.75 * t) * 100);
+    return `color-mix(in srgb, var(--color-accent-500) ${pct}%, transparent)`;
   }
 
   type Cell = { x: number; y: number; v: number; date: Date };
