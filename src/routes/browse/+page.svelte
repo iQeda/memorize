@@ -11,6 +11,7 @@
     selectedNoteIds,
     someSelected,
   } from "$lib/browse/selection";
+  import { keyAction } from "$lib/browse/key-action";
 
   type CardSummary = {
     id: number;
@@ -108,16 +109,27 @@
   }
 
   function onKey(e: KeyboardEvent) {
-    // The editor owns its own keys while open.
-    if (editorMode !== null) return;
-    if (e.metaKey && !e.ctrlKey && e.key.toLowerCase() === "a") {
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      // Let inputs keep ⌘A = select text.
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (cards.length === 0) return;
+    const el = e.target as HTMLElement | null;
+    const tag = el?.tagName;
+    const type = (el as HTMLInputElement | null)?.type;
+    // A checkbox/radio is an INPUT but not text entry — ⌘A there should still
+    // select all rows, so only treat genuine text fields as "in a text field".
+    const inTextField =
+      tag === "TEXTAREA" ||
+      (tag === "INPUT" && type !== "checkbox" && type !== "radio");
+    const action = keyAction({
+      meta: e.metaKey,
+      ctrl: e.ctrlKey,
+      key: e.key,
+      inTextField,
+      editorOpen: editorMode !== null,
+      hasCards: cards.length > 0,
+      hasSelection: selected.size > 0,
+    });
+    if (action === "selectAll") {
       e.preventDefault();
       selectAll();
-    } else if (e.key === "Escape" && selected.size > 0) {
+    } else if (action === "clear") {
       e.preventDefault();
       clearSelection();
     }
@@ -290,7 +302,7 @@
                 <td class="px-6 py-2" onclick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
-                    aria-label={t("browse.selectAll")}
+                    aria-label={t("browse.selectRow", { word: stripHtml(c.text) || String(c.note_id) })}
                     checked={selected.has(c.id)}
                     onchange={() => toggleOne(c.id)}
                     class="cursor-pointer accent-(--color-accent-500)"

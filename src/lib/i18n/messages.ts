@@ -122,6 +122,7 @@ export const messages = {
     "browse.selectAll": "Select all",
     "browse.deleteConfirmTitle": "Delete words",
     "browse.deleteConfirmBody": "Delete {count} words? This cannot be undone.",
+    "browse.selectRow": "Select {word}",
 
     // Note editor
     "note.addTitle": "Add word",
@@ -443,6 +444,7 @@ export const messages = {
     "browse.selectAll": "すべて選択",
     "browse.deleteConfirmTitle": "単語を削除",
     "browse.deleteConfirmBody": "{count}件の単語を削除します。この操作は取り消せません。",
+    "browse.selectRow": "{word} を選択",
 
     // Note editor
     "note.addTitle": "単語を追加",
