@@ -116,6 +116,12 @@ export const messages = {
     "browse.colNote": "Note",
     "browse.colTemplate": "Template",
     "browse.empty": "(empty)",
+    "browse.selectedCount": "{count} selected",
+    "browse.clearSelection": "Clear",
+    "browse.deleteSelected": "Delete",
+    "browse.selectAll": "Select all",
+    "browse.deleteConfirmTitle": "Delete words",
+    "browse.deleteConfirmBody": "Delete {count} words? This cannot be undone.",
 
     // Note editor
     "note.addTitle": "Add word",
@@ -431,6 +437,12 @@ export const messages = {
     "browse.colNote": "ノート",
     "browse.colTemplate": "テンプレート",
     "browse.empty": "(空)",
+    "browse.selectedCount": "{count}件選択中",
+    "browse.clearSelection": "解除",
+    "browse.deleteSelected": "削除",
+    "browse.selectAll": "すべて選択",
+    "browse.deleteConfirmTitle": "単語を削除",
+    "browse.deleteConfirmBody": "{count}件の単語を削除します。この操作は取り消せません。",
 
     // Note editor
     "note.addTitle": "単語を追加",
