@@ -32,23 +32,36 @@ Browse 画面（`src/routes/browse/+page.svelte`）は現状、単語（カー�
 ## UI（選択バーを上部に表示）
 
 ```
-┌──────────────────────────────┐
-│ 120枚            [+ 単語を追加] │  ← 既存ヘッダー
-├──────────────────────────────┤
-│ ☑ 3件選択中   [解除]  [🗑 削除] │  ← 1件以上選択時のみ出現
-├──────────────────────────────┤
-│ ☑ │ Word    │ Note    │ #0    │  ← 先頭にチェックボックス列を追加
-│ ☑ │ apple   │ 15…     │ #0    │
-│ ☐ │ banana  │ 15…     │ #0    │
-└──────────────────────────────┘
+┌────────────────────────────────────────┐
+│ 120枚                      [+ 単語を追加] │  ← 既存ヘッダー
+├────────────────────────────────────────┤
+│ ☑ 3件選択中  [すべて選択] [解除] [🗑 削除] │  ← 1件以上選択時のみ出現
+├────────────────────────────────────────┤
+│ ☑ │ Word    │ Note    │ #0              │  ← 先頭にチェックボックス列を追加
+│ ☑ │ apple   │ 15…     │ #0              │
+│ ☐ │ banana  │ 15…     │ #0              │
+└────────────────────────────────────────┘
 ```
 
 - テーブルに先頭チェックボックス列を追加。`<thead>` のチェックボックスは **全選択トグル**。
   - 全行選択時はチェック ON、一部のみ選択時は `indeterminate`（バインドで設定）、0 件選択時は OFF。
 - 選択バーはヘッダー（`<header>`）とテーブルの間に配置し、`selected.size > 0` のときだけ表示。
-  - 内容: `{count}件選択中` ラベル、`解除`（全選択クリア）ボタン、`🗑 削除` ボタン。
+  - 内容: `{count}件選択中` ラベル、`すべて選択`（表示中の全行を選択）、`解除`（全選択クリア）、
+    `🗑 削除` ボタン。
+  - `すべて選択` は全行選択済み（`allSelected`）のときは disabled。部分選択から「全件に広げる」
+    導線として、ヘッダーチェックボックスより発見しやすい位置に置く。
 - チェックボックスの `click` / `change` は `stopPropagation` し、行クリック（`openEdit` で編集モーダルを
   開く）を誤発火させない。
+
+### キーボードショートカット
+
+- `⌘A`（macOS）: 表示中の全カードをチェック状態にする（`selected = new Set(全カード id)`）。
+  - **検索入力欄にフォーカスがあるときは横取りしない**（テキスト全選択の既定動作を優先）。
+    `event.target` が `<input>` / `<textarea>` のときはスルー。それ以外で Browse 画面にいる場合のみ
+    `preventDefault` して全選択を実行。
+  - 編集モーダル（`NoteEditor`）が開いているときは無効。
+- `Esc`: 編集モーダルが閉じている状態で選択があれば選択をクリア（モーダルを開いていれば従来通り
+  モーダルを閉じる方を優先）。
 
 ## 削除フロー
 
@@ -67,7 +80,7 @@ Browse 画面（`src/routes/browse/+page.svelte`）は現状、単語（カー�
 | `browse.selectedCount` | `{count} selected` | `{count}件選択中` |
 | `browse.clearSelection` | `Clear` | `解除` |
 | `browse.deleteSelected` | `Delete` | `削除` |
-| `browse.selectAll` | `Select all` | `すべて選択`（チェックボックス aria-label） |
+| `browse.selectAll` | `Select all` | `すべて選択`（ヘッダーチェックボックスの aria-label + 選択バーのボタン文言を兼用） |
 | `browse.deleteConfirmTitle` | `Delete words` | `単語を削除` |
 | `browse.deleteConfirmBody` | `Delete {count} words? This cannot be undone.` | `{count}件の単語を削除します。この操作は取り消せません。` |
 
@@ -88,6 +101,9 @@ export function allSelected(cards: Row[], selectedIds: Set<number>): boolean;
 
 // 1 件以上選択されているか（indeterminate 判定に使用：some && !all）
 export function someSelected(cards: Row[], selectedIds: Set<number>): boolean;
+
+// 表示中の全カード id 集合（「すべて選択」/ ⌘A 用）
+export function allCardIds(cards: Row[]): Set<number>;
 ```
 
 `selection.test.ts` のケース:
@@ -96,9 +112,10 @@ export function someSelected(cards: Row[], selectedIds: Set<number>): boolean;
 - 全選択 → 全 note_id、`allSelected` true。
 - 多カード 1 ノート（同 note_id の 2 カードを選択）→ note_id が重複排除され 1 件。
 - 空リスト（`cards` が空）→ `allSelected` は false（空集合を「全選択」と誤判定しない）。
+- `allCardIds` → 表示中の全カード id を含む集合（「すべて選択」/ ⌘A の結果と一致）。
 
-UI 結線（チェックボックスのトグル・選択バーの表示）は Svelte コンポーネント側で薄く実装し、
-ロジックは上記純粋関数に委譲する。
+UI 結線（チェックボックスのトグル・選択バー / すべて選択ボタンの表示・⌘A / Esc のハンドリング）は
+Svelte コンポーネント側で薄く実装し、ロジックは上記純粋関数に委譲する。
 
 ## 非対象（YAGNI）
 
