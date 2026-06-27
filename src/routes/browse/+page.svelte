@@ -1,9 +1,16 @@
 <script lang="ts">
-  import { Search, Filter, Plus } from "lucide-svelte";
+  import { Search, Filter, Plus, Trash2 } from "lucide-svelte";
   import { collection } from "$lib/stores/collection.svelte";
+  import { notes } from "$lib/stores/notes.svelte";
   import { invoke } from "$lib/ipc";
   import NoteEditor from "$lib/components/NoteEditor.svelte";
   import { t } from "$lib/i18n/index.svelte";
+  import {
+    allCardIds,
+    allSelected,
+    selectedNoteIds,
+    someSelected,
+  } from "$lib/browse/selection";
 
   type CardSummary = {
     id: number;
@@ -18,6 +25,11 @@
   let loading = $state(false);
   // null = "すべて" (no deck filter)
   let filterDeckId = $state<number | null>(collection.selectedDeckId);
+
+  // Selected card ids. Reassign (never mutate in place) so $derived re-runs.
+  let selected = $state<Set<number>>(new Set());
+  const allSel = $derived(allSelected(cards, selected));
+  const someSel = $derived(someSelected(cards, selected));
 
   let editorMode = $state<"add" | "edit" | null>(null);
   let editingNoteId = $state<number | null>(null);
@@ -39,6 +51,8 @@
 
   async function load(deckId: number | null, q: string) {
     loading = true;
+    // Drop stale selection on every reload — selected ids may no longer exist.
+    selected = new Set();
     try {
       cards = await invoke<CardSummary[]>("list_cards", {
         deckId,
@@ -50,6 +64,62 @@
       cards = [];
     } finally {
       loading = false;
+    }
+  }
+
+  function toggleOne(cardId: number) {
+    const next = new Set(selected);
+    if (next.has(cardId)) next.delete(cardId);
+    else next.add(cardId);
+    selected = next;
+  }
+
+  function selectAll() {
+    selected = allCardIds(cards);
+  }
+
+  function clearSelection() {
+    selected = new Set();
+  }
+
+  function toggleAll() {
+    selected = allSel ? new Set() : allCardIds(cards);
+  }
+
+  async function deleteSelected() {
+    const noteIds = selectedNoteIds(cards, selected);
+    if (noteIds.length === 0) return;
+    const { confirm } = await import("@tauri-apps/plugin-dialog");
+    const ok = await confirm(
+      t("browse.deleteConfirmBody", { count: noteIds.length }),
+      {
+        title: t("browse.deleteConfirmTitle"),
+        kind: "warning",
+        okLabel: t("note.deleteOk"),
+        cancelLabel: t("note.deleteCancel"),
+      },
+    );
+    if (!ok) return;
+    const removed = await notes.deleteNotes(noteIds);
+    if (removed > 0) {
+      await load(filterDeckId, query); // also clears the selection
+      await collection.refreshDecks();
+    }
+  }
+
+  function onKey(e: KeyboardEvent) {
+    // The editor owns its own keys while open.
+    if (editorMode !== null) return;
+    if (e.metaKey && !e.ctrlKey && e.key.toLowerCase() === "a") {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      // Let inputs keep ⌘A = select text.
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (cards.length === 0) return;
+      e.preventDefault();
+      selectAll();
+    } else if (e.key === "Escape" && selected.size > 0) {
+      e.preventDefault();
+      clearSelection();
     }
   }
 
@@ -84,6 +154,8 @@
       .trim();
   }
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 <div class="grid h-full grid-cols-[280px_1fr]">
   <aside
@@ -148,6 +220,41 @@
         {t("browse.addWord")}
       </button>
     </header>
+
+    {#if someSel}
+      <div
+        class="flex h-10 items-center gap-2 border-b border-(--color-border-default) bg-(--color-bg-sunken) px-6 text-sm"
+      >
+        <span class="text-(--color-fg-muted)">
+          {t("browse.selectedCount", { count: selected.size })}
+        </span>
+        <div class="flex-1"></div>
+        <button
+          type="button"
+          onclick={selectAll}
+          disabled={allSel}
+          class="rounded-(--radius-md) px-2 py-1 text-xs text-(--color-fg-muted) hover:bg-(--color-bg-overlay) disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {t("browse.selectAll")}
+        </button>
+        <button
+          type="button"
+          onclick={clearSelection}
+          class="rounded-(--radius-md) px-2 py-1 text-xs text-(--color-fg-muted) hover:bg-(--color-bg-overlay)"
+        >
+          {t("browse.clearSelection")}
+        </button>
+        <button
+          type="button"
+          onclick={deleteSelected}
+          class="flex items-center gap-1.5 rounded-(--radius-md) border border-(--color-danger)/40 bg-(--color-danger)/10 px-3 py-1 text-xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20 active:scale-[0.97]"
+        >
+          <Trash2 size={12} strokeWidth={2.5} />
+          {t("browse.deleteSelected")}
+        </button>
+      </div>
+    {/if}
+
     <div class="flex-1 overflow-y-auto">
       {#if cards.length === 0 && !loading}
         <div class="grid h-full place-items-center text-(--color-fg-subtle)">
@@ -159,6 +266,16 @@
             class="sticky top-0 bg-(--color-bg-base) text-left text-[11px] font-medium tracking-wider text-(--color-fg-subtle) uppercase"
           >
             <tr>
+              <th class="w-10 px-6 py-2.5">
+                <input
+                  type="checkbox"
+                  aria-label={t("browse.selectAll")}
+                  checked={allSel}
+                  indeterminate={someSel && !allSel}
+                  onchange={toggleAll}
+                  class="cursor-pointer accent-(--color-accent-500)"
+                />
+              </th>
               <th class="px-6 py-2.5">{t("browse.colWord")}</th>
               <th class="px-6 py-2.5">{t("browse.colNote")}</th>
               <th class="px-6 py-2.5">{t("browse.colTemplate")}</th>
@@ -170,6 +287,15 @@
                 onclick={() => openEdit(c.note_id)}
                 class="cursor-pointer border-t border-(--color-border-default) hover:bg-(--color-bg-overlay)"
               >
+                <td class="px-6 py-2" onclick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    aria-label={t("browse.selectAll")}
+                    checked={selected.has(c.id)}
+                    onchange={() => toggleOne(c.id)}
+                    class="cursor-pointer accent-(--color-accent-500)"
+                  />
+                </td>
                 <td class="max-w-[420px] truncate px-6 py-2 text-(--color-fg-default)">
                   {stripHtml(c.text) || t("browse.empty")}
                 </td>
